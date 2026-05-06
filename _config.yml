@@ -1,2 +1,4 @@
 theme: minima
 title: AIニュース自動生成ブログ
+timezone: Asia/Tokyo
+future: true
