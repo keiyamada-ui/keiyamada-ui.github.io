@@ -1,0 +1,31 @@
+name: AI News Auto Post
+
+on:
+  schedule:
+    # 毎日 日本時間の朝7時 と 夜19時 に自動で動く設定（※GitHubの時間はUTCのため9時間引いています）
+    - cron: '0 22,10 * * *'
+  workflow_dispatch: # 「今すぐ実行」ボタンも付ける設定
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. リポジトリを読み込む
+      uses: actions/checkout@v3
+
+    - name: 2. Pythonを準備する
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: 3. 必要なツールをインストール
+      run: |
+        pip install -r requirements.txt
+
+    - name: 4. AI記事作成＆アップロードを実行！
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+      run: |
+        python auto_curator.py
