@@ -15,7 +15,7 @@ from google.genai import types
 GITHUB_TOKEN = os.environ.get("MY_GITHUB_TOKEN")
 GITHUB_REPO = "keiyamada-ui/keiyamada-ui.github.io"
 
-# SNS用の鍵（今回はまだ空っぽでOKです）
+# SNS用の鍵
 THREADS_ACCESS_TOKEN = os.environ.get("THREADS_ACCESS_TOKEN")
 THREADS_USER_ID = os.environ.get("THREADS_USER_ID")
 
@@ -53,7 +53,7 @@ def get_diverse_news(limit=2):
     return news_list
 
 def post_to_threads(sns_text):
-    """Threadsへ自動投稿する機能（準備中）"""
+    """Threadsへ自動投稿する機能"""
     if not THREADS_ACCESS_TOKEN or not THREADS_USER_ID:
         print("ℹ️ ThreadsのAPIキーが未設定のため、SNS投稿はスキップします。")
         print(f"📝 投稿予定だった文章:\n{sns_text}\n")
@@ -138,12 +138,15 @@ async def main():
     【重要】必ず以下のマークダウン形式（Jekyllフロントマターを含む）で出力してください。
     コードブロック（```markdown と ```）は付けずに、直接テキストを出力してください。
     ※各項目の「:」の後には必ず半角スペースを1つ入れてください！
+
+    【絶対ルール】
+    ・categories（カテゴリ）は、URLに使用されるため必ず「半角英語の単語1つ」にしてください。日本語は絶対に使用しないでください。（例: Security, AI, Tech, Business など）
     
     ---
     layout: post
     title: "日本語の魅力的なタイトル（30文字以内）"
     slug: "english-short-title-for-url"
-    categories: [ここに最適なカテゴリを1つ（例: AI, セキュリティ, ビジネス）]
+    categories: [ここに最適なカテゴリを英語で1つ（例: AI, Security, Business）]
     tags: [タグ1, タグ2, タグ3]
     ---
 
