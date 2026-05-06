@@ -16,7 +16,7 @@ GITHUB_TOKEN = os.environ.get("MY_GITHUB_TOKEN")
 GITHUB_REPO = "keiyamada-ui/keiyamada-ui.github.io"
 
 # ==========================================
-# 📰 情報源（RSS）リスト：URLをコピペでいつでも追加・削除できます！
+# 📰 情報源（RSS）リスト
 # ==========================================
 RSS_FEEDS = [
     "https://techcrunch.com/feed/",
@@ -34,7 +34,6 @@ RSS_FEEDS = [
 
 def get_diverse_news(limit=2):
     print("🌍 世界中のメディアから最新ニュースを探索しています...")
-    # リストからランダムに情報源をピックアップ（毎回違うジャンルになりやすい）
     selected_feeds = random.sample(RSS_FEEDS, min(limit, len(RSS_FEEDS)))
     
     news_list = []
@@ -42,7 +41,7 @@ def get_diverse_news(limit=2):
         try:
             parsed = feedparser.parse(feed_url)
             if parsed.entries:
-                entry = parsed.entries[0] # そのメディアの最新記事を1つ取得
+                entry = parsed.entries[0]
                 news_list.append({
                     "title": entry.title,
                     "link": entry.link,
@@ -57,12 +56,16 @@ def upload_to_github(ai_generated_markdown):
     print(f"\n📝 GitHubへ記事を自動アップロードしています...")
     now = datetime.datetime.now()
     
-    # AIが生成したMarkdownからタイトルを抽出（ファイル名にするため）
-    title_match = re.search(r'title:\s*"(.*?)"', ai_generated_markdown)
-    raw_title = title_match.group(1) if title_match else "tech-news"
+    # AIが生成したMarkdownから「URL用の英語タイトル（slug）」を抽出
+    slug_match = re.search(r'slug:\s*"?([^"\n]+)"?', ai_generated_markdown)
+    raw_slug = slug_match.group(1) if slug_match else "tech-news"
     
-    safe_title = "".join([c if c.isalnum() else "_" for c in raw_title])[:20]
-    file_path = f"_posts/{now.strftime('%Y-%m-%d')}-{safe_title}-{now.strftime('%H%M%S')}.md"
+    # 英語と数字とハイフン以外を消して、綺麗なURL（ファイル名）にする
+    safe_slug = "".join([c if c.isalnum() or c == '-' else "" for c in raw_slug.replace(" ", "-")]).strip('-')[:40]
+    if not safe_slug:
+        safe_slug = "tech-news"
+        
+    file_path = f"_posts/{now.strftime('%Y-%m-%d')}-{safe_slug}-{now.strftime('%H%M%S')}.md"
     
     encoded_content = base64.b64encode(ai_generated_markdown.encode('utf-8')).decode('utf-8')
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
@@ -70,8 +73,13 @@ def upload_to_github(ai_generated_markdown):
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
     }
+    
+    # コミットメッセージ用に日本語タイトルも取得しておく
+    title_match = re.search(r'title:\s*"(.*?)"', ai_generated_markdown)
+    commit_msg = title_match.group(1) if title_match else safe_slug
+
     data = {
-        "message": f"Auto post: {safe_title}",
+        "message": f"Auto post: {commit_msg}",
         "content": encoded_content,
         "branch": "main" 
     }
@@ -85,32 +93,29 @@ def upload_to_github(ai_generated_markdown):
 async def main():
     client = genai.Client()
     
-    # 💡 AdSense対策 ＆ 自動カテゴライズ用の強力なプロンプト
+    # 💡 URL用英語スラッグ指定 ＆ スペース忘れ防止を強化したプロンプト
     system_instruction = """
     あなたはプロのITジャーナリスト兼編集長です。
     与えられたURLの英語ニュースを読み込み、日本のビジネスパーソン向けに「独自性のある1000文字程度の解説記事」を作成してください。
     
     【重要】必ず以下のマークダウン形式（Jekyllフロントマターを含む）で出力してください。
-    コードブロック（
-```markdown と ```）は付けずに、直接テキストを出力してください。
+    コードブロック（```markdown と ```）は付けずに、直接テキストを出力してください。
+    ※各項目の「:」の後には必ず半角スペースを1つ入れてください！
     
     ---
     layout: post
     title: "日本語の魅力的なタイトル（30文字以内）"
+    slug: "english-short-title-for-url-like-this"
     categories: [ここに最適なカテゴリを1つ（例: AI, セキュリティ, ガジェット, ビジネス, 開発）]
     tags: [タグ1, タグ2, タグ3]
     ---
 
     ## ニュースの要約（3行で簡潔に）
-    * 
-    * 
-    * 
-    
-    ## 詳細な背景と技術解説
+    * * * ## 詳細な背景と技術解説
     （ここにニュースの詳細な内容を、専門用語を噛み砕いて分かりやすく記述してください）
     
     ## 日本市場・ビジネスへの影響（考察）
-    （ここが最も重要です。このニュースが日本の読者やビジネスにどう影響するか、あなたのプロとしての独自考察を深く記述してください）
+    （このニュースが日本の読者やビジネスにどう影響するか、あなたのプロとしての独自考察を深く記述してください）
     
     [元記事はこちら]({URL})
     """
@@ -140,9 +145,7 @@ async def main():
             async for chunk in response:
                 full_ai_text += chunk.text
             
-            # Markdownのコードブロックタグが誤って出力された場合を除去
             clean_text = full_ai_text.replace("```markdown\n", "").replace("```", "").strip()
-            
             # AIが「:」の後のスペースを忘れた場合の自動修正（安全装置）
             clean_text = clean_text.replace("tags:[", "tags: [").replace("categories:[", "categories: [")
             
