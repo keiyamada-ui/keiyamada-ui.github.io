@@ -143,6 +143,9 @@ async def main():
             # Markdownのコードブロックタグが誤って出力された場合を除去
             clean_text = full_ai_text.replace("```markdown\n", "").replace("```", "").strip()
             
+            # AIが「:」の後のスペースを忘れた場合の自動修正（安全装置）
+            clean_text = clean_text.replace("tags:[", "tags: [").replace("categories:[", "categories: [")
+            
             upload_to_github(clean_text)
             
         except Exception as e:
