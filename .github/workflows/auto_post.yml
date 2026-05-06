@@ -22,10 +22,13 @@ jobs:
     - name: 3. 必要なツールをインストール
       run: |
         pip install -r requirements.txt
+        pip install requests
 
-    - name: 4. AI記事作成＆アップロードを実行！
+    - name: 4. AI記事作成＆SNS投稿＆アップロードを実行！
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+        THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+        THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
       run: |
         python auto_curator.py
