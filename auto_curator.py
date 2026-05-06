@@ -109,8 +109,17 @@ def upload_to_github(ai_generated_markdown):
         if snippet_match:
             snippet = snippet_match.group(1)[:80] + "..." # 長すぎないようにカット
             
-        # 記事のURLを組み立てる（Jekyllの標準URLフォーマット）
-        article_url = f"https://{GITHUB_REPO.split('/')[0]}.github.io/{now.strftime('%Y/%m/%d')}/{safe_slug}.html"
+        # 【追加】カテゴリを抽出してURLのパスを作る
+        import urllib.parse
+        category_match = re.search(r'categories:\s*\[(.*?)\]', ai_generated_markdown)
+        category_path = ""
+        if category_match:
+            first_category = category_match.group(1).split(',')[0].strip().replace('"', '').replace("'", "").lower()
+            if first_category:
+                category_path = f"{urllib.parse.quote(first_category)}/"
+                
+        # 【修正】記事のURLを組み立てる（カテゴリ付きに対応）
+        article_url = f"https://{GITHUB_REPO.split('/')[0]}.github.io/{category_path}{now.strftime('%Y/%m/%d')}/{safe_slug}.html"
         
         # ご要望のSNSフォーマットを作成！
         sns_text = f"『{article_title}』\n\n{snippet}\n\n続きはこちら👇\n{article_url}\n\n#AI #ニュース #Tech"
