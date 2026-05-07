@@ -176,9 +176,16 @@ async def main():
             full_ai_text = ""
             async for chunk in response: full_ai_text += chunk.text
             
+            # --- (前略) ---
             clean_text = full_ai_text.replace("```markdown\n", "").replace("```", "").strip()
             clean_text = clean_text.replace("tags:[", "tags: [").replace("categories:[", "categories: [")
+            
+            # 【ここを追加！】記事の最後に情報源のリンクを強制的に付与する
+            source_link_text = f"\n\n---\n**情報源:** [{news.get('source', '元記事')}]({news['link']})\n"
+            clean_text += source_link_text
+            
             upload_to_github(clean_text)
+            # --- (後略) ---
             
         except Exception as e:
             print(f"❌ エラー: {e}")
