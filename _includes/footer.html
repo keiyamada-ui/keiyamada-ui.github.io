@@ -1,0 +1,15 @@
+<footer class="site-footer h-card" style="border-top: 1px solid #e8e8e8; padding: 30px 0;">
+  <div class="wrapper">
+    <div class="footer-links" style="text-align: center; margin-bottom: 20px;">
+      {%- for path in site.pages -%}
+        {%- if path.title -%}
+          <a class="page-link" href="{{ path.url | relative_url }}" style="margin: 0 15px; font-size: 14px; color: #555;">{{ path.title | escape }}</a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+    
+    <p style="text-align: center; font-size: 12px; color: #999; margin: 0;">
+      &copy; {{ site.time | date: "%Y" }} {{ site.title | escape }}. All rights reserved.
+    </p>
+  </div>
+</footer>
