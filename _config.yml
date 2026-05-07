@@ -2,3 +2,9 @@ theme: minima
 title: AIニュース自動生成ブログ
 timezone: Asia/Tokyo
 future: true
+title: AI Tech News Curator
+description: 世界中の最新AI・テクノロジーニュースをAIが日本語で要約・解説
+url: "https://keiyamada-ui.github.io"
+author: aitech_news_curator
+twitter:
+  username: aitechnewscurator
