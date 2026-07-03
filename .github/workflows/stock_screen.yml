@@ -1,0 +1,95 @@
+name: Stock Screen (手動ボタン)
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: 'スクリーニング条件を選択'
+        required: true
+        default: 'quality'
+        type: choice
+        options:
+          - quality
+          - value
+          - growth
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: スクリーニング実行
+        env:
+          FINANCIAL_DATASETS_API_KEY: ${{ secrets.FINANCIAL_DATASETS_API_KEY }}
+          PRESET: ${{ github.event.inputs.preset }}
+        run: |
+          python - <<'PY'
+          import os, datetime, requests, sys
+          API = "https://api.financialdatasets.ai"
+          KEY = os.environ["FINANCIAL_DATASETS_API_KEY"]
+          PRESET = os.environ.get("PRESET", "quality")
+          PRESETS = {
+              "quality": [
+                  {"field": "return_on_equity", "operator": "gte", "value": 0.15},
+                  {"field": "debt_to_equity", "operator": "lte", "value": 0.5},
+                  {"field": "net_margin", "operator": "gte", "value": 0.10},
+                  {"field": "price_to_earnings_ratio", "operator": "lte", "value": 25},
+              ],
+              "value": [
+                  {"field": "price_to_earnings_ratio", "operator": "lte", "value": 15},
+                  {"field": "price_to_book_ratio", "operator": "lte", "value": 2},
+                  {"field": "return_on_equity", "operator": "gte", "value": 0.10},
+              ],
+              "growth": [
+                  {"field": "revenue_growth", "operator": "gte", "value": 0.15},
+                  {"field": "return_on_equity", "operator": "gte", "value": 0.15},
+                  {"field": "net_margin", "operator": "gte", "value": 0.08},
+              ],
+          }
+          filters = PRESETS[PRESET]
+          body = {"filters": filters, "period": "ttm", "limit": 50, "order_by": "-report_period"}
+          res = requests.post(f"{API}/financials/search",
+                              headers={"X-API-KEY": KEY, "Content-Type": "application/json"},
+                              json=body, timeout=30)
+          if res.status_code != 200:
+              print(f"APIエラー {res.status_code}: {res.text[:300]}")
+              sys.exit(1)
+          rows = res.json().get("search_results", [])
+
+          def fmt(v, pct=False):
+              if v is None: return "-"
+              try: return f"{v*100:.1f}%" if pct else f"{v:.2f}"
+              except Exception: return str(v)
+
+          rows.sort(key=lambda x: (x.get("return_on_equity") is not None,
+                                   x.get("return_on_equity") or 0), reverse=True)
+          today = datetime.date.today().isoformat()
+          lines = [f"# 株式スクリーニング結果 ({today})", "",
+                   f"- プリセット: **{PRESET}**", f"- 合致銘柄数: {len(rows)}", "",
+                   "| 順位 | ティッカー | ROE | PER | 負債比率 | 純利益率 |",
+                   "|---|---|---|---|---|---|"]
+          for i, r in enumerate(rows, 1):
+              lines.append(f"| {i} | {r.get('ticker','?')} | "
+                           f"{fmt(r.get('return_on_equity'), pct=True)} | "
+                           f"{fmt(r.get('price_to_earnings_ratio'))} | "
+                           f"{fmt(r.get('debt_to_equity'))} | "
+                           f"{fmt(r.get('net_margin'), pct=True)} |")
+          lines += ["", "> ⚠️ 投資判断は自己責任で行ってください。"]
+          os.makedirs("stock-reports", exist_ok=True)
+          with open(f"stock-reports/report_{today}.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines))
+          print(f"完了: {len(rows)}銘柄")
+          PY
+      - name: レポートをコミット
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add stock-reports/
+          git commit -m "Stock screen ($PRESET) $(date +%F)" || echo "変更なし"
+          git push
+        env:
+          PRESET: ${{ github.event.inputs.preset }}
