@@ -8,3 +8,5 @@ url: "https://keiyamada-ui.github.io"
 author: aitech_news_curator
 twitter:
   username: aitechnewscurator
+exclude:
+  - skills-lock.json
