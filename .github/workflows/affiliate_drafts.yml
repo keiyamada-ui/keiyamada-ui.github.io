@@ -1,0 +1,100 @@
+name: ことり 投稿下書き
+
+on:
+  schedule:
+    # 毎朝 日本時間 6:15 に実行（GitHub は UTC なので 9 時間引いて 21:15）
+    - cron: '15 21 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'drafts = 下書きを作る / check-api = 楽天APIの接続確認だけ'
+        type: choice
+        options: [drafts, check-api]
+        default: drafts
+      pillar:
+        description: 'テーマを指定（空欄なら日付で自動）: kids_learning / kids_books / family_travel / sale_prep'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: affiliate-drafts
+  cancel-in-progress: false
+
+jobs:
+  drafts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 1. リポジトリを読み込む
+        uses: actions/checkout@v4
+
+      - name: 2. Python を準備する
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 3. 必要なツールをインストール
+        run: pip install -r _affiliate/requirements.txt
+
+      - name: 4. 仕組みの自己テスト
+        run: python -m pytest -q _affiliate/tests
+
+      - name: 5. 楽天APIの接続確認
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'check-api'
+        env:
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+        run: python _affiliate/generate_drafts.py --check-api
+
+      - name: 5. 下書きを作る
+        id: generate
+        if: github.event_name == 'schedule' || inputs.mode == 'drafts'
+        env:
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # この Secret を登録すると、自動的に Claude に切り替わる
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PILLAR: ${{ inputs.pillar }}
+        run: |
+          if [ -n "$PILLAR" ]; then
+            python _affiliate/generate_drafts.py --pillar "$PILLAR"
+          else
+            python _affiliate/generate_drafts.py
+          fi
+
+      - name: 6. 確認用の PR を作る
+        if: steps.generate.outcome == 'success'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: drafts/${{ github.run_id }}
+          add-paths: |
+            _affiliate/drafts/*.md
+            _affiliate/data/history/*.json
+          commit-message: '投稿下書きを追加'
+          title: ${{ steps.generate.outputs.title }}
+          body-path: ${{ steps.generate.outputs.draft_path }}
+          delete-branch: true
+
+      - name: 失敗したら Issue で知らせる
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "⚠️ 投稿下書きの作成に失敗しました（$(TZ=Asia/Tokyo date +%Y-%m-%d)）" \
+            --body "毎朝の下書き作成が失敗しました。エラーの内容はこちらで確認できます:
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          よくある原因:
+          - 楽天の applicationId / accessKey / アフィリエイトID が Secrets に未登録、または間違っている
+          - Gemini / Claude の API キーが未登録、または期限切れ
+          - 楽天 API の URL（_affiliate/config.yaml）が変わった"
