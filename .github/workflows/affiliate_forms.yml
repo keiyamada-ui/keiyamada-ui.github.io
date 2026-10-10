@@ -9,6 +9,10 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
 jobs:
   # 「この商品を紹介したい」フォーム → その商品の下書き PR を作る
   recommend:
@@ -40,8 +44,21 @@ jobs:
       - name: ラベルを用意する
         run: gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
 
+      - name: 自動投稿モード：下書きを保存して、夜の枠で投稿されるようにする
+        if: steps.generate.outputs.auto_post == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/drafts _affiliate/data
+          git commit -m "推し商品の下書きを追加（#$ISSUE_NUMBER）" || echo "保存する変更なし"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "✅ 下書きができました。夜（20時ごろ）の PR 投稿の枠で、優先して自動投稿します（PR 投稿の開始日・間隔のルールに従います）。
+          下書き: ${{ github.server_url }}/${{ github.repository }}/tree/main/_affiliate/drafts"
+          gh issue close "$ISSUE_NUMBER" --repo "${{ github.repository }}"
+
       - name: 確認用の PR を作る
         id: pr
+        if: steps.generate.outputs.auto_post != 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: drafts/item-${{ github.event.issue.number }}
@@ -55,6 +72,7 @@ jobs:
           delete-branch: true
 
       - name: Issue に結果を書いて閉じる
+        if: steps.generate.outputs.auto_post != 'true'
         env:
           PR_URL: ${{ steps.pr.outputs.pull-request-url }}
         run: |

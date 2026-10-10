@@ -1,0 +1,45 @@
+name: ことり Threads の接続確認
+
+# 毎週、Threads につながるかと、トークン（60日で切れる）の期限が近くないかを確認する。
+# 問題があれば Issue で知らせる。
+on:
+  schedule:
+    - cron: '7 18 * * 0'   # 毎週月曜 日本時間 3:07
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+
+      - name: Threads につながるか・トークンの期限を確認する
+        id: check
+        run: python _affiliate/autopost.py --check
+
+      - name: 期限が近ければ知らせる
+        if: steps.check.outputs.token_warning != ''
+        env:
+          WARNING: ${{ steps.check.outputs.token_warning }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "🔑 Threads のトークンの更新が必要です" --body "$WARNING"
+
+      - name: つながらなければ知らせる
+        if: failure()
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "⚠️ Threads につながりません（自動投稿が止まっています）" \
+            --body "トークンの期限切れ、またはアカウントの制限が考えられます。
+          詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

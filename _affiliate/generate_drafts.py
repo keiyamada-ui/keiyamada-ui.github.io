@@ -305,6 +305,22 @@ def save_draft(body, filename):
     return path
 
 
+def save_post_data(md_path, title, kind, today, result, errors, warnings, chosen):
+    """自動投稿用に、投稿文だけを機械が読める形（JSON）でも保存する。"""
+    data = {
+        "date": today.isoformat(), "title": title, "kind": kind,
+        "errors": errors, "warnings": warnings,
+        "chosen": {k: chosen.get(k) for k in ("source", "id", "name", "url", "is_hidden_gem")},
+        "posts": [{"type": p["type"], "angle": p["angle"], "text": p["text"],
+                   "thread_parts": p.get("thread_parts") or [],
+                   "reply_text": p.get("reply_text_with_link", "")} for p in result["posts"]],
+        "room_comment": result["room_comment"],
+    }
+    path = Path(md_path).with_suffix(".json")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 # ---------------------------------------------------------------- 各モード
 
 def run_daily(config, today, client, generate, args):
@@ -335,6 +351,7 @@ def run_daily(config, today, client, generate, args):
     body = render(today, title, theme, analysis, chosen, candidates, result, errors, warn1 + warnings, notes,
                   generate.label)
     path = save_draft(body, f"{today.isoformat()}.md")
+    save_post_data(path, title, "daily", today, result, errors, warn1 + warnings, chosen)
     if not args.dry_run:
         selector.save_history_entry(DATA / "history", {
             "date": today.isoformat(), "source": chosen["source"], "id": chosen["id"], "name": chosen["name"],
@@ -357,6 +374,7 @@ def run_item(config, today, client, generate, args):
                   generate.label)
     suffix = os.environ.get("ISSUE_NUMBER", "manual")
     path = save_draft(body, f"{today.isoformat()}-item-{suffix}.md")
+    save_post_data(path, title, "item", today, result, errors, warn1 + warnings, chosen)
     if not args.dry_run:
         selector.save_history_entry(DATA / "history", {
             "date": today.isoformat(), "source": chosen["source"], "id": chosen["id"], "name": chosen["name"],
@@ -469,7 +487,8 @@ def main(argv=None):
         title, path = run_item(config, today, client, generate, args)
     else:
         title, path = run_daily(config, today, client, generate, args)
-    write_output(title=title, draft_path=path, notice=generate.notice)
+    write_output(title=title, draft_path=path, notice=generate.notice,
+                 auto_post="true" if config.get("auto_post", {}).get("enabled") else "false")
     return 0
 
 
