@@ -1,0 +1,42 @@
+[
+  {
+    "date": "2026-10-11",
+    "source": "travel",
+    "id": "161050",
+    "name": "日和（ひより）ホテル舞浜",
+    "theme_id": "41f8a68063",
+    "theme": "浦安",
+    "origin": "固定",
+    "hidden_gem": false
+  },
+  {
+    "date": "2026-10-11",
+    "source": "books",
+    "id": "9784791630202",
+    "name": "小学生おもしろ学習シリーズ 完全版　ことわざ・四字熟語・慣用句大辞典1120",
+    "theme_id": "d0abbd2194",
+    "theme": "図鑑 小学生",
+    "origin": "手動投稿ストック",
+    "hidden_gem": false
+  },
+  {
+    "date": "2026-10-11",
+    "source": "books",
+    "id": "9784092274020",
+    "name": "小学生のためのドラえもん読解力をつけることば図鑑",
+    "theme_id": "",
+    "theme": "",
+    "origin": "楽天ROOM",
+    "hidden_gem": false
+  },
+  {
+    "date": "2026-10-11",
+    "source": "books",
+    "id": "9784791630363",
+    "name": "小学生おもしろ学習シリーズ 完全版日本の歴史人物大事典",
+    "theme_id": "",
+    "theme": "",
+    "origin": "楽天ROOM",
+    "hidden_gem": false
+  }
+]
