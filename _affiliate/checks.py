@@ -46,7 +46,7 @@ def _ng_hits(text):
     return [(w, reason) for w, reason in NG_WORDS.items() if w in text]
 
 
-def check_posts(posts):
+def check_posts(posts, room_comment=None, owner_note=None):
     errors, warnings = [], []
     pr_posts = [p for p in posts if p.get("type") == "pr"]
     value_posts = [p for p in posts if p.get("type") == "value"]
@@ -68,11 +68,24 @@ def check_posts(posts):
         if URL_PATTERN.search(text) or LINK_PLACEHOLDER in text:
             errors.append(f"{label}: 本文にリンクが入っています（リンクは自分の投稿への返信に1つだけ）")
 
-        for word, reason in _ng_hits(text + reply):
+        parts = post.get("thread_parts") or []
+        if post.get("type") == "pr" and parts:
+            errors.append(f"{label}: PR投稿はツリーにしないでください")
+        if len(parts) > 5:
+            errors.append(f"{label}: ツリーが長すぎます（{len(parts)}個、5個まで）")
+        for i, part in enumerate(parts, 2):
+            if len(part) > THREADS_MAX_CHARS:
+                errors.append(f"{label}: ツリー{i}つ目が{len(part)}文字です（上限{THREADS_MAX_CHARS}文字）")
+            if URL_PATTERN.search(part) or LINK_PLACEHOLDER in part:
+                errors.append(f"{label}: ツリー{i}つ目にリンクが入っています")
+
+        whole = "\n".join([text, reply, *parts])
+        for word, reason in _ng_hits(whole):
             errors.append(f"{label}: NGワード「{word}」— {reason}")
         for word in EXPERIENCE_WORDS:
-            if word in text + reply:
-                warnings.append(f"{label}: 「{word}」は体験談の表現です。実際に使った・泊まった場合だけ残してください")
+            if word in whole:
+                hint = "メモの内容と合っているか確認してください" if owner_note else "実際に使った・泊まった場合だけ残してください"
+                warnings.append(f"{label}: 「{word}」は体験談の表現です。{hint}")
 
         if post.get("type") == "value" and reply.strip():
             errors.append(f"{label}: リンクなし投稿に返信用の文が入っています")
@@ -89,5 +102,17 @@ def check_posts(posts):
                 errors.append(f"{label}: 返信用の文に置き場所以外のリンクが入っています")
             if len(reply.replace(LINK_PLACEHOLDER, "x" * 60)) > THREADS_MAX_CHARS:
                 errors.append(f"{label}: 返信用の文が長すぎます")
+
+    if room_comment is not None:
+        if not room_comment.strip():
+            errors.append("楽天ROOM: コメントが空です")
+        if URL_PATTERN.search(room_comment) or LINK_PLACEHOLDER in room_comment:
+            errors.append("楽天ROOM: コメントにリンクが入っています（ROOMは商品に直接つながるので不要）")
+        if "#PR" not in room_comment:
+            errors.append("楽天ROOM: コメントに「#PR」がありません")
+        if len(room_comment) > THREADS_MAX_CHARS:
+            errors.append(f"楽天ROOM: コメントが{len(room_comment)}文字です（{THREADS_MAX_CHARS}文字まで）")
+        for word, reason in _ng_hits(room_comment):
+            errors.append(f"楽天ROOM: NGワード「{word}」— {reason}")
 
     return errors, warnings

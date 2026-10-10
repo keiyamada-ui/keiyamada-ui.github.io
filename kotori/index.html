@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>ことり 管理画面</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ことり">
+<meta name="theme-color" content="#FFC83C">
+<style>
+  :root {
+    --bg: #FFF8E6; --card: #FFFFFF; --text: #3A2E1F; --sub: #7A6A55; --line: #F0E2C0;
+    --accent: #F5A623; --accent-bg: #FFF0CC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1E1A14; --card: #2A241B; --text: #F5EBDD; --sub: #BFAF98; --line: #3D3427;
+            --accent: #FFC83C; --accent-bg: #3A3020; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
+  header img { width: 48px; height: 48px; border-radius: 12px; }
+  h1 { font-size: 20px; margin: 0; }
+  header p { margin: 2px 0 0; color: var(--sub); font-size: 13px; }
+  h2 { font-size: 13px; color: var(--sub); margin: 24px 4px 8px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  a.btn { display: flex; flex-direction: column; gap: 6px; padding: 16px 14px; min-height: 96px;
+          background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+          color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  a.btn:active { transform: scale(0.98); }
+  a.btn.main { grid-column: 1 / -1; background: var(--accent-bg); border-color: var(--accent); min-height: 84px; }
+  .icon { font-size: 26px; line-height: 1; }
+  .label { font-weight: 700; font-size: 15px; }
+  .desc { color: var(--sub); font-size: 12px; line-height: 1.4; }
+  footer { margin-top: 28px; color: var(--sub); font-size: 11px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="">
+  <div>
+    <h1>ことり 管理画面</h1>
+    <p>子育て家族の"買ってよかった"まとめ</p>
+  </div>
+</header>
+
+<h2>毎日</h2>
+<div class="grid">
+  <a class="btn main" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/pulls?q=is%3Apr+is%3Aopen+label%3A%E4%B8%8B%E6%9B%B8%E3%81%8D">
+    <span class="icon">📝</span><span class="label">今日の下書きを見る</span>
+    <span class="desc">読んで Threads・ROOM に投稿 → Merge（使わない日は Close）</span></a>
+  <a class="btn" href="https://www.threads.com/@kotori.family">
+    <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
+  <a class="btn" href="https://room.rakuten.co.jp/">
+    <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">コメントを貼って投稿</span></a>
+</div>
+
+<h2>ネタを入れる</h2>
+<div class="grid">
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues/new?template=recommend.yml">
+    <span class="icon">🛒</span><span class="label">推し商品を紹介</span>
+    <span class="desc">楽天のURLを貼るだけ</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues/new?template=reference.yml">
+    <span class="icon">⭐</span><span class="label">参考投稿を登録</span>
+    <span class="desc">伸びている投稿の型を学ぶ</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues?q=is%3Aissue+is%3Aopen+label%3A%E5%8B%9D%E3%81%A1%E3%83%91%E3%82%BF%E3%83%BC%E3%83%B3">
+    <span class="icon">🏆</span><span class="label">勝ちパターン一覧</span>
+    <span class="desc">外したい型は Close</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/actions/workflows/affiliate_drafts.yml">
+    <span class="icon">▶️</span><span class="label">今すぐ下書きを作る</span>
+    <span class="desc">「Run workflow」を押す</span></a>
+</div>
+
+<h2>確認・設定</h2>
+<div class="grid">
+  <a class="btn" href="https://affiliate.rakuten.co.jp/">
+    <span class="icon">💴</span><span class="label">楽天アフィリエイト</span>
+    <span class="desc">クリック数・売上のレポート</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues?q=is%3Aissue+is%3Aopen">
+    <span class="icon">🔔</span><span class="label">お知らせ</span>
+    <span class="desc">失敗・AI切り替えの通知</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/config.yaml">
+    <span class="icon">⚙️</span><span class="label">テーマ・条件の設定</span>
+    <span class="desc">ジャンルの追加など</span></a>
+  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/tree/main/_affiliate/data/themes">
+    <span class="icon">🧭</span><span class="label">今月のテーマ</span>
+    <span class="desc">AI が考えた悩みテーマ</span></a>
+</div>
+
+<footer>
+  ホーム画面に追加: Safari の共有ボタン →「ホーム画面に追加」／ Chrome のメニュー →「ホーム画面に追加」<br>
+  このページにはリンクだけを置いています（鍵や売上の数字は載せていません）。
+</footer>
+</body>
+</html>

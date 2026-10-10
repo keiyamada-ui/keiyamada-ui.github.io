@@ -6,7 +6,9 @@
 - 「Webアプリケーション」タイプのため、登録したサイトを Referer / Origin で名乗る
 """
 
+import re
 import time
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
@@ -86,6 +88,58 @@ class RakutenClient:
             return [normalize_travel(h) for h in _hotels(data)]
         raise RakutenError(f"未対応の source です: {source}")
 
+    def ranking_codes(self, genre_id):
+        """ジャンル別ランキングに入っている商品コード → 順位。"""
+        data = self._get("ranking", {"genreId": genre_id})
+        return {i.get("itemCode"): _num(i.get("rank"), int) for i in _items(data, "Items", "Item")}
+
+    def lookup(self, url, isbn=None):
+        """推し商品フォームに貼られた URL（または ISBN）から、その商品1件を取る。"""
+        if isbn:
+            data = self._get("books", {"isbnjan": re.sub(r"[^0-9Xx]", "", isbn)})
+            items = [normalize_books(i) for i in _items(data, "Items", "Item")]
+        else:
+            kind, key = parse_product_url(resolve_url(url, self.session))
+            if kind == "ichiba":
+                data = self._get("ichiba", {"itemCode": key})
+                items = [normalize_ichiba(i) for i in _items(data, "Items", "Item")]
+            elif kind == "travel":
+                data = self._get("travel_hotel", {"hotelNo": key, "responseType": "middle"})
+                items = [normalize_travel(h) for h in _hotels(data)]
+            else:
+                raise RakutenError("楽天ブックスの本は、URL ではなく ISBN（本の裏の978から始まる番号）を入力してください")
+        if not items:
+            raise RakutenError(f"楽天でこの商品が見つかりませんでした: {url or isbn}")
+        return items[0]
+
+
+def resolve_url(url, session=None):
+    """楽天アプリの短縮URLやアフィリエイトURLを、元の商品ページのURLに戻す。"""
+    url = url.strip()
+    host = urlparse(url).netloc
+    if host == "hb.afl.rakuten.co.jp":
+        pc = parse_qs(urlparse(url).query).get("pc")
+        if pc:
+            return unquote(pc[0])
+    if host in ("a.r10.to", "r10.to") or host.endswith(".r10.to"):
+        res = (session or requests).get(url, allow_redirects=True, timeout=30)
+        return res.url
+    return url
+
+
+def parse_product_url(url):
+    parsed = urlparse(url)
+    host, parts = parsed.netloc, [p for p in parsed.path.split("/") if p]
+    if host == "item.rakuten.co.jp" and len(parts) >= 2:
+        return "ichiba", f"{parts[0]}:{parts[1]}"
+    if host.endswith("travel.rakuten.co.jp"):
+        numbers = [p for p in parts if p.isdigit()]
+        if numbers:
+            return "travel", numbers[0]
+    if host == "books.rakuten.co.jp":
+        return "books", None
+    raise RakutenError(f"楽天市場・楽天トラベルの商品ページのURLではないようです: {url}")
+
 
 def _items(data, list_key, wrap_key):
     """formatVersion 1（{"Item": {...}} で包まれる）と 2 の両方に対応する。"""
@@ -148,6 +202,8 @@ def normalize_ichiba(item):
         "shop": item.get("shopName", ""),
         "caption": _clip(item.get("itemCaption")),
         "image": _first_image(item.get("mediumImageUrls")),
+        "affiliate_rate": _num(item.get("affiliateRate")) or None,
+        "genre_id": str(item.get("genreId", "") or ""),
     }
 
 

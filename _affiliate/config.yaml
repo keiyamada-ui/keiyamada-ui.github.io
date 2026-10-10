@@ -19,6 +19,10 @@ rakuten:
     ichiba: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
     books: https://openapi.rakuten.co.jp/services/api/BooksTotal/Search/20170404
     travel: https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20260731
+    # 推し商品フォームで宿のURLが貼られたとき、宿番号で1件を取る
+    travel_hotel: https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20260731
+    # ジャンル別ランキング（需要の判定に使う。つながらなくても下書きは作れる）
+    ranking: https://openapi.rakuten.co.jp/ichibaranking/api/IchibaItem/Ranking/20220601
   # 楽天の利用規約上、1秒に1回程度まで
   min_interval_seconds: 1.2
 
@@ -28,10 +32,37 @@ filters:
   min_review_average: 4.0
   # 同じ商品を再び紹介するまでに空ける日数
   reuse_after_days: 60
-  # AI に渡す候補の数
-  max_candidates: 3
+  # AI に渡す候補の数（AI が5つの基準で採点して1つ選ぶ）
+  max_candidates: 5
 
-# 投稿のテーマ（柱）。日付に応じて順番に切り替わる。
+# 発掘枠: まだ知られていない高評価アイテムを探す日（0=月曜 … 6=日曜）
+hidden_gems:
+  weekdays: [2, 5]
+  min_review_average: 4.5
+  min_review_count: 5
+  max_review_count: 60
+
+# 点数付けの重み（合計1になるように）
+scoring:
+  weights:
+    demand: 0.30      # 需要（レビュー件数・ランキング）
+    quality: 0.25     # 評価の高さ
+    profit: 0.25      # 1件売れたときの報酬の目安（価格×料率）
+    trend: 0.20       # 勢い（レビュー数の伸び）
+  # 料率が取れない場合の目安（%）。楽天アフィリエイトの料率表で確認して調整する
+  default_affiliate_rate:
+    ichiba: 2.0
+    books: 2.0
+    travel: 1.0
+
+# 悩み起点のテーマ
+themes:
+  # AI が月に1回、季節・行事・生活の悩みからテーマを考えて保存する数
+  monthly_count: 30
+  # 同じテーマを再び使うまでに空ける日数
+  reuse_after_days: 21
+
+# 固定テーマ（柱）。AI が考えたテーマと混ぜて使う。
 # persona = 「誰が＋どんな条件で探しているか」。AI の書き出しの軸になる。
 pillars:
   - id: kids_learning

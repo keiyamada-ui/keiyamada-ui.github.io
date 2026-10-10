@@ -1,0 +1,104 @@
+name: ことり フォーム（推し商品・参考投稿）
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  # 「この商品を紹介したい」フォーム → その商品の下書き PR を作る
+  recommend:
+    # 公開リポジトリなので、持ち主が作った Issue だけを受け付ける（他人に AI を使わせない）
+    if: startsWith(github.event.issue.title, '[推し商品]') && github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+
+      - name: 下書きを作る
+        id: generate
+        run: python _affiliate/generate_drafts.py --from-issue
+
+      - name: ラベルを用意する
+        run: gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
+
+      - name: 確認用の PR を作る
+        id: pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: drafts/item-${{ github.event.issue.number }}
+          add-paths: |
+            _affiliate/drafts/*.md
+            _affiliate/data/history/*.json
+          commit-message: '推し商品の下書きを追加'
+          title: ${{ steps.generate.outputs.title }}
+          body-path: ${{ steps.generate.outputs.draft_path }}
+          labels: 下書き
+          delete-branch: true
+
+      - name: Issue に結果を書いて閉じる
+        env:
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "✅ 下書きができました → $PR_URL"
+          gh issue close "$ISSUE_NUMBER" --repo "${{ github.repository }}"
+
+      - name: 失敗したら Issue に書く
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "⚠️ 下書きを作れませんでした。URL が楽天の商品ページか確認してください。
+          詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # 「参考になる投稿を登録」フォーム → AI が型を分析して Issue にコメント、勝ちパターンとして使う
+  reference:
+    if: startsWith(github.event.issue.title, '[参考投稿]') && github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+
+      - name: 投稿を分析する
+        id: analyze
+        run: python _affiliate/generate_drafts.py --analyze-reference
+
+      - name: 分析結果をコメントして、勝ちパターンにする
+        env:
+          COMMENT_PATH: ${{ steps.analyze.outputs.comment_path }}
+        run: |
+          gh label create "勝ちパターン" --color 9FC5E8 --description "毎朝の下書きで参考にする型" --force
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file "$COMMENT_PATH"
+          gh issue edit "$ISSUE_NUMBER" --repo "${{ github.repository }}" --add-label "勝ちパターン"
+
+      - name: 失敗したら Issue に書く
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "⚠️ 分析できませんでした。
+          詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

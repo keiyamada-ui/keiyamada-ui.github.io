@@ -7,14 +7,19 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'drafts = 下書きを作る / check-api = 楽天APIの接続確認だけ'
+        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / check-api = 楽天APIの接続確認'
         type: choice
-        options: [drafts, check-api]
+        options: [drafts, themes, check-api]
         default: drafts
-      pillar:
-        description: 'テーマを指定（空欄なら日付で自動）: kids_learning / kids_books / family_travel / sale_prep'
+      keyword:
+        description: '（任意）テーマを使わず、このキーワードで探す 例: なわとび 子供'
         required: false
         default: ''
+      source:
+        description: 'keyword を使うときの検索先'
+        type: choice
+        options: [ichiba, books, travel]
+        default: ichiba
 
 permissions:
   contents: write
@@ -28,7 +33,17 @@ concurrency:
 jobs:
   drafts:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # この Secret を登録すると Claude を優先して使い、使えないときは Gemini に自動で切り替わる
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # 勝ちパターン（参考投稿の分析結果）を Issue から読むため
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: 1. リポジトリを読み込む
         uses: actions/checkout@v4
@@ -45,32 +60,31 @@ jobs:
         run: python -m pytest -q _affiliate/tests
 
       - name: 5. 楽天APIの接続確認
-        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'check-api'
-        env:
-          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
-          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
-          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+        if: inputs.mode == 'check-api'
         run: python _affiliate/generate_drafts.py --check-api
 
       - name: 5. 下書きを作る
         id: generate
-        if: github.event_name == 'schedule' || inputs.mode == 'drafts'
+        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes'
         env:
-          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
-          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
-          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # この Secret を登録すると、自動的に Claude に切り替わる
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          PILLAR: ${{ inputs.pillar }}
+          MODE: ${{ inputs.mode }}
+          KEYWORD: ${{ inputs.keyword }}
+          SOURCE: ${{ inputs.source }}
         run: |
-          if [ -n "$PILLAR" ]; then
-            python _affiliate/generate_drafts.py --pillar "$PILLAR"
+          if [ "$MODE" = "themes" ]; then
+            python _affiliate/generate_drafts.py --generate-themes
+          elif [ -n "$KEYWORD" ]; then
+            python _affiliate/generate_drafts.py --keyword "$KEYWORD" --source "$SOURCE"
           else
             python _affiliate/generate_drafts.py
           fi
 
-      - name: 6. 確認用の PR を作る
+      - name: 6. ラベルを用意する
+        if: steps.generate.outcome == 'success'
+        run: |
+          gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
+
+      - name: 7. 確認用の PR を作る
         if: steps.generate.outcome == 'success'
         uses: peter-evans/create-pull-request@v7
         with:
@@ -78,15 +92,25 @@ jobs:
           add-paths: |
             _affiliate/drafts/*.md
             _affiliate/data/history/*.json
+            _affiliate/data/themes/*.json
+            _affiliate/data/snapshots/*.json
           commit-message: '投稿下書きを追加'
           title: ${{ steps.generate.outputs.title }}
           body-path: ${{ steps.generate.outputs.draft_path }}
+          labels: 下書き
           delete-branch: true
+
+      - name: AI の切り替えを知らせる
+        if: steps.generate.outputs.notice != ''
+        env:
+          NOTICE: ${{ steps.generate.outputs.notice }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "ℹ️ 今日の下書きは Gemini で作りました（$(TZ=Asia/Tokyo date +%Y-%m-%d)）" \
+            --body "$NOTICE"
 
       - name: 失敗したら Issue で知らせる
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
             --repo "${{ github.repository }}" \
