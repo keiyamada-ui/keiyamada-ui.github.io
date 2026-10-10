@@ -12,6 +12,7 @@ LLM_PROVIDER=gemini / claude で全部を固定することもできる。
 
 import json
 import os
+import time
 
 import requests
 
@@ -28,6 +29,7 @@ CLAUDE_BACKUP_MODEL = "claude-sonnet-5-5"
 WEB_SEARCH_TOOL = {"type": "web_search_20260209", "name": "web_search", "max_uses": 6,
                    "user_location": {"type": "approximate", "country": "JP", "timezone": "Asia/Tokyo"}}
 MAX_CONTINUATIONS = 4
+GEMINI_RETRY_WAITS = [10, 30, 60]
 
 
 class LLMError(RuntimeError):
@@ -59,9 +61,15 @@ def _call_gemini(system, user, schema=None, search=False):
     if search:
         body["tools"] = [{"google_search": {}}]
     body["contents"] = [{"role": "user", "parts": [{"text": user}]}]
-    res = requests.post(GEMINI_URL.format(model=GEMINI_MODEL),
-                        headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                        json=body, timeout=300)
+    for wait in GEMINI_RETRY_WAITS + [None]:
+        res = requests.post(GEMINI_URL.format(model=GEMINI_MODEL),
+                            headers={"x-goog-api-key": key, "Content-Type": "application/json"},
+                            json=body, timeout=300)
+        # 混雑（429/503）や一時的な不具合（500）は、少し待ってやり直す
+        if res.status_code not in (429, 500, 502, 503, 504) or wait is None:
+            break
+        print(f"⏳ Gemini が混雑しています（HTTP {res.status_code}）。{wait}秒待ってやり直します")
+        time.sleep(wait)
     if res.status_code != 200:
         raise LLMError(f"Gemini API がエラーを返しました: HTTP {res.status_code} {res.text[:300]}")
     data = res.json()

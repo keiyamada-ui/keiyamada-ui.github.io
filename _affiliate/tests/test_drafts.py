@@ -315,6 +315,24 @@ def test_casual_falls_back_to_claude_sonnet(monkeypatch):
     assert models == ["claude-sonnet-5-5"]
 
 
+def test_gemini_retries_when_busy(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "y")
+    monkeypatch.setattr(llm.time, "sleep", lambda s: None)
+    statuses = [503, 429, 200]
+
+    class R:
+        def __init__(self, status):
+            self.status_code, self.text = status, "busy"
+
+        def json(self):
+            return {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
+    monkeypatch.setattr(llm.requests, "post", lambda *a, **k: R(statuses.pop(0)))
+    assert llm._call_gemini("s", "u") == "ok" and statuses == []
+    statuses[:] = [503] * 4
+    with pytest.raises(llm.LLMError):
+        llm._call_gemini("s", "u")
+
+
 def test_gemini_when_no_claude_key(monkeypatch):
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
