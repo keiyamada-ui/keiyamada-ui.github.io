@@ -1,0 +1,100 @@
+name: ことり 自動投稿
+
+on:
+  schedule:
+    # 日本時間 7:40・12:20・20:10（GitHub は UTC なので 9 時間引く）。実行時にさらに 0〜15 分ずらす
+    - cron: '40 22 * * *'
+    - cron: '20 3 * * *'
+    - cron: '10 11 * * *'
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'auto = 今の時間帯 / 1 = 朝（リンクなし1） / 2 = 昼（リンクなし2） / 3 = 夜（PR） / check = Threads の接続確認'
+        type: choice
+        options: [auto, '1', '2', '3', check]
+        default: auto
+      dry_run:
+        description: '投稿せず、何を投稿するかだけ表示する'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+
+      - name: Threads の接続確認
+        if: inputs.slot == 'check'
+        run: python _affiliate/autopost.py --check
+
+      - name: 投稿時刻を少しずらす（毎日同じ時刻にならないように）
+        if: github.event_name == 'schedule'
+        run: sleep $((RANDOM % 900))
+
+      - name: 投稿する
+        id: post
+        if: inputs.slot != 'check'
+        env:
+          SLOT: ${{ inputs.slot || 'auto' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          git pull -q origin main
+          if [ "$DRY_RUN" = "true" ]; then
+            python _affiliate/autopost.py --slot "$SLOT" --dry-run
+          else
+            python _affiliate/autopost.py --slot "$SLOT"
+          fi
+
+      - name: 投稿の記録を保存する
+        if: always() && steps.post.outcome != 'skipped' && inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/posted
+          git commit -m "投稿の記録を追加" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+
+      - name: 今日のレポートにコメントする
+        if: steps.post.outcome == 'success' && steps.post.outputs.report != ''
+        env:
+          REPORT: ${{ steps.post.outputs.report }}
+          DAY: ${{ steps.post.outputs.date }}
+        run: |
+          gh label create "投稿レポート" --color B6D7A8 --description "自動投稿の結果" --force
+          num=$(gh issue list --repo "${{ github.repository }}" --label "投稿レポート" --state all --limit 30 \
+                --json number,title --jq "map(select(.title | endswith(\"$DAY\"))) | .[0].number // empty")
+          if [ -z "$num" ]; then
+            gh issue create --repo "${{ github.repository }}" --label "投稿レポート" \
+              --title "📣 ことり 今日の投稿 $DAY" --body "$REPORT"
+          else
+            gh issue comment "$num" --repo "${{ github.repository }}" --body "$REPORT"
+          fi
+
+      - name: 失敗したら Issue で知らせる
+        if: failure()
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "⚠️ Threads への自動投稿に失敗しました（$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')）" \
+            --body "詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          よくある原因:
+          - Threads のアクセストークン（Secrets の KOTORI_THREADS_TOKEN）が未登録・期限切れ
+          - Threads 側の一時的な不具合（次の枠で自動的にやり直します）
+          - アカウントが制限・停止されている（Threads アプリで確認してください）"

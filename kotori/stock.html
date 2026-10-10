@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>手動投稿ストック</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<style>
+  :root {
+    --bg: #FFF8E6; --card: #FFFFFF; --text: #3A2E1F; --sub: #7A6A55; --line: #F0E2C0;
+    --accent: #F5A623; --accent-bg: #FFF0CC; --pr: #D9534F; --pr-bg: #FDECEA; --ok: #3C8D5A; --box: #FBF6EA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1E1A14; --card: #2A241B; --text: #F5EBDD; --sub: #BFAF98; --line: #3D3427;
+            --accent: #FFC83C; --accent-bg: #3A3020; --pr: #FF8A80; --pr-bg: #3D2423; --ok: #7BC896; --box: #231E16; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+         padding: max(12px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
+  header a.back { color: var(--sub); text-decoration: none; font-size: 22px; padding: 4px 6px 4px 0; }
+  h1 { font-size: 19px; margin: 0; }
+  .note { color: var(--sub); font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+  .bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px;
+          padding: 7px 12px; font-size: 13px; font-family: inherit; }
+  .chip[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); font-weight: 700; }
+  .set { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .set-head { display: flex; gap: 10px; align-items: flex-start; }
+  .set-head img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--box); flex: none; }
+  .date { color: var(--sub); font-size: 12px; }
+  .theme { font-weight: 700; font-size: 15px; margin: 2px 0; }
+  .item { font-size: 12px; color: var(--sub); line-height: 1.4; overflow-wrap: anywhere; }
+  .item a { color: inherit; }
+  .warn { background: var(--pr-bg); color: var(--pr); border-radius: 10px; padding: 8px 10px; font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .post { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 12px; }
+  .post.used { opacity: 0.45; }
+  .post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--accent-bg); color: var(--text); }
+  .badge.pr { background: var(--pr-bg); color: var(--pr); }
+  .angle { font-size: 12px; color: var(--sub); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .label { font-size: 11px; color: var(--sub); margin: 8px 0 4px; }
+  .text { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--box); border-radius: 10px; padding: 10px; font-size: 14px; line-height: 1.6; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  button.act, a.act { flex: 1 1 auto; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
+                      color: var(--text); font-size: 13px; font-weight: 600; font-family: inherit; text-decoration: none;
+                      display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
+  button.act.primary { background: var(--accent); border-color: var(--accent); color: #3A2E1F; }
+  button.act.done { color: var(--ok); border-color: var(--ok); }
+  .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
+  #toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+           background: #3A2E1F; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px;
+           opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./" aria-label="管理画面に戻る">‹</a>
+  <h1>✋ 手動投稿ストック</h1>
+</header>
+<p class="note">自動投稿とは別のテーマ・商品で毎朝たまっていきます。コピーして自分の手で投稿し、終わったら「使った」を押してください（この端末に記録されます）。PR 投稿は、リンクを本文ではなく自分の投稿への返信に貼ります。</p>
+<div class="bar">
+  <button class="chip" id="f-unused" aria-pressed="true">未使用だけ</button>
+  <button class="chip" id="f-value" aria-pressed="false">リンクなしだけ</button>
+  <button class="chip" id="f-pr" aria-pressed="false">PR だけ</button>
+</div>
+<main id="list"><p class="empty">読み込み中…</p></main>
+<div id="toast"></div>
+
+<script>
+const SRC = new URLSearchParams(location.search).get("src") ||
+  "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/index.json";
+const KEY = "kotori-used-v1";
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } },
+  set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} },
+};
+let used = store.get();
+let filters = { unused: true, value: false, pr: false };
+let data = { sets: [] };
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } finally { ta.remove(); }
+  }
+  toast("コピーしました");
+}
+
+function el(tag, attrs = {}, children = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) n.append(c);
+  return n;
+}
+
+function textBlock(label, text, withOpen) {
+  const actions = [el("button", { class: "act primary", text: "コピー", onclick: () => copy(text) })];
+  if (withOpen) {
+    actions.push(el("a", { class: "act", text: "Threads で開く", target: "_blank", rel: "noopener",
+      href: "https://www.threads.com/intent/post?text=" + encodeURIComponent(text) }));
+  }
+  return [el("div", { class: "label", text: label }), el("div", { class: "text", text }),
+          el("div", { class: "actions" }, actions)];
+}
+
+function render() {
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  let shown = 0;
+  for (const set of data.sets) {
+    const posts = set.posts.map((p, i) => ({ ...p, key: `${set.id}:${i}` })).filter(p =>
+      (!filters.unused || !used[p.key]) && (!filters.value || p.type === "value") && (!filters.pr || p.type === "pr"));
+    if (!posts.length) continue;
+    shown += posts.length;
+    const item = set.item || {};
+    const head = el("div", { class: "set-head" }, [
+      item.image ? el("img", { src: item.image, alt: "", loading: "lazy" }) : null,
+      el("div", {}, [
+        el("div", { class: "date", text: set.date + (item.is_hidden_gem ? "　💎発掘枠" : "") }),
+        el("div", { class: "theme", text: set.theme }),
+        el("div", { class: "item" }, [
+          item.name ? el("a", { href: item.url, target: "_blank", rel: "noopener", text: item.name.slice(0, 60) }) : null,
+          item.price ? ` ／ ${Number(item.price).toLocaleString()}円・★${item.review_average}（${item.review_count}件）` : "",
+        ]),
+      ]),
+    ]);
+    const card = el("section", { class: "set" }, [head]);
+    const notes = [...(set.errors || []).map(e => "❌ " + e), ...(set.questions || []).map(q => "🙋 " + q)];
+    if (notes.length) card.append(el("div", { class: "warn", text: notes.join("\n") }));
+
+    for (const p of posts) {
+      const isPr = p.type === "pr";
+      const parts = p.thread_parts || [];
+      const box = el("div", { class: "post" + (used[p.key] ? " used" : "") }, [
+        el("div", { class: "post-head" }, [
+          el("span", { class: "badge" + (isPr ? " pr" : ""), text: isPr ? "PR・リンクあり" : "リンクなし" }),
+          el("span", { class: "angle", text: p.angle }),
+        ]),
+      ]);
+      box.append(...textBlock(parts.length ? `本文（ツリー 1/${parts.length + 1}）` : "本文", p.text, true));
+      parts.forEach((t, i) => box.append(...textBlock(`ツリー ${i + 2}/${parts.length + 1}（自分の投稿への返信として）`, t, false)));
+      if (isPr && p.reply_text) box.append(...textBlock("返信（自分の投稿への返信に貼る・リンク入り）", p.reply_text, false));
+      if (isPr && set.room_comment) box.append(...textBlock("楽天ROOM 用コメント", set.room_comment, false));
+      const doneBtn = el("button", { class: "act" + (used[p.key] ? " done" : ""), text: used[p.key] ? "✓ 使った（戻す）" : "使った" });
+      doneBtn.addEventListener("click", () => {
+        if (used[p.key]) delete used[p.key]; else used[p.key] = new Date().toISOString();
+        store.set(used); render();
+        if (used[p.key]) toast("使った印を付けました");
+      });
+      box.append(el("div", { class: "actions" }, [doneBtn]));
+      card.append(box);
+    }
+    list.append(card);
+  }
+  if (!shown) list.append(el("p", { class: "empty", text: data.sets.length ? "条件に合う投稿はありません" : "まだストックがありません（毎朝たまっていきます）" }));
+}
+
+function toggle(id, name, others = []) {
+  document.getElementById(id).addEventListener("click", e => {
+    filters[name] = !filters[name];
+    for (const o of others) { if (filters[name]) { filters[o] = false; document.getElementById("f-" + o).setAttribute("aria-pressed", "false"); } }
+    e.currentTarget.setAttribute("aria-pressed", String(filters[name]));
+    render();
+  });
+}
+toggle("f-unused", "unused");
+toggle("f-value", "value", ["pr"]);
+toggle("f-pr", "pr", ["value"]);
+
+fetch(SRC + (SRC.includes("?") ? "&" : "?") + "t=" + Date.now())
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(j => { data = j; render(); })
+  .catch(() => {
+    document.getElementById("list").replaceChildren(
+      el("p", { class: "empty", text: "まだストックがありません（毎朝たまっていきます）" }));
+  });
+</script>
+</body>
+</html>

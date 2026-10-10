@@ -26,6 +26,25 @@ rakuten:
   # 楽天の利用規約上、1秒に1回程度まで（市場・ブックス・トラベル合わせて数える。余裕を持たせる）
   min_interval_seconds: 2.0
 
+# 自動投稿（Threads）
+auto_post:
+  # false にすると自動投稿を止め、これまでどおり確認用の PR で届く
+  enabled: true
+  # この日より前は、リンク付きの PR 投稿をしない（アカウントを育てる期間）
+  pr_posts_from: 2026-10-24
+  # PR 投稿どうしの間隔（日）。1 にすると毎日
+  pr_min_interval_days: 2
+  # Threads のトークンを Secrets に登録した日。60日で切れるので、50日たったら Issue で知らせる
+  token_updated:
+  # 投稿は1日3回（日本時間 7:40ごろ・12:20ごろ・20:10ごろ、毎回0〜15分ずらす）
+  #   朝 = リンクなし投稿1 / 昼 = リンクなし投稿2 / 夜 = PR 投稿（推し商品フォームの下書きを優先）
+  #   時刻は .github/workflows/affiliate_post.yml の cron で変えられる
+
+# 手動投稿ストック（BAN 対策）: 自動投稿とは別のテーマ・別の商品で、毎朝1セット作ってためておく。
+# スマホの「✋ 手動投稿ストック」ページから選んでコピーし、自分の手で投稿する
+manual_stock:
+  enabled: true
+
 # 商品を候補に残す条件
 filters:
   min_review_count: 20

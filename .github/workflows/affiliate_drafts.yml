@@ -2,8 +2,8 @@ name: ことり 投稿下書き
 
 on:
   schedule:
-    # 毎朝 日本時間 6:15 に実行（GitHub は UTC なので 9 時間引いて 21:15）
-    - cron: '15 21 * * *'
+    # 毎朝 日本時間 5:15 に実行（GitHub は UTC なので 9 時間引いて 20:15）。7:40 の自動投稿に間に合わせる
+    - cron: '15 20 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -27,7 +27,8 @@ permissions:
   issues: write
 
 concurrency:
-  group: affiliate-drafts
+  # 下書き作り・自動投稿・フォームが同時に main に書き込まないよう、順番に動かす
+  group: affiliate-main
   cancel-in-progress: false
 
 jobs:
@@ -83,9 +84,32 @@ jobs:
         if: steps.generate.outcome == 'success'
         run: |
           gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
+          gh label create "投稿レポート" --color B6D7A8 --description "自動投稿の結果" --force
 
-      - name: 7. 確認用の PR を作る
-        if: steps.generate.outcome == 'success'
+      - name: 7a. 自動投稿モード：下書きを保存して、今日のレポートを作る
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.auto_post == 'true'
+        env:
+          TITLE: ${{ steps.generate.outputs.title }}
+          DRAFT_PATH: ${{ steps.generate.outputs.draft_path }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/drafts _affiliate/data _affiliate/manual
+          git commit -m "下書きを追加: $TITLE" || echo "保存する変更なし"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+          day=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          rel=${DRAFT_PATH#"$GITHUB_WORKSPACE/"}
+          gh issue create --repo "${{ github.repository }}" --label "投稿レポート" \
+            --title "📣 ことり 今日の投稿 $day" \
+            --body "$TITLE
+
+          今日の下書き: ${{ github.server_url }}/${{ github.repository }}/blob/main/$rel
+
+          このあと 朝・昼・夜 の3回、自動で Threads に投稿し、結果をこの Issue にコメントします。
+          良くない投稿は Threads アプリで削除してください。自動投稿を止めたいときは _affiliate/config.yaml の auto_post.enabled を false に。"
+
+      - name: 7b. 確認用の PR を作る
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.auto_post != 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: drafts/${{ github.run_id }}
@@ -94,6 +118,7 @@ jobs:
             _affiliate/data/history/*.json
             _affiliate/data/themes/*.json
             _affiliate/data/snapshots/*.json
+            _affiliate/manual/*.json
           commit-message: '投稿下書きを追加'
           title: ${{ steps.generate.outputs.title }}
           body-path: ${{ steps.generate.outputs.draft_path }}
