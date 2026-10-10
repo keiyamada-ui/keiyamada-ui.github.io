@@ -43,6 +43,16 @@ AI は `ANTHROPIC_API_KEY` があれば Claude を使い、残高切れなどで
 投稿したら「使った」を押すと、その端末では一覧から外れます。自動投稿を止めて、手動だけで運用することもできます。
 `config.yaml` の `manual_stock.enabled: false` で作らないようにできます。
 
+## 楽天ROOM（手動）
+
+楽天ROOM には公式の投稿用 API がなく、機械で投稿すると楽天 ID（アフィリエイト報酬の受け取り先）ごと止められる危険があるため、手動で投稿します。
+
+毎朝、ROOM に載せる商品とコメントを `room.per_day`（初期値 3）件まで用意し、`manual/room.json` にためます。
+対象は楽天市場・楽天ブックスの商品だけです（楽天トラベルの宿は ROOM に載せられません）。
+
+管理画面の「🛍️ 楽天ROOM」（`kotori/stock.html#room`）で、上から順に
+「① 商品を開く」→ ROOM に投稿 →「② コメントをコピー」して貼り付け →「③ 投稿した」を押します。
+
 ## スマホから使う
 
 管理画面 https://keiyamada-ui.github.io/kotori/ をホーム画面に追加すると、アプリのように使えます。
@@ -116,7 +126,7 @@ python _affiliate/generate_drafts.py --check-api        # 楽天 API の接続�
 | `autopost.py` / `threads.py` | Threads への自動投稿 |
 | `drafts/` | 下書き（Merge した PR の分が残る） |
 | `data/history/` `data/themes/` `data/snapshots/` `data/posted/` | 紹介履歴・月ごとのテーマ・勢いを測る記録・投稿の記録 |
-| `manual/` | 手動投稿ストック（`index.json` が一覧ページの元データ） |
+| `manual/` | 手動投稿ストック（`index.json`）と楽天ROOM の一覧（`room.json`） |
 | `../kotori/` | スマホ用の管理画面・手動投稿ストックの一覧ページ |
 | `../.github/workflows/affiliate_*.yml` | 毎朝の自動実行・フォームの処理 |
 | `../.github/ISSUE_TEMPLATE/` | 推し商品・参考投稿のフォーム |

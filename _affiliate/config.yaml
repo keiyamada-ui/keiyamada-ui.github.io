@@ -45,6 +45,10 @@ auto_post:
 manual_stock:
   enabled: true
 
+# 楽天ROOM: 毎朝、ROOM に載せる商品とコメントをこの件数まで用意する（楽天市場・楽天ブックスの商品のみ）
+room:
+  per_day: 3
+
 # 商品を候補に残す条件
 filters:
   min_review_count: 20

@@ -361,7 +361,48 @@ def make_manual_stock(config, today, ordered, used_theme, history, pats, search,
         print(f"⚠️ 手動投稿ストックを作れませんでした（自動投稿の下書きはできています）: {e}")
         return None
     save_manual_stock(today, theme, analysis, chosen, result, errors, warn1 + warnings)
-    return theme, chosen
+    return theme, chosen, candidates, result["room_comment"]
+
+
+ROOM_SOURCES = ("ichiba", "books")  # 楽天トラベルの宿は ROOM に載せられない
+ROOM_KEEP = 60
+
+
+def build_room_list(config, today, picked, extras, generate):
+    """ROOM 用の一覧に今日の分を追加する。picked = すでにコメントがある (商品, コメント)、extras = 追加候補。"""
+    per_day = config.get("room", {}).get("per_day", 3)
+    entries, seen = [], set()
+    for item, comment in picked:
+        if item["source"] in ROOM_SOURCES and item["id"] not in seen and not checks.check_room_comment(comment):
+            entries.append((item, comment))
+            seen.add(item["id"])
+    more = [i for i in extras if i["source"] in ROOM_SOURCES and i["id"] not in seen]
+    more = sorted(more, key=lambda i: i.get("score", 0), reverse=True)[: max(per_day - len(entries), 0)]
+    if more:
+        try:
+            system, user = prompts.room_messages(config["account"], today, more)
+            comments = {c["id"]: c["comment"] for c in generate(system, user, prompts.ROOM_SCHEMA)["comments"]}
+            for item in more:
+                comment = comments.get(item["id"], "")
+                if comment and not checks.check_room_comment(comment):
+                    entries.append((item, comment))
+        except Exception as e:  # noqa: BLE001 - ROOM の追加分は補助なので、失敗しても続ける
+            print(f"⚠️ ROOM 用コメントを追加で作れませんでした: {e}")
+    entries = entries[:per_day]
+    if not entries:
+        return []
+    MANUAL.mkdir(parents=True, exist_ok=True)
+    path = MANUAL / "room.json"
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    new = [{"key": f"{today.isoformat()}:{item['id']}", "date": today.isoformat(),
+            **{k: item.get(k) for k in ("source", "id", "name", "url", "price", "review_count",
+                                          "review_average", "shop", "image", "is_hidden_gem")},
+            "comment": comment} for item, comment in entries]
+    keys = {e["key"] for e in new}
+    path.write_text(json.dumps(new + [e for e in old if e["key"] not in keys][:ROOM_KEEP], ensure_ascii=False,
+                               indent=1) + "\n", encoding="utf-8")
+    print(f"🛍️ ROOM 用に{len(new)}件追加しました")
+    return [item for item, _ in entries]
 
 
 # ---------------------------------------------------------------- 各モード
@@ -399,14 +440,24 @@ def run_daily(config, today, client, generate, args):
                 "theme_id": theme["id"], "theme": theme["keyword"], "origin": theme["origin"],
                 "hidden_gem": chosen.get("is_hidden_gem", False)}]
 
+    room_picked = [(chosen, result["room_comment"])]
+    room_extras = [c for c in candidates if c["id"] != chosen["id"]]
     if config.get("manual_stock", {}).get("enabled") and not args.keyword:
         manual = make_manual_stock(config, today, ordered, theme, history + entries, pats,
                                    client.search, client.ranking_codes, generate)
         if manual:
-            m_theme, m_chosen = manual
+            m_theme, m_chosen, m_candidates, m_room = manual
             entries.append({"date": today.isoformat(), "source": m_chosen["source"], "id": m_chosen["id"],
                             "name": m_chosen["name"], "theme_id": m_theme["id"], "theme": m_theme["keyword"],
                             "origin": "手動投稿ストック", "hidden_gem": False})
+            room_picked.append((m_chosen, m_room))
+            room_extras += [c for c in m_candidates if c["id"] != m_chosen["id"]]
+    used_ids = {e["id"] for e in entries}
+    for item in build_room_list(config, today, room_picked, room_extras, generate):
+        if item["id"] not in used_ids:
+            entries.append({"date": today.isoformat(), "source": item["source"], "id": item["id"],
+                            "name": item["name"], "theme_id": "", "theme": "", "origin": "楽天ROOM",
+                            "hidden_gem": item.get("is_hidden_gem", False)})
     if not args.dry_run:
         for entry in entries:
             selector.save_history_entry(DATA / "history", entry)
@@ -476,8 +527,13 @@ class FakeGenerator:
 
     def __call__(self, system, user, schema):
         name = {id(prompts.THEME_SCHEMA): "themes", id(prompts.ANALYSIS_SCHEMA): "analysis",
-                id(prompts.WRITE_SCHEMA): "write", id(prompts.REFERENCE_SCHEMA): "reference"}[id(schema)]
+                id(prompts.WRITE_SCHEMA): "write", id(prompts.REFERENCE_SCHEMA): "reference",
+                id(prompts.ROOM_SCHEMA): "room"}[id(schema)]
         result = json.loads(json.dumps(self.fixtures[name]))
+        if name == "room":
+            ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
+            template = result["comments"][0]["comment"]
+            result["comments"] = [{"id": i, "comment": template} for i in ids]
         if name == "analysis":
             first = next(json.loads(line) for line in user.splitlines() if line.startswith("{"))
             result["chosen_candidate_id"] = first["id"]

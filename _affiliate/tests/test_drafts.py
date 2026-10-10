@@ -370,3 +370,18 @@ def test_manual_stock_uses_a_different_theme_and_product(out_dir):
     assert stock["date"] == "2026-10-10" and len(stock["posts"]) == 3
     assert stock["item"]["url"] != auto["chosen"]["url"]
     assert "https://hb.afl.rakuten.co.jp" in stock["posts"][2]["reply_text"] and stock["room_comment"]
+
+
+def test_room_list_has_three_items_without_travel(out_dir):
+    for day in ["2026-10-10", "2026-10-11"]:
+        assert generate_drafts.main(["--dry-run", "--date", day]) == 0
+    room = json.loads((generate_drafts.MANUAL / "room.json").read_text(encoding="utf-8"))
+    today = [e for e in room if e["date"] == "2026-10-11"]
+    assert 1 <= len(today) <= 3 and all(e["source"] in ("ichiba", "books") for e in room)
+    assert all("#PR" in e["comment"] and "http" not in e["comment"] for e in room)
+    assert len({e["key"] for e in room}) == len(room) and room[0]["date"] == "2026-10-11"
+
+
+def test_check_room_comment():
+    assert checks.check_room_comment(ROOM) == []
+    assert checks.check_room_comment("") and checks.check_room_comment("必ず効く https://x.com")

@@ -48,6 +48,8 @@ WRITE_SCHEMA = obj(
     hook_alternatives=STRS,
 )
 
+ROOM_SCHEMA = obj(comments={"type": "array", "items": obj(id=STR, comment=STR)})
+
 REFERENCE_SCHEMA = obj(
     summary=STR, hook_type=STR, structure=STRS, why_it_worked=STRS,
     reusable_pattern=STR, avoid=STRS,
@@ -192,4 +194,18 @@ def reference_messages(account, post_text, likes, memo):
 
 JSON だけを返す。"""
     user = f"いいね数: {likes or '不明'}\n投稿者のメモ: {memo or 'なし'}\n\n投稿:\n{post_text}"
+    return system, user
+
+
+def room_messages(account, today, items):
+    system = f"""あなたは楽天ROOMに商品を載せる、子育て家族向けの紹介者です。{_persona(account)}
+
+渡された商品それぞれに、楽天ROOMの投稿コメントを書いてください。
+- 200〜300文字。「誰が・どんな場面で困っていて・この商品の何が良さそうか」を、レビューの評判として書く
+- 体験していないことを体験したように書かない（「使ってみた」「うちの子が」などは書かない）
+- 価格や件数は渡された数字だけを使い、「記事作成時点で」と添える
+- URL は書かない。末尾に「#PR」を付ける
+{SHARED_RULES}
+JSON だけを返す。comments の id は渡された商品の id をそのまま使う。"""
+    user = f"今日の日付: {today.isoformat()}\n\n商品:\n" + "\n".join(_candidate_line(i) for i in items)
     return system, user
