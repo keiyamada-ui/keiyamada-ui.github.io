@@ -35,6 +35,14 @@ AI は `ANTHROPIC_API_KEY` があれば Claude を使い、残高切れなどで
 - `auto_post.enabled: false` にすると、以前の「確認用の PR が届く」形に戻ります
 - Threads のトークンは60日で切れます。登録した日を `auto_post.token_updated` に書いておくと、50日たったときに Issue で知らせます（毎週月曜に確認）
 
+## 手動投稿ストック（BAN 対策）
+
+毎朝、自動投稿とは**別のテーマ・別の商品**で、手動投稿用の下書きを1セット（リンクなし2本＋PR1本＋楽天ROOM用コメント）作って `manual/` にためます。
+
+管理画面の「✋ 手動投稿ストック」（`kotori/stock.html`）に一覧で並び、ボタンでコピー、または「Threads で開く」で投稿画面を開けます。
+投稿したら「使った」を押すと、その端末では一覧から外れます。自動投稿を止めて、手動だけで運用することもできます。
+`config.yaml` の `manual_stock.enabled: false` で作らないようにできます。
+
 ## スマホから使う
 
 管理画面 https://keiyamada-ui.github.io/kotori/ をホーム画面に追加すると、アプリのように使えます。
@@ -108,6 +116,7 @@ python _affiliate/generate_drafts.py --check-api        # 楽天 API の接続�
 | `autopost.py` / `threads.py` | Threads への自動投稿 |
 | `drafts/` | 下書き（Merge した PR の分が残る） |
 | `data/history/` `data/themes/` `data/snapshots/` `data/posted/` | 紹介履歴・月ごとのテーマ・勢いを測る記録・投稿の記録 |
-| `../kotori/` | スマホ用の管理画面 |
+| `manual/` | 手動投稿ストック（`index.json` が一覧ページの元データ） |
+| `../kotori/` | スマホ用の管理画面・手動投稿ストックの一覧ページ |
 | `../.github/workflows/affiliate_*.yml` | 毎朝の自動実行・フォームの処理 |
 | `../.github/ISSUE_TEMPLATE/` | 推し商品・参考投稿のフォーム |

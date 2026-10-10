@@ -40,6 +40,11 @@ auto_post:
   #   朝 = リンクなし投稿1 / 昼 = リンクなし投稿2 / 夜 = PR 投稿（推し商品フォームの下書きを優先）
   #   時刻は .github/workflows/affiliate_post.yml の cron で変えられる
 
+# 手動投稿ストック（BAN 対策）: 自動投稿とは別のテーマ・別の商品で、毎朝1セット作ってためておく。
+# スマホの「✋ 手動投稿ストック」ページから選んでコピーし、自分の手で投稿する
+manual_stock:
+  enabled: true
+
 # 商品を候補に残す条件
 filters:
   min_review_count: 20

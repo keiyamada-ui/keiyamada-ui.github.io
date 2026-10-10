@@ -35,6 +35,8 @@ from rakuten import RakutenClient, RakutenError  # noqa: E402
 JST = datetime.timezone(datetime.timedelta(hours=9))
 MAX_ATTEMPTS = 3
 DATA = HERE / "data"
+MANUAL = HERE / "manual"
+MANUAL_INDEX_SIZE = 40
 CRITERIA = {"seasonal": "季節", "repurchase": "買い替え", "comparable": "比較しやすさ",
             "visual": "写真映え", "pain_fit": "悩み直結"}
 
@@ -321,6 +323,47 @@ def save_post_data(md_path, title, kind, today, result, errors, warnings, chosen
     return path
 
 
+def save_manual_stock(today, theme, analysis, chosen, result, errors, warnings):
+    """手動投稿用のストックに1セット追加し、一覧（index.json）を作り直す。"""
+    MANUAL.mkdir(parents=True, exist_ok=True)
+    data = {
+        "id": today.isoformat(), "date": today.isoformat(),
+        "theme": theme.get("category") or theme.get("keyword", ""), "reader": analysis["reader_persona"],
+        "errors": errors, "warnings": warnings, "questions": analysis["questions_for_human"],
+        "item": {k: chosen.get(k) for k in ("source", "name", "url", "price", "price_note", "review_count",
+                                              "review_average", "shop", "image", "is_hidden_gem")},
+        "posts": [{"type": p["type"], "angle": p["angle"], "text": p["text"],
+                   "thread_parts": p.get("thread_parts") or [],
+                   "reply_text": p.get("reply_text_with_link", "")} for p in result["posts"]],
+        "room_comment": result["room_comment"],
+        "hook_alternatives": result["hook_alternatives"],
+    }
+    path = MANUAL / f"{today.isoformat()}.json"
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    sets = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(MANUAL.glob("2*.json"), reverse=True)]
+    index = {"updated": datetime.datetime.now(JST).isoformat(timespec="minutes"), "sets": sets[:MANUAL_INDEX_SIZE]}
+    (MANUAL / "index.json").write_text(json.dumps(index, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"✋ 手動投稿ストックに追加しました（{theme.get('category') or theme.get('keyword')}）")
+    return path
+
+
+def make_manual_stock(config, today, ordered, used_theme, history, pats, search, ranking, generate):
+    """自動投稿とは別のテーマ・別の商品で、手動投稿用の下書きを1セット作る。失敗しても毎朝の下書きは止めない。"""
+    rest = [t for t in ordered if t["id"] != used_theme["id"] and t["source"] != used_theme["source"]]
+    rest += [t for t in ordered if t["id"] != used_theme["id"] and t not in rest]
+    if not rest:
+        return None
+    try:
+        theme, candidates, _ = find_candidates(config, rest, today, history, search, ranking, False)
+        analysis, chosen, warn1 = analyze(config, theme, candidates, today, generate)
+        result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate)
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 手動投稿ストックを作れませんでした（自動投稿の下書きはできています）: {e}")
+        return None
+    save_manual_stock(today, theme, analysis, chosen, result, errors, warn1 + warnings)
+    return theme, chosen
+
+
 # ---------------------------------------------------------------- 各モード
 
 def run_daily(config, today, client, generate, args):
@@ -352,11 +395,21 @@ def run_daily(config, today, client, generate, args):
                   generate.label)
     path = save_draft(body, f"{today.isoformat()}.md")
     save_post_data(path, title, "daily", today, result, errors, warn1 + warnings, chosen)
+    entries = [{"date": today.isoformat(), "source": chosen["source"], "id": chosen["id"], "name": chosen["name"],
+                "theme_id": theme["id"], "theme": theme["keyword"], "origin": theme["origin"],
+                "hidden_gem": chosen.get("is_hidden_gem", False)}]
+
+    if config.get("manual_stock", {}).get("enabled") and not args.keyword:
+        manual = make_manual_stock(config, today, ordered, theme, history + entries, pats,
+                                   client.search, client.ranking_codes, generate)
+        if manual:
+            m_theme, m_chosen = manual
+            entries.append({"date": today.isoformat(), "source": m_chosen["source"], "id": m_chosen["id"],
+                            "name": m_chosen["name"], "theme_id": m_theme["id"], "theme": m_theme["keyword"],
+                            "origin": "手動投稿ストック", "hidden_gem": False})
     if not args.dry_run:
-        selector.save_history_entry(DATA / "history", {
-            "date": today.isoformat(), "source": chosen["source"], "id": chosen["id"], "name": chosen["name"],
-            "theme_id": theme["id"], "theme": theme["keyword"], "origin": theme["origin"],
-            "hidden_gem": chosen.get("is_hidden_gem", False)})
+        for entry in entries:
+            selector.save_history_entry(DATA / "history", entry)
     return title, path
 
 
@@ -450,12 +503,13 @@ def main(argv=None):
     parser.add_argument("--check-api", action="store_true", help="楽天APIの接続確認だけ行う")
     args = parser.parse_args(argv)
 
-    global DATA
+    global DATA, MANUAL
     config = load_config()
     if args.dry_run:
         # お試し実行ではリポジトリの記録（履歴・テーマ・勢いの記録）を書き換えない
         DATA = Path(tempfile.mkdtemp(prefix="kotori-dry-"))
         os.environ.setdefault("KOTORI_DRAFTS_DIR", str(DATA / "drafts"))
+        MANUAL = DATA / "manual"
     if args.check_api:
         return check_api(config)
 

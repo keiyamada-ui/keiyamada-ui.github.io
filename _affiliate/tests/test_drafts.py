@@ -360,3 +360,13 @@ def test_rewrite_loop_feeds_errors_back():
     result, errors, _ = generate_drafts.write_posts(CONFIG, theme, chosen, analysis, [], TODAY, generate)
     assert errors == [] and len(calls) == 2 and "1行目" in calls[1]
     assert result["posts"][2]["reply_text_with_link"].count("https://x/1") == 1
+
+
+def test_manual_stock_uses_a_different_theme_and_product(out_dir):
+    assert generate_drafts.main(["--dry-run", "--date", "2026-10-10"]) == 0
+    index = json.loads((generate_drafts.MANUAL / "index.json").read_text(encoding="utf-8"))
+    stock = index["sets"][0]
+    auto = json.loads((out_dir / "2026-10-10.json").read_text(encoding="utf-8"))
+    assert stock["date"] == "2026-10-10" and len(stock["posts"]) == 3
+    assert stock["item"]["url"] != auto["chosen"]["url"]
+    assert "https://hb.afl.rakuten.co.jp" in stock["posts"][2]["reply_text"] and stock["room_comment"]
