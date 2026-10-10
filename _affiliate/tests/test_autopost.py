@@ -171,3 +171,10 @@ def test_token_age_warning():
     assert autopost.token_age_warning(config(token_updated=datetime.date(2026, 10, 1)), TODAY) is None
     warning = autopost.token_age_warning(config(token_updated=datetime.date(2026, 9, 1)), TODAY)
     assert "54 日" in warning and "あと約 6 日" in warning
+
+
+def test_no_token_is_a_quiet_skip(monkeypatch, tmp_path):
+    monkeypatch.delenv("KOTORI_THREADS_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_OUTPUT", str(tmp_path / "out"))
+    assert autopost.main(["--slot", "1"]) == 0
+    assert "まだ登録されていません" in (tmp_path / "out").read_text(encoding="utf-8")

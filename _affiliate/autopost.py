@@ -207,6 +207,11 @@ def main(argv=None):
         print("⏸ config.yaml の auto_post.enabled が false のため、自動投稿しません")
         write_output(posted="false", report="")
         return 0
+    if not token and not args.dry_run:
+        report = f"### {SLOT_NAMES[slot]}\n⏸ 投稿なし — Threads のトークン（Secrets の KOTORI_THREADS_TOKEN）がまだ登録されていません\n"
+        print(report)
+        write_output(posted="false", report=report, date=today.isoformat())
+        return 0
     client = None if args.dry_run else ThreadsClient(token)
     report, posted = run(slot, today, config, HERE / "drafts", HERE / "data" / "posted", client, args.dry_run)
     print(report)
