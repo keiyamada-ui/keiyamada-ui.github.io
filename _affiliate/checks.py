@@ -104,15 +104,21 @@ def check_posts(posts, room_comment=None, owner_note=None):
                 errors.append(f"{label}: 返信用の文が長すぎます")
 
     if room_comment is not None:
-        if not room_comment.strip():
-            errors.append("楽天ROOM: コメントが空です")
-        if URL_PATTERN.search(room_comment) or LINK_PLACEHOLDER in room_comment:
-            errors.append("楽天ROOM: コメントにリンクが入っています（ROOMは商品に直接つながるので不要）")
-        if "#PR" not in room_comment:
-            errors.append("楽天ROOM: コメントに「#PR」がありません")
-        if len(room_comment) > THREADS_MAX_CHARS:
-            errors.append(f"楽天ROOM: コメントが{len(room_comment)}文字です（{THREADS_MAX_CHARS}文字まで）")
-        for word, reason in _ng_hits(room_comment):
-            errors.append(f"楽天ROOM: NGワード「{word}」— {reason}")
+        errors += check_room_comment(room_comment)
 
     return errors, warnings
+
+
+def check_room_comment(comment):
+    errors = []
+    if not comment.strip():
+        errors.append("楽天ROOM: コメントが空です")
+    if URL_PATTERN.search(comment) or LINK_PLACEHOLDER in comment:
+        errors.append("楽天ROOM: コメントにリンクが入っています（ROOMは商品に直接つながるので不要）")
+    if "#PR" not in comment:
+        errors.append("楽天ROOM: コメントに「#PR」がありません")
+    if len(comment) > THREADS_MAX_CHARS:
+        errors.append(f"楽天ROOM: コメントが{len(comment)}文字です（{THREADS_MAX_CHARS}文字まで）")
+    for word, reason in _ng_hits(comment):
+        errors.append(f"楽天ROOM: NGワード「{word}」— {reason}")
+    return errors

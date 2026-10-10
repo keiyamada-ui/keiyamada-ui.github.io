@@ -26,6 +26,13 @@
   header a.back { color: var(--sub); text-decoration: none; font-size: 22px; padding: 4px 6px 4px 0; }
   h1 { font-size: 19px; margin: 0; }
   .note { color: var(--sub); font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--box); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+  .tab { border: 0; background: transparent; color: var(--sub); border-radius: 9px; padding: 9px 0; font-size: 14px; font-weight: 700; font-family: inherit; }
+  .tab[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .room { display: flex; gap: 10px; }
+  .room img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--box); flex: none; }
+  .room-name { font-size: 13px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+  .count { color: var(--sub); font-size: 12px; margin: -4px 0 10px; }
   .bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .chip { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px;
           padding: 7px 12px; font-size: 13px; font-family: inherit; }
@@ -64,7 +71,11 @@
   <a class="back" href="./" aria-label="管理画面に戻る">‹</a>
   <h1>✋ 手動投稿ストック</h1>
 </header>
-<p class="note">自動投稿とは別のテーマ・商品で毎朝たまっていきます。コピーして自分の手で投稿し、終わったら「使った」を押してください（この端末に記録されます）。PR 投稿は、リンクを本文ではなく自分の投稿への返信に貼ります。</p>
+<p class="note">Threads は自動投稿とは別のテーマ・商品で、ROOM は毎朝3件ずつたまっていきます。コピーして自分の手で投稿し、終わったら「使った」を押してください（この端末に記録されます）。PR 投稿は、リンクを本文ではなく自分の投稿への返信に貼ります。</p>
+<div class="tabs" role="tablist">
+  <button class="tab" id="t-threads" role="tab" aria-selected="true">🧵 Threads</button>
+  <button class="tab" id="t-room" role="tab" aria-selected="false">🛍️ 楽天ROOM</button>
+</div>
 <div class="bar">
   <button class="chip" id="f-unused" aria-pressed="true">未使用だけ</button>
   <button class="chip" id="f-value" aria-pressed="false">リンクなしだけ</button>
@@ -76,6 +87,10 @@
 <script>
 const SRC = new URLSearchParams(location.search).get("src") ||
   "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/index.json";
+const ROOM_SRC = new URLSearchParams(location.search).get("room") ||
+  "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/room.json";
+let tab = "threads";
+let room = [];
 const KEY = "kotori-used-v1";
 const store = {
   get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } },
@@ -121,6 +136,50 @@ function textBlock(label, text, withOpen) {
   }
   return [el("div", { class: "label", text: label }), el("div", { class: "text", text }),
           el("div", { class: "actions" }, actions)];
+}
+
+function renderRoom() {
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  const items = room.filter(r => !filters.unused || !used["room:" + r.key]);
+  const left = room.filter(r => !used["room:" + r.key]).length;
+  list.append(el("p", { class: "count", text: `未投稿 ${left} 件 ／ 上から順に「商品を開く」→「ROOMに投稿」→ コメントを貼って投稿` }));
+  for (const r of items) {
+    const key = "room:" + r.key;
+    const done = !!used[key];
+    const card = el("section", { class: "set" + (done ? " used" : "") }, [
+      el("div", { class: "room" }, [
+        r.image ? el("img", { src: r.image, alt: "", loading: "lazy" }) : null,
+        el("div", {}, [
+          el("div", { class: "date", text: r.date + (r.is_hidden_gem ? "　💎発掘枠" : "") }),
+          el("div", { class: "room-name", text: (r.name || "").slice(0, 70) }),
+          el("div", { class: "item", text: r.price ? `${Number(r.price).toLocaleString()}円・★${r.review_average}（${r.review_count}件）` : "" }),
+        ]),
+      ]),
+      el("div", { class: "label", text: "ROOM 用コメント" }),
+      el("div", { class: "text", text: r.comment }),
+      el("div", { class: "actions" }, [
+        el("a", { class: "act", text: "① 商品を開く", href: r.url, target: "_blank", rel: "noopener" }),
+        el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
+      ]),
+    ]);
+    const doneBtn = el("button", { class: "act" + (done ? " done" : ""), text: done ? "✓ 投稿した（戻す）" : "③ 投稿した" });
+    doneBtn.addEventListener("click", () => {
+      if (used[key]) delete used[key]; else used[key] = new Date().toISOString();
+      store.set(used); renderRoom();
+      if (used[key]) toast("投稿済みにしました");
+    });
+    card.append(el("div", { class: "actions" }, [doneBtn]));
+    list.append(card);
+  }
+  if (!items.length) list.append(el("p", { class: "empty", text: room.length ? "今日の分はすべて投稿済みです 🎉" : "まだありません（毎朝たまっていきます）" }));
+}
+
+function show() {
+  const isRoom = tab === "room";
+  document.getElementById("f-value").style.display = isRoom ? "none" : "";
+  document.getElementById("f-pr").style.display = isRoom ? "none" : "";
+  if (isRoom) renderRoom(); else render();
 }
 
 function render() {
@@ -180,16 +239,32 @@ function toggle(id, name, others = []) {
     filters[name] = !filters[name];
     for (const o of others) { if (filters[name]) { filters[o] = false; document.getElementById("f-" + o).setAttribute("aria-pressed", "false"); } }
     e.currentTarget.setAttribute("aria-pressed", String(filters[name]));
-    render();
+    show();
   });
 }
 toggle("f-unused", "unused");
 toggle("f-value", "value", ["pr"]);
 toggle("f-pr", "pr", ["value"]);
 
+for (const [id, name] of [["t-threads", "threads"], ["t-room", "room"]]) {
+  document.getElementById(id).addEventListener("click", () => {
+    tab = name;
+    document.getElementById("t-threads").setAttribute("aria-selected", String(name === "threads"));
+    document.getElementById("t-room").setAttribute("aria-selected", String(name === "room"));
+    try { localStorage.setItem("kotori-tab", name); } catch (e) {}
+    show();
+  });
+}
+try { if (localStorage.getItem("kotori-tab") === "room" || location.hash === "#room") document.getElementById("t-room").click(); } catch (e) {}
+
+fetch(ROOM_SRC + (ROOM_SRC.includes("?") ? "&" : "?") + "t=" + Date.now())
+  .then(r => r.ok ? r.json() : [])
+  .then(j => { room = Array.isArray(j) ? j : []; if (tab === "room") show(); })
+  .catch(() => {});
+
 fetch(SRC + (SRC.includes("?") ? "&" : "?") + "t=" + Date.now())
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(j => { data = j; render(); })
+  .then(j => { data = j; if (tab === "threads") show(); })
   .catch(() => {
     document.getElementById("list").replaceChildren(
       el("p", { class: "empty", text: "まだストックがありません（毎朝たまっていきます）" }));
