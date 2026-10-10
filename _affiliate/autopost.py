@@ -1,11 +1,12 @@
 """作った下書きを Threads に自動で投稿する。
 
-    python _affiliate/autopost.py              # 今の時間帯（朝・昼・夜）の投稿をする
-    python _affiliate/autopost.py --slot 3     # 夜の枠（PR 投稿）を今すぐ投稿する
+    python _affiliate/autopost.py              # 今の時間帯の投稿をする
+    python _affiliate/autopost.py --slot 5     # 夜の枠（PR 投稿）を今すぐ投稿する
     python _affiliate/autopost.py --dry-run    # 何を投稿するかだけ表示する（投稿しない）
-    python _affiliate/autopost.py --check      # Threads につながるか・トークンの期限が近くないか確認する
+    python _affiliate/autopost.py --check      # Threads につながるか・権限・トークンの期限を確認する
 
-朝 = リンクなし投稿1 / 昼 = リンクなし投稿2（ツリー可）/ 夜 = PR 投稿（本文 → 返信にリンク）。
+1日5回: 朝=集客投稿 / 午前=つぶやき / 昼=役立つ投稿 / 午後=つぶやき / 夜=PR 投稿（本文 → 返信にリンク）。
+夜は PR 投稿のない日、役立つ投稿の2本目かつぶやきを出す。
 同じ投稿を二度出さないよう、出した投稿は data/posted/ に記録する。
 """
 
@@ -24,16 +25,17 @@ sys.path.insert(0, str(HERE))
 from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
-SLOT_NAMES = {1: "朝（リンクなし投稿1）", 2: "昼（リンクなし投稿2）", 3: "夜（PR 投稿）"}
+SLOT_NAMES = {1: "朝（集客投稿）", 2: "午前（つぶやき）", 3: "昼（役立つ投稿）", 4: "午後（つぶやき）", 5: "夜（PR 投稿）"}
+# 枠ごとに、出すものの優先順（前のものがなければ次を出す）
+SLOT_KINDS = {1: ["buzz", "value"], 2: ["casual"], 3: ["value"], 4: ["casual"], 5: ["pr", "value", "casual"]}
+# 各枠の終わりの時刻（日本時間・分）。GitHub の定期実行は遅れることがあるので、時間帯で判断する
+SLOT_ENDS = [(9 * 60 + 30, 1), (11 * 60 + 30, 2), (14 * 60, 3), (18 * 60, 4)]
+FOLLOWUP_DAYS = 3
 
 
 def slot_for(now):
-    """GitHub の定期実行は遅れることがあるので、時刻ではなく時間帯で判断する。"""
-    if now.hour < 11:
-        return 1
-    if now.hour < 17:
-        return 2
-    return 3
+    minutes = now.hour * 60 + now.minute
+    return next((slot for end, slot in SLOT_ENDS if minutes < end), 5)
 
 
 def load_posted(directory):
@@ -57,29 +59,28 @@ def load_draft(path):
     return json.loads(Path(path).read_text(encoding="utf-8")) if Path(path).exists() else None
 
 
-def pick(slot, today, config, drafts_dir, posted):
-    """この枠で出す（下書き, 投稿）を決める。出さないときは (None, None, 理由)。"""
+def _first_unposted(name, draft, kind, done):
+    return next((i for i, p in enumerate(draft["posts"]) if p["type"] == kind and (name, i) not in done), None)
+
+
+def _pick_simple(kind, today, drafts_dir, done):
+    """集客投稿（buzz）・つぶやき（casual）・役立つ投稿（value）"""
+    suffix = {"buzz": "-buzz", "casual": "-casual", "value": ""}[kind]
+    label = {"buzz": "集客投稿", "casual": "つぶやき", "value": "役立つ投稿"}[kind]
+    name = f"{today.isoformat()}{suffix}.json"
+    draft = load_draft(Path(drafts_dir) / name)
+    if not draft:
+        return None, None, f"今日の{label}の下書きがありません"
+    if draft["errors"]:
+        return None, None, f"{label}の下書きに自動チェックのエラーが残っているため投稿しませんでした"
+    index = _first_unposted(name, draft, kind, done)
+    if index is None:
+        return None, None, f"今日の{label}はすべて出しました"
+    return name, index, None
+
+
+def _pick_pr(today, config, drafts_dir, posted, done):
     auto = config["auto_post"]
-    done = {(p["draft"], p["post_index"]) for p in posted}
-
-    if slot in (1, 2):
-        name = f"{today.isoformat()}.json"
-        draft = load_draft(Path(drafts_dir) / name)
-        if not draft:
-            return None, None, "今日の下書きがまだありません（朝の下書き作りが失敗した可能性があります）"
-        values = [i for i, p in enumerate(draft["posts"]) if p["type"] == "value"]
-        if len(values) < slot:
-            return None, None, "リンクなし投稿が見つかりません"
-        if draft["errors"]:
-            return None, None, "自動チェックでエラーが残っているため投稿しませんでした"
-        # 朝はリンクなし投稿1。昼は、朝の分が出ていなければそれを、出ていれば投稿2を出す
-        wanted = values[:1] if slot == 1 else values[:2]
-        index = next((i for i in wanted if (name, i) not in done), None)
-        if index is None:
-            return None, None, "この投稿はすでに出しています"
-        return name, index, None
-
-    # 夜の枠: PR 投稿
     start = auto["pr_posts_from"]
     start = start if isinstance(start, datetime.date) else datetime.date.fromisoformat(str(start))
     if today < start:
@@ -88,22 +89,43 @@ def pick(slot, today, config, drafts_dir, posted):
     if last_pr and (today - last_pr).days < auto["pr_min_interval_days"]:
         return None, None, f"前回の PR 投稿（{last_pr.isoformat()}）から {auto['pr_min_interval_days']} 日たっていないため、今日はお休みです"
 
-    candidates = sorted(Path(drafts_dir).glob("*-item-*.json"))  # 推し商品フォームの下書きを優先
+    # 優先順: 推し商品フォーム → 反響のあった話題の PR（3日以内）→ 今日の下書き
+    candidates = sorted(Path(drafts_dir).glob("*-item-*.json"))
+    for days in range(FOLLOWUP_DAYS, 0, -1):
+        path = Path(drafts_dir) / f"{(today - datetime.timedelta(days=days)).isoformat()}.json"
+        draft = load_draft(path)
+        if draft and draft.get("followup"):
+            candidates.append(path)
     candidates.append(Path(drafts_dir) / f"{today.isoformat()}.json")
     for path in candidates:
         draft = load_draft(path)
         if not draft or draft["date"] > today.isoformat() or draft["errors"]:
             continue
-        index = next((i for i, p in enumerate(draft["posts"]) if p["type"] == "pr"), None)
-        if index is not None and (path.name, index) not in done:
+        index = _first_unposted(path.name, draft, "pr", done)
+        if index is not None:
             return path.name, index, None
     return None, None, "投稿できる PR の下書きがありません（エラーが残っているか、すでに投稿済みです）"
+
+
+def pick(slot, today, config, drafts_dir, posted):
+    """この枠で出す（下書き, 投稿の番号）を決める。出さないときは (None, None, 理由)。"""
+    done = {(p["draft"], p["post_index"]) for p in posted}
+    reasons = []
+    for kind in SLOT_KINDS[slot]:
+        if kind == "pr":
+            name, index, reason = _pick_pr(today, config, drafts_dir, posted, done)
+        else:
+            name, index, reason = _pick_simple(kind, today, drafts_dir, done)
+        if name:
+            return name, index, None
+        reasons.append(reason)
+    return None, None, " ／ ".join(reasons)
 
 
 def publish(client, post, ids):
     """本文を投稿し、ツリーや返信（リンク）を自分の投稿への返信としてつなげる。
     途中で失敗しても、出せた分は ids に残る（二重投稿を防ぐ記録に使う）。"""
-    first = client.post_text(post["text"])
+    first = client.post_text(post["text"], topic_tag=post.get("topic_tag") or None)
     ids.append(first)
     parent = first
     for part in post.get("thread_parts") or []:
@@ -112,6 +134,14 @@ def publish(client, post, ids):
     if post["type"] == "pr" and post.get("reply_text"):
         ids.append(client.post_text(post["reply_text"], reply_to=first))
     return client.permalink(first)
+
+
+KIND_NAMES = {"buzz": "集客投稿", "casual": "つぶやき", "value": "役立つ投稿", "pr": "PR 投稿"}
+
+
+def slot_kind_changed(slot, kind):
+    """枠の本来の投稿ではなく、代わりのものを出したとき True。"""
+    return SLOT_KINDS[slot][0] != kind
 
 
 def run(slot, today, config, drafts_dir, posted_dir, client=None, dry_run=False):
@@ -141,7 +171,10 @@ def run(slot, today, config, drafts_dir, posted_dir, client=None, dry_run=False)
     record_posted(posted_dir, today, entry)
     extra = f"（ツリー {len(post['thread_parts']) + 1} 件）" if post.get("thread_parts") else ""
     extra += "（返信にリンク）" if post["type"] == "pr" else ""
+    extra += f"（{KIND_NAMES.get(post['type'], '')}）" if slot_kind_changed(slot, post["type"]) else ""
     lines += [f"✅ 投稿しました{extra}: {link or '（リンク取得できず）'}", "", "```text", post["text"].strip(), "```"]
+    if post["type"] == "pr" and draft.get("followup"):
+        lines.append(f"🔥 反響のあった集客投稿（いいね{draft['followup']['likes']}件）の話題から選んだ商品です")
     if post["type"] == "pr" and draft["chosen"].get("is_hidden_gem"):
         lines.append("💎 発掘枠の商品です。レビューが少ないので、商品ページも確認しておいてください")
     lines.append("")
@@ -178,12 +211,32 @@ def token_age_warning(config, today):
     return None
 
 
+def check_permissions(client):
+    """反響の取得・コメントの取得に必要な権限があるか、最近の投稿で試す。"""
+    ids = client.recent_ids(1)
+    if not ids:
+        return ["ℹ️ まだ投稿がないため、反響・コメントの権限は確認できませんでした（最初の投稿のあとにもう一度確認してください）"]
+    lines = []
+    for name, call, perm in (("投稿の反響（いいね数など）", client.insights, "threads_manage_insights"),
+                             ("コメントの取得", client.replies, "threads_read_replies")):
+        try:
+            call(ids[0])
+            lines.append(f"✅ {name}: 取得できます")
+        except Exception as e:  # noqa: BLE001
+            lines.append(f"⚠️ {name}: 取得できません。Meta のアプリで権限「{perm}」を追加し、"
+                         f"トークンを作り直して Secrets を更新してください（{str(e)[:100]}）")
+    return lines
+
+
 def check(token, config, today):
-    me = ThreadsClient(token).me()
+    client = ThreadsClient(token)
+    me = client.me()
     print(f"✅ Threads につながりました: @{me.get('username')}（ID {me.get('id')}）")
     if me.get("username") != "kotori.family":
         print("⚠️ kotori.family 以外のアカウントです。トークンを作ったアカウントを確認してください")
         return 1
+    for line in check_permissions(client):
+        print(line)
     warning = token_age_warning(config, today)
     if warning:
         print(f"⚠️ {warning}")
@@ -201,7 +254,7 @@ def write_output(**values):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ことり｜下書きを Threads に自動投稿する")
-    parser.add_argument("--slot", choices=["auto", "1", "2", "3"], default="auto")
+    parser.add_argument("--slot", choices=["auto", "1", "2", "3", "4", "5"], default="auto")
     parser.add_argument("--date", help="日付（例: 2026-10-10）。省略すると今日（日本時間）")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true", help="Threads につながるか・トークンの期限を確認する")

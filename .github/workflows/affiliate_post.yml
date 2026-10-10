@@ -2,16 +2,19 @@ name: ことり 自動投稿
 
 on:
   schedule:
-    # 日本時間 7:40・12:20・20:10（GitHub は UTC なので 9 時間引く）。実行時にさらに 0〜15 分ずらす
+    # 日本時間 7:40 集客投稿・10:10 つぶやき・12:20 役立つ投稿・15:40 つぶやき・20:10 PR 投稿
+    # （GitHub は UTC なので 9 時間引く）。実行時にさらに 0〜15 分ずらす
     - cron: '40 22 * * *'
+    - cron: '10 1 * * *'
     - cron: '20 3 * * *'
+    - cron: '40 6 * * *'
     - cron: '10 11 * * *'
   workflow_dispatch:
     inputs:
       slot:
-        description: 'auto = 今の時間帯 / 1 = 朝（リンクなし1） / 2 = 昼（リンクなし2） / 3 = 夜（PR） / check = Threads の接続確認'
+        description: 'auto = 今の時間帯 / 1 = 朝（集客） / 2 = 午前（つぶやき） / 3 = 昼（役立つ） / 4 = 午後（つぶやき） / 5 = 夜（PR） / check = Threads の接続確認'
         type: choice
-        options: [auto, '1', '2', '3', check]
+        options: [auto, '1', '2', '3', '4', '5', check]
         default: auto
       dry_run:
         description: '投稿せず、何を投稿するかだけ表示する'
@@ -32,6 +35,9 @@ jobs:
     timeout-minutes: 30
     env:
       KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
+      # コメント返しの案を作るため（つぶやき用の AI: Gemini → 使えなければ Claude Sonnet）
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -62,19 +68,25 @@ jobs:
             python _affiliate/autopost.py --slot "$SLOT"
           fi
 
+      - name: コメントを確認して、返信文の案を作る
+        id: comments
+        if: steps.post.outcome == 'success' && inputs.dry_run != true
+        continue-on-error: true
+        run: python _affiliate/comments.py
+
       - name: 投稿の記録を保存する
         if: always() && steps.post.outcome != 'skipped' && inputs.dry_run != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/data/posted
+          git add _affiliate/data/posted _affiliate/manual/comments.json 2>/dev/null || git add _affiliate/data/posted
           git commit -m "投稿の記録を追加" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 
       - name: 今日のレポートにコメントする
         if: steps.post.outcome == 'success' && steps.post.outputs.report != ''
         env:
-          REPORT: ${{ steps.post.outputs.report }}
+          REPORT: ${{ steps.post.outputs.report }}${{ steps.comments.outputs.report }}
           DAY: ${{ steps.post.outputs.date }}
         run: |
           gh label create "投稿レポート" --color B6D7A8 --description "自動投稿の結果" --force

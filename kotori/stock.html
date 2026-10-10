@@ -26,7 +26,7 @@
   header a.back { color: var(--sub); text-decoration: none; font-size: 22px; padding: 4px 6px 4px 0; }
   h1 { font-size: 19px; margin: 0; }
   .note { color: var(--sub); font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--box); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; background: var(--box); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
   .tab { border: 0; background: transparent; color: var(--sub); border-radius: 9px; padding: 9px 0; font-size: 14px; font-weight: 700; font-family: inherit; }
   .tab[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   .room { display: flex; gap: 10px; }
@@ -59,6 +59,10 @@
                       display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
   button.act.primary { background: var(--accent); border-color: var(--accent); color: #3A2E1F; }
   button.act.done { color: var(--ok); border-color: var(--ok); }
+  .who { font-size: 12px; color: var(--sub); margin-bottom: 4px; overflow-wrap: anywhere; }
+  .quote { font-size: 12px; color: var(--sub); border-left: 3px solid var(--line); padding-left: 8px; margin: 8px 0; line-height: 1.5; overflow-wrap: anywhere; }
+  .badge.like { background: #FCE4EC; color: #C2185B; }
+  .badge.ignore { background: var(--box); color: var(--sub); }
   .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
   #toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%);
            background: #3A2E1F; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px;
@@ -71,10 +75,11 @@
   <a class="back" href="./" aria-label="管理画面に戻る">‹</a>
   <h1>✋ 手動投稿ストック</h1>
 </header>
-<p class="note">Threads は自動投稿とは別のテーマ・商品で、ROOM は毎朝3件ずつたまっていきます。コピーして自分の手で投稿し、終わったら「使った」を押してください（この端末に記録されます）。PR 投稿は、リンクを本文ではなく自分の投稿への返信に貼ります。</p>
+<p class="note">Threads は自動投稿とは別のテーマ・商品で、ROOM は毎朝3件ずつたまっていきます。コメントには返信文の案が付きます。コピーして自分の手で投稿し、終わったら「使った」を押してください（この端末に記録されます）。PR 投稿は、リンクを本文ではなく自分の投稿への返信に貼ります。</p>
 <div class="tabs" role="tablist">
   <button class="tab" id="t-threads" role="tab" aria-selected="true">🧵 Threads</button>
   <button class="tab" id="t-room" role="tab" aria-selected="false">🛍️ 楽天ROOM</button>
+  <button class="tab" id="t-comments" role="tab" aria-selected="false">💬 コメント</button>
 </div>
 <div class="bar">
   <button class="chip" id="f-unused" aria-pressed="true">未使用だけ</button>
@@ -89,8 +94,12 @@ const SRC = new URLSearchParams(location.search).get("src") ||
   "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/index.json";
 const ROOM_SRC = new URLSearchParams(location.search).get("room") ||
   "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/room.json";
+const COMMENTS_SRC = new URLSearchParams(location.search).get("comments") ||
+  "https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/main/_affiliate/manual/comments.json";
 let tab = "threads";
 let room = [];
+let comments = [];
+const ACTION = { reply: ["💬 返信する", ""], like: ["❤️ いいねだけ", " like"], ignore: ["🙈 返さない", " ignore"] };
 const KEY = "kotori-used-v1";
 const store = {
   get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } },
@@ -175,11 +184,46 @@ function renderRoom() {
   if (!items.length) list.append(el("p", { class: "empty", text: room.length ? "今日の分はすべて投稿済みです 🎉" : "まだありません（毎朝たまっていきます）" }));
 }
 
+function renderComments() {
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  const items = comments.filter(c => !filters.unused || !used["comment:" + c.id]);
+  const left = comments.filter(c => c.action !== "ignore" && !used["comment:" + c.id]).length;
+  list.append(el("p", { class: "count", text: `対応待ち ${left} 件 ／ 返信は「コメントを開く」→ 返信欄に貼り付け。いいねだけのものは ♡ を押すだけ` }));
+  for (const c of items) {
+    const key = "comment:" + c.id;
+    const done = !!used[key];
+    const [label, cls] = ACTION[c.action] || ACTION.reply;
+    const card = el("section", { class: "set" + (done ? " used" : "") }, [
+      el("div", { class: "post-head" }, [
+        el("span", { class: "badge" + cls, text: label }),
+        el("span", { class: "angle", text: c.reason || "" }),
+      ]),
+      el("div", { class: "who", text: `@${c.username}　${(c.timestamp || "").slice(0, 16).replace("T", " ")}` }),
+      el("div", { class: "text", text: c.text }),
+      c.post_text ? el("div", { class: "quote", text: "自分の投稿: " + c.post_text.slice(0, 80) }) : null,
+    ]);
+    if (c.reply_text) card.append(...textBlock("返信文の案（自由に直してOK）", c.reply_text, false));
+    const doneBtn = el("button", { class: "act" + (done ? " done" : ""), text: done ? "✓ 対応した（戻す）" : "対応した" });
+    doneBtn.addEventListener("click", () => {
+      if (used[key]) delete used[key]; else used[key] = new Date().toISOString();
+      store.set(used); renderComments();
+    });
+    card.append(el("div", { class: "actions" }, [
+      c.permalink ? el("a", { class: "act", text: "コメントを開く", href: c.permalink, target: "_blank", rel: "noopener" }) : null,
+      doneBtn,
+    ]));
+    list.append(card);
+  }
+  if (!items.length) list.append(el("p", { class: "empty", text: comments.length ? "対応待ちのコメントはありません 🎉" : "まだコメントはありません（投稿のたびに確認しています）" }));
+}
+
 function show() {
-  const isRoom = tab === "room";
-  document.getElementById("f-value").style.display = isRoom ? "none" : "";
-  document.getElementById("f-pr").style.display = isRoom ? "none" : "";
-  if (isRoom) renderRoom(); else render();
+  const single = tab !== "threads";
+  document.getElementById("f-value").style.display = single ? "none" : "";
+  document.getElementById("f-pr").style.display = single ? "none" : "";
+  document.getElementById("f-unused").textContent = { threads: "未使用だけ", room: "未投稿だけ", comments: "未対応だけ" }[tab];
+  if (tab === "room") renderRoom(); else if (tab === "comments") renderComments(); else render();
 }
 
 function render() {
@@ -246,16 +290,26 @@ toggle("f-unused", "unused");
 toggle("f-value", "value", ["pr"]);
 toggle("f-pr", "pr", ["value"]);
 
-for (const [id, name] of [["t-threads", "threads"], ["t-room", "room"]]) {
+const TABS = [["t-threads", "threads"], ["t-room", "room"], ["t-comments", "comments"]];
+for (const [id, name] of TABS) {
   document.getElementById(id).addEventListener("click", () => {
     tab = name;
-    document.getElementById("t-threads").setAttribute("aria-selected", String(name === "threads"));
-    document.getElementById("t-room").setAttribute("aria-selected", String(name === "room"));
+    for (const [i, n] of TABS) document.getElementById(i).setAttribute("aria-selected", String(n === name));
     try { localStorage.setItem("kotori-tab", name); } catch (e) {}
     show();
   });
 }
-try { if (localStorage.getItem("kotori-tab") === "room" || location.hash === "#room") document.getElementById("t-room").click(); } catch (e) {}
+{
+  let start = location.hash.slice(1);
+  if (!start) { try { start = localStorage.getItem("kotori-tab") || ""; } catch (e) {} }
+  const found = TABS.find(([, n]) => n === start);
+  if (found && start !== "threads") document.getElementById(found[0]).click();
+}
+
+fetch(COMMENTS_SRC + (COMMENTS_SRC.includes("?") ? "&" : "?") + "t=" + Date.now())
+  .then(r => r.ok ? r.json() : { comments: [] })
+  .then(j => { comments = (j && j.comments) || []; if (tab === "comments") show(); })
+  .catch(() => {});
 
 fetch(ROOM_SRC + (ROOM_SRC.includes("?") ? "&" : "?") + "t=" + Date.now())
   .then(r => r.ok ? r.json() : [])

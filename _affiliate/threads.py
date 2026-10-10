@@ -36,12 +36,21 @@ class ThreadsClient:
             self._user_id = self.me()["id"]
         return self._user_id
 
-    def post_text(self, text, reply_to=None):
+    def post_text(self, text, reply_to=None, topic_tag=None):
         """テキストを投稿して、投稿のIDを返す。reply_to を付けると、その投稿への返信（ツリー）になる。"""
         params = {"media_type": "TEXT", "text": text}
         if reply_to:
             params["reply_to_id"] = reply_to
-        container = self._call("POST", f"{BASE}/{self.user_id}/threads", **params)["id"]
+        if topic_tag:
+            params["topic_tag"] = topic_tag
+        try:
+            container = self._call("POST", f"{BASE}/{self.user_id}/threads", **params)["id"]
+        except ThreadsError:
+            if not topic_tag:
+                raise
+            # トピックタグが受け付けられなかったときは、タグなしで出す
+            params.pop("topic_tag")
+            container = self._call("POST", f"{BASE}/{self.user_id}/threads", **params)["id"]
         # 作ったコンテナが公開できる状態になるまで少し待つ（Meta の推奨）
         last_error = None
         for attempt in range(4):
@@ -57,3 +66,23 @@ class ThreadsClient:
             return self._call("GET", f"{BASE}/{media_id}", fields="permalink").get("permalink", "")
         except ThreadsError:
             return ""
+
+    def insights(self, media_id):
+        """投稿の反響（表示・いいね・返信・再投稿・引用）。threads_manage_insights の権限が必要。"""
+        data = self._call("GET", f"{BASE}/{media_id}/insights", metric="views,likes,replies,reposts,quotes")
+        out = {}
+        for item in data.get("data", []):
+            values = item.get("values") or []
+            value = values[0].get("value") if values else (item.get("total_value") or {}).get("value")
+            out[item.get("name")] = int(value or 0)
+        return out
+
+    def replies(self, media_id):
+        """投稿についた返信（コメント）。threads_read_replies の権限が必要。"""
+        data = self._call("GET", f"{BASE}/{media_id}/replies",
+                          fields="id,text,username,timestamp,permalink,hide_status")
+        return data.get("data", [])
+
+    def recent_ids(self, limit=5):
+        data = self._call("GET", f"{BASE}/{self.user_id}/threads", fields="id", limit=limit)
+        return [x["id"] for x in data.get("data", [])]

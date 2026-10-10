@@ -36,9 +36,40 @@ auto_post:
   pr_min_interval_days: 2
   # Threads のトークンを Secrets に登録した日。60日で切れるので、50日たったら Issue で知らせる
   token_updated: 2026-10-10
-  # 投稿は1日3回（日本時間 7:40ごろ・12:20ごろ・20:10ごろ、毎回0〜15分ずらす）
-  #   朝 = リンクなし投稿1 / 昼 = リンクなし投稿2 / 夜 = PR 投稿（推し商品フォームの下書きを優先）
+  # 投稿は1日5回（日本時間、毎回0〜15分ずらす）
+  #   7:40 集客投稿 / 10:10 つぶやき / 12:20 役立つ投稿 / 15:40 つぶやき /
+  #   20:10 PR 投稿（推し商品 → 反響のあった話題 → 今日の下書きの順。PR のない日は役立つ投稿の2本目かつぶやき）
   #   時刻は .github/workflows/affiliate_post.yml の cron で変えられる
+
+# 使う AI（投稿の重要度ごと）。provider は claude か gemini。Claude が使えないときは自動で Gemini に切り替わる
+ai:
+  important:   # 集客投稿（ネット検索つき）・PR 投稿・役立つ投稿
+    provider: claude
+    model: claude-opus-5-5
+    effort: high
+  standard:    # テーマ作り・楽天ROOM のコメント・手動投稿ストック・参考投稿の分析
+    provider: claude
+    model: claude-sonnet-5-5
+    effort: medium
+  casual:      # つぶやき・コメント返しの案（Gemini が使えないときは Claude Sonnet）
+    provider: gemini
+
+# 集客投稿（朝・宣伝なし）: ニュース・トレンドから話題を拾い、ネット検索で深掘りして書く
+buzz:
+  enabled: true
+  # Google ニュースで探す言葉（増やす・変えるのは自由）
+  queries: [子育て, 小学生 親, 習い事, 小学校 保護者, 子連れ おでかけ]
+
+# つぶやき（短い日常の投稿）: 1日に作る本数（午前・午後＋夜の予備）
+casual:
+  enabled: true
+  per_day: 3
+
+# 反響のあった集客投稿から、その話題の商品の PR 投稿を作る
+followup:
+  enabled: true
+  # いいねがこの数以上、かつ最近の投稿のいいねの中央値の2倍以上で「反響あり」
+  min_likes: 10
 
 # 手動投稿ストック（BAN 対策）: 自動投稿とは別のテーマ・別の商品で、毎朝1セット作ってためておく。
 # スマホの「✋ 手動投稿ストック」ページから選んでコピーし、自分の手で投稿する

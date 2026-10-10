@@ -35,10 +35,11 @@ class FakeThreads:
     def __init__(self, fail_on=None):
         self.calls, self.fail_on = [], fail_on
 
-    def post_text(self, text, reply_to=None):
+    def post_text(self, text, reply_to=None, topic_tag=None):
         if self.fail_on is not None and len(self.calls) == self.fail_on:
             raise threads.ThreadsError("boom")
         self.calls.append((text, reply_to))
+        self.tags = getattr(self, "tags", []) + [topic_tag]
         return f"id{len(self.calls)}"
 
     def permalink(self, media_id):
@@ -52,29 +53,77 @@ def dirs(tmp_path):
     return drafts, posted
 
 
+def write_simple(directory, kind, texts, date="2026-10-25", errors=(), tag=""):
+    suffix = "-buzz" if kind == "buzz" else "-casual"
+    data = {"date": date, "kind": kind, "title": "t", "errors": list(errors), "warnings": [],
+            "posts": [{"type": kind, "angle": "", "text": t, "thread_parts": [], "reply_text": "", "topic_tag": tag}
+                      for t in texts]}
+    (directory / f"{date}{suffix}.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
 def test_slot_by_time_of_day():
-    at = lambda h: datetime.datetime(2026, 10, 25, h, 30, tzinfo=JST)  # noqa: E731
-    assert [autopost.slot_for(at(h)) for h in (7, 10, 12, 16, 20, 23)] == [1, 1, 2, 2, 3, 3]
+    at = lambda h, m=30: datetime.datetime(2026, 10, 25, h, m, tzinfo=JST)  # noqa: E731
+    assert [autopost.slot_for(at(h)) for h in (7, 10, 12, 16, 20, 23)] == [1, 2, 3, 4, 5, 5]
+    assert autopost.slot_for(at(9, 29)) == 1 and autopost.slot_for(at(11, 31)) == 3
 
 
-def test_morning_and_noon_post_value_posts_with_tree(dirs):
+def test_noon_posts_value_post_with_tree(dirs):
     drafts, posted = dirs
     write_draft(drafts, "2026-10-25.json")
     client = FakeThreads()
-    report, ok = autopost.run(1, TODAY, config(), drafts, posted, client)
+    report, ok = autopost.run(3, TODAY, config(), drafts, posted, client)
     assert ok and "✅" in report and len(client.calls) == 3  # 本文＋ツリー2つ
     assert client.calls[1][1] == "id1" and client.calls[2][1] == "id2"  # ツリーは順につながる
-    report, ok = autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())
-    assert not ok and "すでに出しています" in report  # 二重投稿しない
+    assert autopost.load_posted(posted)[0]["post_index"] == 0
+
+
+def test_morning_buzz_with_topic_tag_and_fallback(dirs):
+    drafts, posted = dirs
+    write_draft(drafts, "2026-10-25.json")
     client = FakeThreads()
-    assert autopost.run(2, TODAY, config(), drafts, posted, client)[1] and len(client.calls) == 1
+    report, ok = autopost.run(1, TODAY, config(), drafts, posted, client)  # 集客投稿がない日は役立つ投稿
+    assert ok and "役立つ投稿" in report
+    write_simple(drafts, "buzz", ["運動会の練習で体操服が毎日ドロドロ"], tag="子育て")
+    client = FakeThreads()
+    assert autopost.run(1, TODAY, config(), drafts, posted, client)[1]
+    assert client.calls == [("運動会の練習で体操服が毎日ドロドロ", None)] and client.tags == ["子育て"]
+    report, ok = autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())
+    assert ok  # 集客投稿を出し終えたので、残りの役立つ投稿2本目
+    assert not autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())[1]  # 二重投稿しない
+
+
+def test_casual_slots_and_evening_fallback(dirs):
+    drafts, posted = dirs
+    write_draft(drafts, "2026-10-21.json", date="2026-10-21")
+    write_simple(drafts, "casual", ["朝から雨", "夕飯なにしよう", "長袖どこ"], date="2026-10-21")
+    day = datetime.date(2026, 10, 21)  # PR 投稿の開始日より前
+    for slot in (2, 4):
+        assert autopost.run(slot, day, config(), drafts, posted, FakeThreads())[1]
+    autopost.run(3, day, config(), drafts, posted, FakeThreads())
+    report, ok = autopost.run(5, day, config(), drafts, posted, FakeThreads())
+    assert ok and "役立つ投稿" in report  # PR のない夜は役立つ投稿の2本目
+    report, ok = autopost.run(5, day, config(), drafts, posted, FakeThreads())
+    assert ok and "つぶやき" in report
+    report, ok = autopost.run(5, day, config(), drafts, posted, FakeThreads())
+    assert not ok and "育てる期間" in report and "すべて出しました" in report
+
+
+def test_followup_pr_has_priority(dirs):
+    drafts, posted = dirs
+    write_draft(drafts, "2026-10-25.json")
+    write_draft(drafts, "2026-10-23.json", date="2026-10-23")
+    data = json.loads((drafts / "2026-10-23.json").read_text(encoding="utf-8"))
+    data["followup"] = {"draft": "2026-10-22-buzz.json", "likes": 30}
+    (drafts / "2026-10-23.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    report, ok = autopost.run(5, TODAY, config(), drafts, posted, FakeThreads())
+    assert ok and "🔥" in report and autopost.load_posted(posted)[0]["draft"] == "2026-10-23.json"
 
 
 def test_pr_post_puts_link_in_reply(dirs):
     drafts, posted = dirs
     write_draft(drafts, "2026-10-25.json", gem=True)
     client = FakeThreads()
-    report, ok = autopost.run(3, TODAY, config(), drafts, posted, client)
+    report, ok = autopost.run(5, TODAY, config(), drafts, posted, client)
     assert ok and "💎" in report
     (body, _), (reply, parent) = client.calls
     assert "【PR】" in body and "https://" not in body
@@ -83,40 +132,37 @@ def test_pr_post_puts_link_in_reply(dirs):
 
 def test_pr_gates(dirs):
     drafts, posted = dirs
+    kinds = lambda: [p["kind"] for p in autopost.load_posted(posted)]  # noqa: E731
     write_draft(drafts, "2026-10-20.json", date="2026-10-20")
-    report, ok = autopost.run(3, datetime.date(2026, 10, 20), config(), drafts, posted, FakeThreads())
-    assert not ok and "育てる期間" in report
+    autopost.run(5, datetime.date(2026, 10, 20), config(), drafts, posted, FakeThreads())
+    assert kinds() == ["value"]  # 育てる期間は PR の代わりに役立つ投稿
+    _, reason = autopost.pick(5, datetime.date(2026, 10, 20), config(), drafts, [])[1:]
+    assert reason is None
+    assert "育てる期間" in autopost._pick_pr(datetime.date(2026, 10, 20), config(), drafts, [], set())[2]
     write_draft(drafts, "2026-10-25.json")
     write_draft(drafts, "2026-10-26.json", date="2026-10-26")
-    assert autopost.run(3, TODAY, config(), drafts, posted, FakeThreads())[1]
-    report, ok = autopost.run(3, datetime.date(2026, 10, 26), config(), drafts, posted, FakeThreads())
-    assert not ok and "お休み" in report
-    assert autopost.run(3, datetime.date(2026, 10, 26), config(pr_min_interval_days=1), drafts, posted,
-                        FakeThreads())[1]
+    autopost.run(5, TODAY, config(), drafts, posted, FakeThreads())
+    assert kinds()[-1] == "pr"
+    autopost.run(5, datetime.date(2026, 10, 26), config(), drafts, posted, FakeThreads())
+    assert kinds()[-1] == "value"  # 間隔があいていない日はお休み
+    autopost.run(5, datetime.date(2026, 10, 26), config(pr_min_interval_days=1), drafts, posted, FakeThreads())
+    assert kinds()[-1] == "pr"
 
 
 def test_recommended_item_goes_first_and_errors_are_skipped(dirs):
     drafts, posted = dirs
     write_draft(drafts, "2026-10-25.json")
     write_draft(drafts, "2026-10-24-item-7.json", date="2026-10-24")
-    autopost.run(3, TODAY, config(), drafts, posted, FakeThreads())
+    autopost.run(5, TODAY, config(), drafts, posted, FakeThreads())
     assert autopost.load_posted(posted)[0]["draft"] == "2026-10-24-item-7.json"
     write_draft(drafts, "2026-10-27.json", date="2026-10-27", errors=["NG"])
-    report, ok = autopost.run(1, datetime.date(2026, 10, 27), config(), drafts, posted, FakeThreads())
+    report, ok = autopost.run(3, datetime.date(2026, 10, 27), config(), drafts, posted, FakeThreads())
     assert not ok and "エラー" in report
-
-
-def test_noon_catches_up_on_missed_morning(dirs):
-    drafts, posted = dirs
-    write_draft(drafts, "2026-10-25.json")
-    autopost.run(2, TODAY, config(), drafts, posted, FakeThreads())
-    autopost.run(2, TODAY, config(), drafts, posted, FakeThreads())
-    assert [p["post_index"] for p in autopost.load_posted(posted)] == [0, 1]
 
 
 def test_missing_draft_and_dry_run(dirs):
     drafts, posted = dirs
-    assert "まだありません" in autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())[0]
+    assert "下書きがありません" in autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())[0]
     write_draft(drafts, "2026-10-25.json")
     report, ok = autopost.run(1, TODAY, config(), drafts, posted, None, dry_run=True)
     assert not ok and "お試し" in report and autopost.load_posted(posted) == []
@@ -126,10 +172,11 @@ def test_partial_failure_is_recorded(dirs):
     drafts, posted = dirs
     write_draft(drafts, "2026-10-25.json")
     with pytest.raises(threads.ThreadsError):
-        autopost.run(1, TODAY, config(), drafts, posted, FakeThreads(fail_on=1))
+        autopost.run(3, TODAY, config(), drafts, posted, FakeThreads(fail_on=1))
     entry = autopost.load_posted(posted)[0]
-    assert entry["partial"] and entry["ids"] == ["id1"]
-    assert not autopost.run(1, TODAY, config(), drafts, posted, FakeThreads())[1]
+    assert entry["partial"] and entry["ids"] == ["id1"] and entry["post_index"] == 0
+    autopost.run(3, TODAY, config(), drafts, posted, FakeThreads())
+    assert autopost.load_posted(posted)[1]["post_index"] == 1  # 本文が出た投稿は二度出さない
 
 
 class Resp:

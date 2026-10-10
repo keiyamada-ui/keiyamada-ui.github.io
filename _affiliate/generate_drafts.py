@@ -23,14 +23,19 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import autopost  # noqa: E402
 import checks  # noqa: E402
+import extras  # noqa: E402
+import insights  # noqa: E402
 import issue_forms  # noqa: E402
 import llm  # noqa: E402
 import patterns as patterns_mod  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
+import sources  # noqa: E402
 import themes as themes_mod  # noqa: E402
 from rakuten import RakutenClient, RakutenError  # noqa: E402
+from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
 MAX_ATTEMPTS = 3
@@ -88,6 +93,10 @@ def check_api(config):
         print(f"✅ ranking: {len(ranks)}件取得")
     except Exception as e:  # ランキングはなくても下書きは作れる
         print(f"⚠️ ranking（なくても動きます）: {e}")
+    headlines, failed_sources = sources.collect(config.get("buzz", {}).get("feeds"), config.get("buzz", {}).get("queries"))
+    print(f"✅ ニュース・トレンドの見出し: {len(headlines)}件（集客投稿のネタ集め）")
+    for name in failed_sources:
+        print(f"   ⚠️ 取得できなかった出どころ: {name}")
     if not os.environ.get("RAKUTEN_AFFILIATE_ID"):
         print("⚠️ RAKUTEN_AFFILIATE_ID が未設定です。リンクから購入されても報酬になりません")
     return 1 if failed else 0
@@ -146,9 +155,9 @@ def find_candidates(config, ordered_themes, today, history, search, ranking, gem
 
 # ---------------------------------------------------------------- AI による分析と執筆
 
-def analyze(config, theme, candidates, today, generate, owner_note=None):
+def analyze(config, theme, candidates, today, generate, owner_note=None, tier="important"):
     system, user = prompts.analysis_messages(config["account"], theme, candidates, today, owner_note)
-    analysis = generate(system, user, prompts.ANALYSIS_SCHEMA)
+    analysis = generate(system, user, prompts.ANALYSIS_SCHEMA, tier=tier)
     ids = [c["id"] for c in candidates]
     warnings = []
     if analysis["chosen_candidate_id"] not in ids:
@@ -160,13 +169,14 @@ def analyze(config, theme, candidates, today, generate, owner_note=None):
     return analysis, chosen, warnings
 
 
-def write_posts(config, theme, chosen, analysis, pats, today, generate, owner_note=None):
+def write_posts(config, theme, chosen, analysis, pats, today, generate, owner_note=None, tier="important",
+                context=None):
     """AI に書かせて自動チェック。引っかかったら理由を伝えて書き直させる。"""
     feedback = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         system, user = prompts.write_messages(config["account"], theme, chosen, analysis, pats,
-                                              today, owner_note, feedback)
-        result = generate(system, user, prompts.WRITE_SCHEMA)
+                                              today, owner_note, feedback, context)
+        result = generate(system, user, prompts.WRITE_SCHEMA, tier=tier)
         errors, warnings = checks.check_posts(result["posts"], result["room_comment"], owner_note)
         print(f"✍️ 下書き {attempt}回目: エラー{len(errors)}件・要確認{len(warnings)}件")
         if not errors:
@@ -307,10 +317,10 @@ def save_draft(body, filename):
     return path
 
 
-def save_post_data(md_path, title, kind, today, result, errors, warnings, chosen):
+def save_post_data(md_path, title, kind, today, result, errors, warnings, chosen, followup=None):
     """自動投稿用に、投稿文だけを機械が読める形（JSON）でも保存する。"""
     data = {
-        "date": today.isoformat(), "title": title, "kind": kind,
+        "date": today.isoformat(), "title": title, "kind": kind, "followup": followup,
         "errors": errors, "warnings": warnings,
         "chosen": {k: chosen.get(k) for k in ("source", "id", "name", "url", "is_hidden_gem")},
         "posts": [{"type": p["type"], "angle": p["angle"], "text": p["text"],
@@ -355,8 +365,9 @@ def make_manual_stock(config, today, ordered, used_theme, history, pats, search,
         return None
     try:
         theme, candidates, _ = find_candidates(config, rest, today, history, search, ranking, False)
-        analysis, chosen, warn1 = analyze(config, theme, candidates, today, generate)
-        result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate)
+        analysis, chosen, warn1 = analyze(config, theme, candidates, today, generate, tier="standard")
+        result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate,
+                                               tier="standard")
     except Exception as e:  # noqa: BLE001
         print(f"⚠️ 手動投稿ストックを作れませんでした（自動投稿の下書きはできています）: {e}")
         return None
@@ -407,10 +418,80 @@ def build_room_list(config, today, picked, extras, generate):
 
 # ---------------------------------------------------------------- 各モード
 
+def update_insights(today, dry_run=False):
+    """直近の投稿の反響を Threads から取ってくる。トークンや権限がなければ (None, 理由)。"""
+    if dry_run:
+        return None, None
+    token = os.environ.get("KOTORI_THREADS_TOKEN")
+    if not token:
+        return None, "Threads のトークンがないため、投稿の反響は取得していません"
+    posted = autopost.load_posted(DATA / "posted")
+    try:
+        return insights.collect(ThreadsClient(token), posted, today, DATA / "insights" / "latest.json")
+    except Exception as e:  # noqa: BLE001 - 反響は補助なので、取れなくても下書きは作る
+        return None, f"投稿の反響を取得できませんでした（{str(e)[:120]}）"
+
+
+def find_followup(config, today, store, drafts_dir):
+    """反響が大きかった集客投稿があれば、その話題の商品を探すテーマと、書くときの補足を返す。"""
+    conf = config.get("followup", {})
+    if not store or not conf.get("enabled", True):
+        return None
+    hit = insights.pick_followup(store, today, insights.load_done(DATA / "followups.json"), conf.get("min_likes", 10))
+    if not hit:
+        return None
+    name, likes, record = hit
+    path = Path(drafts_dir) / name
+    if not path.exists():
+        return None
+    buzz = json.loads(path.read_text(encoding="utf-8"))
+    product = buzz.get("product") or {}
+    if not product.get("keyword"):
+        return None
+    theme = themes_mod._make("反響", product.get("source") or "ichiba", product["keyword"],
+                             product.get("persona") or "", category=f"反響のあった話題: {buzz.get('topic', '')}")
+    theme["id"] = f"followup:{name}"
+    theme["scene"] = buzz.get("topic", "")
+    context = (f"この PR 投稿は、{record['date']} の集客投稿（下）に いいね{likes}件 の反響があったことを受けて書く。"
+               "その話題の続きとして自然につなげる（例:「この前の◯◯の話、思った以上に反応があって」）。"
+               f"\n反響のあった投稿: {buzz['posts'][0]['text']}")
+    return {"theme": theme, "context": context, "draft": name, "likes": likes, "topic": buzz.get("topic", "")}
+
+
+def make_extras(config, today, generate, pats, args):
+    """集客投稿とつぶやきを作る。失敗しても毎朝の下書きは止めない。返り値: (本文に足す Markdown, お知らせ)"""
+    drafts_dir = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts"))
+    sections, notes = [], []
+    if config.get("buzz", {}).get("enabled", True):
+        try:
+            collect = (lambda *a: ([("お試し", "運動会の練習で毎日体操服を洗う季節")], [])) if args.dry_run else sources.collect
+            buzz = extras.make_buzz(config, today, generate, pats, drafts_dir, collect)
+            extras.save_json(drafts_dir, f"{today.isoformat()}-buzz.json", buzz)
+            sections.append(extras.render_buzz(buzz))
+        except Exception as e:  # noqa: BLE001
+            notes.append(f"集客投稿を作れませんでした（朝の枠は役立つ投稿で代わりに出します）: {str(e)[:150]}")
+    if config.get("casual", {}).get("enabled", True):
+        try:
+            repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
+            neta = [] if args.dry_run else extras.fetch_neta(repo, token)
+            casual = extras.make_casual(config, today, generate, drafts_dir, neta)
+            extras.save_json(drafts_dir, f"{today.isoformat()}-casual.json", casual)
+            sections.append(extras.render_casual(casual))
+            if not args.dry_run:
+                for number in casual["neta_used"]:
+                    text = next(m for n, m in neta if n == number)
+                    extras.close_neta(repo, token, number, text)
+        except Exception as e:  # noqa: BLE001
+            notes.append(f"つぶやきを作れませんでした: {str(e)[:150]}")
+    return "\n".join(sections), notes
+
+
 def run_daily(config, today, client, generate, args):
     history = selector.load_history(DATA / "history")
     pats = patterns_mod.fetch_patterns(os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN"))
     bank_created = ensure_theme_bank(config, today, generate)
+    drafts_dir = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts"))
+    store, insight_note = update_insights(today, args.dry_run)
 
     if args.keyword:
         pool = [themes_mod._make("手動", args.source or "ichiba", args.keyword, "", category="手動指定")]
@@ -420,22 +501,46 @@ def run_daily(config, today, client, generate, args):
                 + themes_mod.fixed_themes(config))
         ordered = (themes_mod.rank(pool, history, today, config["themes"]["reuse_after_days"])
                    or themes_mod.rank(pool, [], today, 0))
+    followup = None if args.keyword else find_followup(config, today, store, drafts_dir)
+    if followup:
+        print(f"🔥 反響のあった集客投稿（いいね{followup['likes']}件）の話題で商品を探します: {followup['topic']}")
+        ordered = [followup["theme"]] + ordered
     gem_day = selector.is_hidden_gem_day(today, config["hidden_gems"])
     print(f"📅 {today}: テーマ候補 {len(ordered)}個（{'💎発掘枠の日' if gem_day else '通常の日'}）／ 勝ちパターン {len(pats)}個")
 
     theme, candidates, notes = find_candidates(config, ordered, today, history, client.search,
                                                client.ranking_codes, gem_day)
+    is_followup = bool(followup) and theme["id"] == followup["theme"]["id"]
+    if followup and not is_followup:
+        notes.append(f"反響のあった話題（{followup['topic']}）に合う商品が見つからなかったため、通常のテーマで書きました")
+    if is_followup:
+        notes.append(f"🔥 {followup['draft']} の集客投稿に いいね{followup['likes']}件 の反響があったので、その話題の商品を選びました")
+    if insight_note:
+        notes.append(insight_note)
+    elif store:
+        lines = insights.summary(store, today)
+        if lines:
+            notes.append("この1週間の反響: " + " ".join(x.lstrip("- ") for x in lines))
     analysis, chosen, warn1 = analyze(config, theme, candidates, today, generate)
-    result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate)
+    result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate,
+                                           context=followup["context"] if is_followup else None)
     if bank_created:
         notes.append(f"今月のテーマを{len(json.loads(bank_created.read_text(encoding='utf-8')))}個作りました"
                      "（data/themes）。Merge すると保存されます")
+    extra_md, extra_notes = ("", []) if args.keyword else make_extras(config, today, generate, pats, args)
+    notes += extra_notes
     label = theme.get("category") or theme["keyword"]
-    title = f"{'⚠️要修正 ' if errors else ''}{'💎' if chosen.get('is_hidden_gem') else '📝'} 投稿下書き {today.isoformat()}（{label}）"
+    icon = "🔥" if is_followup else ("💎" if chosen.get("is_hidden_gem") else "📝")
+    title = f"{'⚠️要修正 ' if errors else ''}{icon} 投稿下書き {today.isoformat()}（{label}）"
     body = render(today, title, theme, analysis, chosen, candidates, result, errors, warn1 + warnings, notes,
                   generate.label)
+    if extra_md:
+        body += "\n" + extra_md
     path = save_draft(body, f"{today.isoformat()}.md")
-    save_post_data(path, title, "daily", today, result, errors, warn1 + warnings, chosen)
+    save_post_data(path, title, "daily", today, result, errors, warn1 + warnings, chosen,
+                   followup={"draft": followup["draft"], "likes": followup["likes"]} if is_followup else None)
+    if is_followup and not args.dry_run:
+        insights.mark_done(DATA / "followups.json", followup["draft"])
     entries = [{"date": today.isoformat(), "source": chosen["source"], "id": chosen["id"], "name": chosen["name"],
                 "theme_id": theme["id"], "theme": theme["keyword"], "origin": theme["origin"],
                 "hidden_gem": chosen.get("is_hidden_gem", False)}]
@@ -525,10 +630,14 @@ class FakeGenerator:
     def __init__(self):
         self.fixtures = json.loads((HERE / "fixtures" / "sample_llm_output.json").read_text(encoding="utf-8"))
 
-    def __call__(self, system, user, schema):
+    def research(self, system, user, tier="important"):
+        return "お試しの調査メモ: 10月は運動会シーズンで、体操服の洗濯が大変という声が多い。"
+
+    def __call__(self, system, user, schema, tier="standard"):
         name = {id(prompts.THEME_SCHEMA): "themes", id(prompts.ANALYSIS_SCHEMA): "analysis",
                 id(prompts.WRITE_SCHEMA): "write", id(prompts.REFERENCE_SCHEMA): "reference",
-                id(prompts.ROOM_SCHEMA): "room"}[id(schema)]
+                id(prompts.ROOM_SCHEMA): "room", id(prompts.BUZZ_SCHEMA): "buzz",
+                id(prompts.CASUAL_SCHEMA): "casual", id(prompts.COMMENT_SCHEMA): "comment"}[id(schema)]
         result = json.loads(json.dumps(self.fixtures[name]))
         if name == "room":
             ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
@@ -570,7 +679,7 @@ def main(argv=None):
         return check_api(config)
 
     today = datetime.date.fromisoformat(args.date) if args.date else datetime.datetime.now(JST).date()
-    generate = FakeGenerator() if args.dry_run else llm.Generator()
+    generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
     if args.analyze_reference:
         path = run_reference(config, generate, os.environ.get("ISSUE_BODY", ""))

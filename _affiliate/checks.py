@@ -38,6 +38,10 @@ NG_WORDS = {
     "公式": "公式アカウントと誤解されるおそれ",
 }
 
+# AI が書いたと気づかれやすい言い回し（見つけたら書き直し）
+AI_SMELL = ["いかがでしたか", "結論から言うと", "解説します", "ご紹介します", "まとめると", "と言えるでしょう",
+            "てみてはいかがでしょうか", "徹底解説", "必見", "様々な", "することが大切です", "することが重要です"]
+
 # 実際に使ったかどうかは人にしか分からないので、警告として知らせる
 EXPERIENCE_WORDS = ["使ってみた", "使ってみました", "愛用", "うちの子", "我が家で", "買ってみた", "泊まってみた", "泊まりました"]
 
@@ -82,6 +86,7 @@ def check_posts(posts, room_comment=None, owner_note=None):
         whole = "\n".join([text, reply, *parts])
         for word, reason in _ng_hits(whole):
             errors.append(f"{label}: NGワード「{word}」— {reason}")
+        errors += [f"{label}: {e}" for e in _ai_smell(whole)]
         for word in EXPERIENCE_WORDS:
             if word in whole:
                 hint = "メモの内容と合っているか確認してください" if owner_note else "実際に使った・泊まった場合だけ残してください"
@@ -121,4 +126,27 @@ def check_room_comment(comment):
         errors.append(f"楽天ROOM: コメントが{len(comment)}文字です（{THREADS_MAX_CHARS}文字まで）")
     for word, reason in _ng_hits(comment):
         errors.append(f"楽天ROOM: NGワード「{word}」— {reason}")
+    return errors
+
+
+def _ai_smell(text):
+    return [f"「{w}」は AI が書いた感じが出る言い回しです。別の言い方にしてください" for w in AI_SMELL if w in text]
+
+
+def check_simple_post(text, label, min_chars=1, max_chars=THREADS_MAX_CHARS):
+    """集客投稿・つぶやきのチェック（リンク・宣伝なしの短い投稿）。"""
+    errors = []
+    if len(text.strip()) < min_chars:
+        errors.append(f"{label}: 短すぎます（{len(text.strip())}文字、{min_chars}文字以上）")
+    if len(text) > max_chars:
+        errors.append(f"{label}: 長すぎます（{len(text)}文字、{max_chars}文字まで）")
+    if URL_PATTERN.search(text) or LINK_PLACEHOLDER in text:
+        errors.append(f"{label}: リンクは入れないでください")
+    if "PR" in text:
+        errors.append(f"{label}: 宣伝ではない投稿なので「PR」は入れないでください")
+    if "#" in text or "＃" in text:
+        errors.append(f"{label}: ハッシュタグは入れないでください")
+    for word, reason in _ng_hits(text):
+        errors.append(f"{label}: NGワード「{word}」— {reason}")
+    errors += [f"{label}: {e}" for e in _ai_smell(text)]
     return errors
