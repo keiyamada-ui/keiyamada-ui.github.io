@@ -2,13 +2,10 @@ name: ことり 自動投稿
 
 on:
   schedule:
-    # 日本時間 7:40 集客投稿・10:10 つぶやき・12:20 役立つ投稿・15:40 つぶやき・20:10 PR 投稿
-    # （GitHub は UTC なので 9 時間引く）。実行時にさらに 0〜15 分ずらす
-    - cron: '40 22 * * *'
-    - cron: '10 1 * * *'
-    - cron: '20 3 * * *'
-    - cron: '40 6 * * *'
-    - cron: '10 11 * * *'
+    # 投稿の予定: 日本時間 7:40 集客投稿・10:10 つぶやき・12:20 役立つ投稿・15:40 つぶやき・20:10 PR 投稿。
+    # GitHub の定期実行は数時間遅れることがあるため、日本時間 6:00〜23:40 に20分おきに起動し、
+    # 「時刻を過ぎて、まだ出していない枠」があれば出す（何もないときはすぐ終わる）。GitHub は UTC なので 9 時間引く
+    - cron: '*/20 21-23,0-14 * * *'
   workflow_dispatch:
     inputs:
       slot:
@@ -24,6 +21,7 @@ on:
 permissions:
   contents: write
   issues: write
+  actions: write
 
 concurrency:
   group: affiliate-main
@@ -50,9 +48,23 @@ jobs:
         if: inputs.slot == 'check'
         run: python _affiliate/autopost.py --check
 
+      - name: 今日の下書きがまだなければ作る（朝の下書き作りの起動が遅れたとき）
+        if: github.event_name == 'schedule'
+        run: |
+          day=$(TZ=Asia/Tokyo date +%F)
+          hour=$(TZ=Asia/Tokyo date +%-H)
+          if [ -f "_affiliate/drafts/$day.json" ] || [ "$hour" -lt 6 ]; then exit 0; fi
+          since=$(date -u -d "$day 00:00 +0900" +%FT%TZ)
+          n=$(gh run list --repo "${{ github.repository }}" --workflow affiliate_drafts.yml --limit 10 \
+                --json createdAt --jq "[.[] | select(.createdAt >= \"$since\")] | length")
+          if [ "$n" = "0" ]; then
+            echo "今日の下書きがまだないので、下書き作りを始めます"
+            gh workflow run affiliate_drafts.yml --repo "${{ github.repository }}" -f mode=drafts
+          fi
+
       - name: 投稿時刻を少しずらす（毎日同じ時刻にならないように）
         if: github.event_name == 'schedule'
-        run: sleep $((RANDOM % 900))
+        run: sleep $((RANDOM % 240))
 
       - name: 投稿する
         id: post
