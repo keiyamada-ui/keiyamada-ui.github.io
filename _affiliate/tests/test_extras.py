@@ -222,6 +222,12 @@ def test_comments_collect_and_suggest(tmp_path):
     (drafts / "d.json").write_text(json.dumps({"posts": [{"text": "自分の投稿"}]}, ensure_ascii=False), encoding="utf-8")
 
     class C:
+        def recent_posts(self, limit):
+            raise threads.ThreadsError("x")  # 一覧が取れなくても、自動投稿の記録から探す
+
+        def conversation(self, media_id):
+            raise threads.ThreadsError("x")
+
         def replies(self, media_id):
             return [{"id": "c1", "username": "mama", "text": "うちも毎晩洗濯です", "permalink": "p"},
                     {"id": "c2", "username": "kotori.family", "text": "自分の返信"},
@@ -238,6 +244,19 @@ def test_comments_collect_and_suggest(tmp_path):
     comments.save(tmp_path / "c.json", items, datetime.datetime(2026, 10, 25, 13, 0))
     assert len(json.loads((tmp_path / "c.json").read_text(encoding="utf-8"))["comments"]) == 1
     assert "1 件" in comments.report(items)
+
+
+def test_comments_include_posts_made_by_hand(tmp_path):
+    class C:
+        def recent_posts(self, limit):
+            return [{"id": "hand", "text": "手で出した投稿", "timestamp": "2026-10-24T23:10:00+0000", "permalink": "h"},
+                    {"id": "old", "text": "古い投稿", "timestamp": "2026-10-01T00:00:00+0000"}]
+
+        def conversation(self, media_id):
+            assert media_id == "hand"
+            return [{"id": "c9", "username": "papa", "text": "わかります", "permalink": "p9"}]
+    items, reason = comments.collect_new(C(), [], TODAY, set(), tmp_path, "kotori.family")
+    assert reason is None and items[0]["id"] == "c9" and items[0]["post_text"] == "手で出した投稿"
 
 
 def test_comment_reply_never_contains_links(tmp_path):
