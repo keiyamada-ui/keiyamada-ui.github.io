@@ -153,6 +153,17 @@ TOKEN_LIFETIME_DAYS = 60
 TOKEN_WARN_DAYS = 50
 
 
+TOKEN_REMIND_DAYS_LEFT = 10
+
+
+def token_days_left(config, today):
+    updated = config.get("auto_post", {}).get("token_updated")
+    if not updated:
+        return None
+    updated = updated if isinstance(updated, datetime.date) else datetime.date.fromisoformat(str(updated))
+    return TOKEN_LIFETIME_DAYS - (today - updated).days
+
+
 def token_age_warning(config, today):
     """トークンは60日で切れる。登録した日（config の token_updated）から50日たったら知らせる。"""
     updated = config.get("auto_post", {}).get("token_updated")
@@ -214,6 +225,10 @@ def main(argv=None):
         return 0
     client = None if args.dry_run else ThreadsClient(token)
     report, posted = run(slot, today, config, HERE / "drafts", HERE / "data" / "posted", client, args.dry_run)
+    left = token_days_left(config, today)
+    if left is not None and left <= TOKEN_REMIND_DAYS_LEFT:
+        report += (f"\n🔑 **Threads のトークンの期限まで、あと {max(left, 0)} 日です。** "
+                   "作り直して Secrets の KOTORI_THREADS_TOKEN を更新してください\n")
     print(report)
     write_output(posted="true" if posted else "false", report=report, date=today.isoformat())
     return 0

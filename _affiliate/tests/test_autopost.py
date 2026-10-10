@@ -178,3 +178,8 @@ def test_no_token_is_a_quiet_skip(monkeypatch, tmp_path):
     monkeypatch.setenv("GITHUB_OUTPUT", str(tmp_path / "out"))
     assert autopost.main(["--slot", "1"]) == 0
     assert "まだ登録されていません" in (tmp_path / "out").read_text(encoding="utf-8")
+
+
+def test_token_days_left():
+    assert autopost.token_days_left(config(), TODAY) is None
+    assert autopost.token_days_left(config(token_updated=datetime.date(2026, 9, 1)), TODAY) == 6
