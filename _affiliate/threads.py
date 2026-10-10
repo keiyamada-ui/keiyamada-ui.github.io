@@ -84,5 +84,15 @@ class ThreadsClient:
         return data.get("data", [])
 
     def recent_ids(self, limit=5):
-        data = self._call("GET", f"{BASE}/{self.user_id}/threads", fields="id", limit=limit)
-        return [x["id"] for x in data.get("data", [])]
+        return [x["id"] for x in self.recent_posts(limit)]
+
+    def recent_posts(self, limit=20):
+        """自分の最近の投稿（手で出したものも含む）。返信（ツリーの続き・リンクの返信）は含まれない。"""
+        data = self._call("GET", f"{BASE}/{self.user_id}/threads", fields="id,text,timestamp,permalink", limit=limit)
+        return data.get("data", [])
+
+    def conversation(self, media_id):
+        """投稿についた返信を、返信への返信も含めてすべて取る。"""
+        data = self._call("GET", f"{BASE}/{media_id}/conversation",
+                          fields="id,text,username,timestamp,permalink,hide_status", reverse="false")
+        return data.get("data", [])
