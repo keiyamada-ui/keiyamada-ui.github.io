@@ -103,7 +103,8 @@ def theme_messages(account, today, count, existing_keywords):
 - urgency: 購入の緊急度 1〜5（5=今すぐ必要）
 - months: そのテーマの需要が高い月（1〜12の数字の配列）
 - source: ichiba（一般商品）/ books（本・図鑑）/ travel（宿）
-- keyword: 楽天でそのまま検索できる2〜3語のキーワード（travel は地名を中心に）
+- keyword: 楽天でそのまま検索して商品がたくさん出る、一般的な2〜3語のキーワード（travel は地名を中心に）。
+  固有名詞・型番・細かすぎる条件（「直結」「コンパクト版」「裏起毛」など）は入れない。例: 「なわとび 子供」「図鑑 小学生」「箱根 家族」
 - persona: 「誰が＋どんな条件で探しているか」を1文で
 
 JSON だけを返す。"""
