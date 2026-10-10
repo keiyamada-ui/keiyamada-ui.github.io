@@ -25,7 +25,8 @@ const main = document.getElementById("main");
 const BOT = "github-actions[bot]";
 const HIDE_LABELS = ["投稿レポート", "勝ちパターン", "ネタ帳", "下書き"];
 const RUN_NAMES = { "ことり 投稿下書き": "📝 下書き作り", "ことり 自動投稿": "📣 自動投稿",
-                    "ことり フォーム（推し商品・参考投稿）": "📮 フォームの処理", "ことり Threads の接続確認": "🔑 トークン確認" };
+                    "ことり フォーム（推し商品・参考投稿）": "📮 フォームの処理", "ことり Threads の接続確認": "🔑 トークン確認",
+                    "ことり 手で投稿した記録": "✋ 手で投稿した記録" };
 
 function fail(e) { main.replaceChildren(el("div", { class: "warn", text: "⚠️ " + e.message })); }
 const trustworthy = i => i.user && (i.user.login === OWNER || i.user.login === BOT);  // 公開リポジトリなので、他人の書き込みは表示しない
@@ -102,7 +103,7 @@ async function showRuns() {
   main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
   let runs, wf;
   try {
-    [runs, wf] = await Promise.all([gh(`/repos/${REPO}/actions/runs?per_page=30`),
+    [runs, wf] = await Promise.all([gh(`/repos/${REPO}/actions/runs?per_page=100`),
                                     gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml`)]);
   } catch (e) { return fail(e); }
   const active = wf.state === "active";
@@ -112,7 +113,10 @@ async function showRuns() {
     el("div", { class: "actions" }, [el("a", { class: "btn", href: "input.html#actions", text: active ? "止める・今すぐ下書きを作る" : "再開する" })]),
   ])];
   nodes.push(el("h2", { text: "最近の動き" }));
-  const list = runs.workflow_runs.filter(r => RUN_NAMES[r.name]);
+  nodes.push(el("p", { class: "note", text: "自動投稿は 6:00〜23:40 に20分おきに確認しています（うまくいった回は省略し、失敗したときだけここに出ます）。投稿の結果は「📣 今日の投稿」で見られます。" }));
+  // 自動投稿は20分おきに起動して、出す枠がなければすぐ終わる。成功した記録は多すぎるので、失敗だけ出す
+  const list = runs.workflow_runs.filter(r => RUN_NAMES[r.name] &&
+    !(r.name === "ことり 自動投稿" && r.event === "schedule" && r.conclusion === "success"));
   if (!list.length) nodes.push(el("p", { class: "empty", text: "まだ記録がありません" }));
   for (const r of list) {
     const state = r.status !== "completed" ? ["⏳ 実行中", ""] : r.conclusion === "success" ? ["✅ 成功", "ok"]

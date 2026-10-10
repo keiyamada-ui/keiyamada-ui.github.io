@@ -1,0 +1,57 @@
+name: ことり 手で投稿した記録
+
+# 管理画面の「✋ 手で投稿した」ボタンから呼ばれる。
+# 記録しておくと、自動投稿で同じ投稿を二重に出さず、管理画面にも「手で投稿済み」と表示される。
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: '下書きのファイル名（例: 2026-10-10-buzz.json）'
+        required: true
+      index:
+        description: '下書きの中の何番目の投稿か（0から）'
+        required: true
+      undo:
+        description: '「投稿済み」を取り消す'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  mark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml requests
+
+      - name: 記録する
+        env:
+          DRAFT: ${{ inputs.draft }}
+          INDEX: ${{ inputs.index }}
+          UNDO: ${{ inputs.undo }}
+        run: |
+          if [ "$UNDO" = "true" ]; then
+            python _affiliate/autopost.py --mark "$DRAFT" "$INDEX" --undo
+          else
+            python _affiliate/autopost.py --mark "$DRAFT" "$INDEX"
+          fi
+
+      - name: 保存する
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/posted
+          git commit -m "手で投稿した記録: $DRAFT" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+        env:
+          DRAFT: ${{ inputs.draft }}

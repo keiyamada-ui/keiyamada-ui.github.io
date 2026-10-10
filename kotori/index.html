@@ -164,7 +164,8 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
   const day = jstDate();
   const posted = (await raw(`_affiliate/data/posted/${day}.json`)) || [];
   const box = document.getElementById("today");
-  box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${posted.length} / 5 回`;
+  const auto = posted.filter(p => !p.manual).length, manual = posted.length - auto;
+  box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
   box.classList.add("show");
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
   try {

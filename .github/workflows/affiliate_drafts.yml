@@ -73,7 +73,12 @@ jobs:
           MODE: ${{ inputs.mode }}
           KEYWORD: ${{ inputs.keyword }}
           SOURCE: ${{ inputs.source }}
+          EVENT: ${{ github.event_name }}
         run: |
+          # 定期実行が遅れて、すでに今日の下書きがある（自動投稿の側で作った）ときは作り直さない
+          if [ "$EVENT" = "schedule" ] && [ -f "_affiliate/drafts/$(TZ=Asia/Tokyo date +%F).json" ]; then
+            echo "今日の下書きはもうあるので、作り直しません"; exit 0
+          fi
           if [ "$MODE" = "themes" ]; then
             python _affiliate/generate_drafts.py --generate-themes
           elif [ -n "$KEYWORD" ]; then
@@ -83,14 +88,14 @@ jobs:
           fi
 
       - name: 6. ラベルを用意する
-        if: steps.generate.outcome == 'success'
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.title != ''
         run: |
           gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
           gh label create "投稿レポート" --color B6D7A8 --description "自動投稿の結果" --force
           gh label create "ネタ帳" --color D9EAD3 --description "つぶやきのネタ（本人の出来事）" --force
 
       - name: 7a. 自動投稿モード：下書きを保存して、今日のレポートを作る
-        if: steps.generate.outcome == 'success' && steps.generate.outputs.auto_post == 'true'
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.title != '' && steps.generate.outputs.auto_post == 'true'
         env:
           TITLE: ${{ steps.generate.outputs.title }}
           DRAFT_PATH: ${{ steps.generate.outputs.draft_path }}
@@ -113,7 +118,7 @@ jobs:
           良くない投稿は Threads アプリで削除してください。自動投稿を止めたいときは _affiliate/config.yaml の auto_post.enabled を false に。"
 
       - name: 7b. 確認用の PR を作る
-        if: steps.generate.outcome == 'success' && steps.generate.outputs.auto_post != 'true'
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.title != '' && steps.generate.outputs.auto_post != 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: drafts/${{ github.run_id }}

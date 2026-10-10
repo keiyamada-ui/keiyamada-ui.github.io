@@ -64,7 +64,50 @@ def write_simple(directory, kind, texts, date="2026-10-25", errors=(), tag=""):
 def test_slot_by_time_of_day():
     at = lambda h, m=30: datetime.datetime(2026, 10, 25, h, m, tzinfo=JST)  # noqa: E731
     assert [autopost.slot_for(at(h)) for h in (7, 10, 12, 16, 20, 23)] == [1, 2, 3, 4, 5, 5]
-    assert autopost.slot_for(at(9, 29)) == 1 and autopost.slot_for(at(11, 31)) == 3
+
+
+def test_due_slot_catches_up_after_delays():
+    at = lambda h, m=0: datetime.datetime(2026, 10, 25, h, m, tzinfo=JST)  # noqa: E731
+    entry = lambda slot, h, m=0, **k: dict({"date": "2026-10-25", "slot": slot, "draft": "d", "post_index": slot,  # noqa: E731
+                                             "kind": "x", "at": at(h, m).isoformat()}, **k)
+    assert autopost.due_slot(at(7, 0), []) == (None, "今出す枠はありません")
+    assert autopost.due_slot(at(7, 45), [])[0] == 1
+    # 定期実行が遅れて 12:30 に初めて動いた: 集客投稿を先に出し、午前のつぶやきは締め切り切れ
+    assert autopost.due_slot(at(12, 30), [])[0] == 1
+    slot, reason = autopost.due_slot(at(12, 50), [entry(1, 12, 30)])
+    assert slot is None and "60分" in reason  # 続けて出さない
+    assert autopost.due_slot(at(13, 35), [entry(1, 12, 30)])[0] == 3
+    assert autopost.due_slot(at(14, 30), [])[0] == 3  # 14時を過ぎたら集客投稿はあきらめる
+    # 手で投稿した記録は枠を埋めない
+    assert autopost.due_slot(at(7, 50), [entry(0, 7, 45, manual=True)])[0] == 1
+    assert autopost.due_slot(at(23, 50), [entry(5, 20, 15)]) == (None, "今出す枠はありません")
+
+
+def test_auto_mode_is_quiet_when_nothing_is_due(monkeypatch, tmp_path):
+    monkeypatch.setenv("KOTORI_THREADS_TOKEN", "t")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(tmp_path / "out"))
+    monkeypatch.setattr(autopost, "due_slot", lambda now, posted: (None, "今出す枠はありません"))
+    assert autopost.main([]) == 0
+    out = (tmp_path / "out").read_text(encoding="utf-8")
+    assert "posted<<__END__\nfalse" in out and "report<<__END__\n\n" in out
+
+
+def test_mark_manual_and_undo(dirs):
+    drafts, posted = dirs
+    write_draft(drafts, "2026-10-24.json", date="2026-10-24")
+    now = datetime.datetime(2026, 10, 25, 9, 0, tzinfo=JST)
+    assert autopost.mark_manual(drafts, posted, "2026-10-24.json", 2, now) == 0
+    entry = autopost.load_posted(posted)[0]
+    assert entry["manual"] and entry["kind"] == "pr" and entry["date"] == "2026-10-25"
+    assert autopost.mark_manual(drafts, posted, "2026-10-24.json", 2, now) == 0  # 2回押しても1件
+    assert len(autopost.load_posted(posted)) == 1
+    # 手で出した PR は、自動投稿の PR の間隔にも数える
+    write_draft(drafts, "2026-10-25.json")
+    assert "お休み" in autopost._pick_pr(TODAY, config(), drafts, autopost.load_posted(posted), set())[2]
+    assert autopost.mark_manual(drafts, posted, "2026-10-24.json", 2, now, undo=True) == 0
+    assert autopost.load_posted(posted) == []
+    assert autopost.mark_manual(drafts, posted, "../config.json", 0, now) == 1
+    assert autopost.mark_manual(drafts, posted, "2026-10-24.json", 9, now) == 1
 
 
 def test_noon_posts_value_post_with_tree(dirs):

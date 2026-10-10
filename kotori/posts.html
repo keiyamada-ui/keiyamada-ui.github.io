@@ -19,12 +19,12 @@
 
 <script src="app.js"></script>
 <script>
-const SLOTS = [
-  { n: 1, time: "7:40", min: 460, plan: "buzz" },
-  { n: 2, time: "10:10", min: 610, plan: "casual" },
-  { n: 3, time: "12:20", min: 740, plan: "value" },
-  { n: 4, time: "15:40", min: 940, plan: "casual" },
-  { n: 5, time: "20:10", min: 1210, plan: "pr" },
+const SLOTS = [  // min = 開始時刻、end = 締め切り（日本時間・0時からの分）。autopost.py と同じ
+  { n: 1, time: "7:40", min: 460, end: 840, plan: "buzz" },
+  { n: 2, time: "10:10", min: 610, end: 740, plan: "casual" },
+  { n: 3, time: "12:20", min: 740, end: 940, plan: "value" },
+  { n: 4, time: "15:40", min: 940, end: 1210, plan: "casual" },
+  { n: 5, time: "20:10", min: 1210, end: 1440, plan: "pr" },
 ];
 const draftCache = {};
 async function draft(name) {
@@ -37,6 +37,36 @@ async function postOf(entry) {
 }
 let day = jstDate();
 const main = document.getElementById("main");
+
+// 「手で投稿した」を押してから、記録が反映されるまでの間の表示用（この端末だけ）
+const MARKS = "kotori-marks";
+const marks = {
+  all() { try { return JSON.parse(localStorage.getItem(MARKS) || "{}"); } catch (e) { return {}; } },
+  set(key, v) { const m = marks.all(); if (v) m[key] = v; else delete m[key]; try { localStorage.setItem(MARKS, JSON.stringify(m)); } catch (e) {} },
+};
+
+async function sendMark(name, i, undo, btn) {
+  if (!Key.get()) {
+    const box = btn.closest("section");
+    if (!box.querySelector(".info")) box.prepend(needKeyBox());
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await gh(`/repos/${REPO}/actions/workflows/affiliate_mark.yml/dispatches`,
+             { method: "POST", body: { ref: "main", inputs: { draft: name, index: String(i), undo: undo ? "true" : "false" } } });
+    marks.set(`${name}:${i}`, undo ? "undo" : "mark");
+    toast(undo ? "取り消しました（1〜2分で反映）" : "投稿済みにしました（1〜2分で反映）");
+    showDay();
+  } catch (e) { btn.disabled = false; toast(e.message); }
+}
+
+// その日の投稿記録。古い下書きを手で投稿した記録は「投稿した日」のファイルに入るので、数日分まとめて読む
+async function loadPosted(d) {
+  const days = [...new Set([d, addDays(d, 1), addDays(d, 2), jstDate()])].filter(x => x <= jstDate());
+  const lists = await Promise.all(days.map(x => raw("_affiliate/data/posted/" + x + ".json")));
+  return lists.flatMap(x => x || []);
+}
 
 function postBlock(post, extra = []) {
   const parts = post.thread_parts || [];
@@ -51,8 +81,14 @@ async function showDay() {
   main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
   const [daily, buzz, casual, posted] = await Promise.all([
     draft(day + ".json"), draft(day + "-buzz.json"), draft(day + "-casual.json"),
-    raw("_affiliate/data/posted/" + day + ".json")]);
+    loadPosted(day)]);
   const done = posted || [];
+  // 記録が反映されたら、この端末の「反映待ち」を消す
+  for (const [key, v] of Object.entries(marks.all())) {
+    const [n, i] = [key.slice(0, key.lastIndexOf(":")), +key.slice(key.lastIndexOf(":") + 1)];
+    const has = done.some(p => p.draft === n && p.post_index === i);
+    if ((v === "mark" && has) || (v === "undo" && !has)) marks.set(key, null);
+  }
   const today = jstDate();
   const now = new Date(Date.now() + 9 * 3600000);
   const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
@@ -69,17 +105,17 @@ async function showDay() {
   const sched = el("section", { class: "card" }, [el("div", { class: "title", text: "投稿の予定と結果" })]);
   const box = el("div", { style: "margin-top:10px" });
   for (const s of SLOTS) {
-    const hit = done.find(p => p.slot === s.n);
+    const hit = done.find(p => p.slot === s.n && p.date === day && !p.manual);
     const right = el("div");
     if (hit) {
       const post = await postOf(hit);
       right.append(el("div", { class: "row" }, [
-        el("span", { class: "badge ok", text: "✅ 投稿済み " + (hit.at ? hit.at.slice(11, 16) : "") }),
+        el("span", { class: "badge ok", text: "✅ 自動で投稿済み " + (hit.at ? hit.at.slice(11, 16) : "") }),
         el("span", { class: "badge" + (hit.kind === "pr" ? " pr" : ""), text: KIND[hit.kind] || hit.kind })]));
       if (hit.partial) right.append(el("div", { class: "muted", text: "⚠️ 途中までしか投稿できませんでした" }));
       if (post) right.append(...postBlock(post, hit.permalink ? [el("a", { class: "btn", href: hit.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })] : []));
     } else {
-      const passed = day < today || (day === today && nowMin > s.min + 90);
+      const passed = day < today || (day === today && nowMin >= s.end);
       right.append(el("div", { class: "row" }, [
         el("span", { class: "badge " + (passed ? "gray" : ""), text: passed ? "— 投稿なし" : "⏳ 予定" }),
         el("span", { class: "badge gray", text: KIND[s.plan] })]));
@@ -87,11 +123,18 @@ async function showDay() {
     }
     box.append(el("div", { class: "slot" }, [el("div", { class: "time", text: s.time }), right]));
   }
+  const manual = done.filter(p => p.manual && p.date === day);
+  if (manual.length) {
+    box.append(el("div", { class: "slot" }, [el("div", { class: "time", text: "手動" }),
+      el("div", {}, [el("span", { class: "badge", text: `✋ 手で投稿した記録 ${manual.length}件` }),
+                     el("div", { class: "muted", text: "下の下書きの一覧に「手で投稿済み」と表示されます" })])]));
+  }
   sched.append(box);
   nodes.push(sched);
 
   // その日の下書き
-  const isDone = (name, i) => done.some(p => p.draft === name && p.post_index === i);
+  const entryOf = (name, i) => done.find(p => p.draft === name && p.post_index === i);
+  const pending = marks.all();
   const groups = [[buzz, day + "-buzz.json"], [casual, day + "-casual.json"], [daily, day + ".json"]];
   const any = groups.some(([d]) => d && d.posts && d.posts.length);
   nodes.push(el("h2", { text: "この日の下書き" }));
@@ -105,11 +148,28 @@ async function showDay() {
     if (d.chosen && d.chosen.name) card.append(el("div", { class: "muted" }, ["商品: ", el("a", { href: d.chosen.url, target: "_blank", rel: "noopener", text: d.chosen.name.slice(0, 50) })]));
     if (d.errors && d.errors.length) card.append(el("div", { class: "warn", text: "❌ 自動チェックのエラーがあるため投稿しません:\n" + d.errors.join("\n") }));
     d.posts.forEach((p, i) => {
+      const e = entryOf(name, i);
+      const wait = pending[`${name}:${i}`];
+      let state, cls, extra = [];
+      if (wait === "mark" && !e) [state, cls] = ["✋ 手で投稿済み（反映中）", "ok"];
+      else if (wait === "undo" && e) [state, cls] = ["未投稿に戻しています（反映中）", "gray"];
+      else if (e && e.manual) {
+        [state, cls] = ["✋ 手で投稿済み", "ok"];
+        extra = [el("button", { class: "btn", text: "取り消す", onclick: ev => sendMark(name, i, true, ev.currentTarget) })];
+      } else if (e) {
+        [state, cls] = ["✅ 自動で投稿済み " + (e.at ? e.at.slice(5, 10).replace("-", "/") + " " + e.at.slice(11, 16) : ""), "ok"];
+        if (e.permalink) extra = [el("a", { class: "btn", href: e.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })];
+      } else {
+        [state, cls] = ["未投稿", "gray"];
+        extra = [el("a", { class: "btn", target: "_blank", rel: "noopener", text: "Threads で開く",
+                           href: "https://www.threads.com/intent/post?text=" + encodeURIComponent(p.text) }),
+                 el("button", { class: "btn primary", text: "✋ 手で投稿した", onclick: ev => sendMark(name, i, false, ev.currentTarget) })];
+      }
       card.append(el("div", { class: "row", style: "margin-top:12px" }, [
         el("span", { class: "badge" + (p.type === "pr" ? " pr" : ""), text: KIND[p.type] || p.type }),
-        el("span", { class: "badge " + (isDone(name, i) ? "ok" : "gray"), text: isDone(name, i) ? "投稿済み" : "未投稿" }),
+        el("span", { class: "badge " + cls, text: state }),
         p.angle ? el("span", { class: "muted", text: p.angle }) : null]));
-      card.append(...postBlock(p));
+      card.append(...postBlock(p, extra));
     });
     nodes.push(card);
   }
