@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-10",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-10",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "急に朝晩冷えてきて、長袖パジャマどこにしまったか朝からクローゼットひっくり返してた。見つからない。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の習い事の送迎、待ってる間の1時間って本当に何もできないまま終わる。車でぼーっとしてたらもう時間。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "連休初日だけど、朝ごはん片付けたらもうお昼何にするか考えてるの親の宿命なのかな。結局うどんになりそう。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

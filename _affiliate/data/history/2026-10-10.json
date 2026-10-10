@@ -8,5 +8,15 @@
     "theme": "ランドセル 反射材 ライト",
     "origin": "AI",
     "hidden_gem": true
+  },
+  {
+    "date": "2026-10-10",
+    "source": "travel",
+    "id": "38754",
+    "name": "八ヶ岳グレイスホテル",
+    "theme_id": "0e6495e0b3",
+    "theme": "八ヶ岳 星空観察 ホテル 子供",
+    "origin": "AI",
+    "hidden_gem": false
   }
 ]
