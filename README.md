@@ -1,2 +1,2 @@
 # keiyamada-ui.github.io
-AIテックニュース速報
+Threads自動投稿システム
