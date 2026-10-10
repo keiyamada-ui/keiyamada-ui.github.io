@@ -143,12 +143,29 @@ function textBlock(label, text, withOpen) {
           el("div", { class: "actions" }, actions)];
 }
 
+// 楽天市場の商品は、ROOM の投稿画面を商品を選んだ状態で開ける（商品コード「お店:商品」を使う）。
+// 本は ROOM の投稿画面を直接開けないので、書名をコピーして ROOM アプリの「商品キーワード検索から投稿」で探す
+function roomButtons(r) {
+  const ichiba = r.source === "ichiba" && String(r.id || "").includes(":");
+  if (ichiba) {
+    const url = "https://room.rakuten.co.jp/mix?itemcode=" + encodeURIComponent(r.id) + "&scid=we_room_upc60";
+    return [el("button", { class: "act primary", text: "① コメントをコピーして ROOM で開く", onclick: () => {
+      copy(r.comment);  // 待たずに開く（待つとスマホのブラウザに新しい画面を止められることがある）
+      window.open(url, "_blank", "noopener");
+    } }),
+      el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" })];
+  }
+  return [el("button", { class: "act primary", text: "① 書名をコピー", onclick: () => copy(r.name) }),
+          el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
+          el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" })];
+}
+
 function renderRoom() {
   const list = document.getElementById("list");
   list.replaceChildren();
   const items = room.filter(r => !filters.unused || !used["room:" + r.key]);
   const left = room.filter(r => !used["room:" + r.key]).length;
-  list.append(el("p", { class: "count", text: `未投稿 ${left} 件 ／ 上から順に「商品を開く」→「ROOMに投稿」→ コメントを貼って投稿` }));
+  list.append(el("p", { class: "count", text: `未投稿 ${left} 件 ／ 楽天市場の商品:「コメントをコピーして ROOM で開く」→ コメント欄に貼って投稿。本: ROOM アプリの投稿ボタン →「商品キーワード検索から投稿」で書名を貼って探す → コメントを貼って投稿` }));
   for (const r of items) {
     const key = "room:" + r.key;
     const done = !!used[key];
@@ -163,12 +180,9 @@ function renderRoom() {
       ]),
       el("div", { class: "label", text: "ROOM 用コメント" }),
       el("div", { class: "text", text: r.comment }),
-      el("div", { class: "actions" }, [
-        el("a", { class: "act", text: "① 商品を開く", href: r.url, target: "_blank", rel: "noopener" }),
-        el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
-      ]),
+      el("div", { class: "actions" }, roomButtons(r)),
     ]);
-    const doneBtn = el("button", { class: "act" + (done ? " done" : ""), text: done ? "✓ 投稿した（戻す）" : "③ 投稿した" });
+    const doneBtn = el("button", { class: "act" + (done ? " done" : ""), text: done ? "✓ 投稿した（戻す）" : "投稿した" });
     doneBtn.addEventListener("click", () => {
       if (used[key]) delete used[key]; else used[key] = new Date().toISOString();
       store.set(used); renderRoom();
