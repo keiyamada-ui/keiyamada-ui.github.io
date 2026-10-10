@@ -35,7 +35,7 @@ auto_post:
   # PR 投稿どうしの間隔（日）。1 にすると毎日
   pr_min_interval_days: 2
   # Threads のトークンを Secrets に登録した日。60日で切れるので、50日たったら Issue で知らせる
-  token_updated:
+  token_updated: 2026-10-10
   # 投稿は1日3回（日本時間 7:40ごろ・12:20ごろ・20:10ごろ、毎回0〜15分ずらす）
   #   朝 = リンクなし投稿1 / 昼 = リンクなし投稿2 / 夜 = PR 投稿（推し商品フォームの下書きを優先）
   #   時刻は .github/workflows/affiliate_post.yml の cron で変えられる
