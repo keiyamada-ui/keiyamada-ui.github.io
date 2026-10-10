@@ -62,7 +62,7 @@
   </div>
 </header>
 
-<a class="token" id="token" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/README.md"></a>
+<div class="token" id="token"></div>
 <a class="today" id="today" href="posts.html"></a>
 
 <h2>毎日</h2>
@@ -151,7 +151,7 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
       : `🔑 Threads のトークンの期限が切れています（${day}）`;
     if (left <= 10) {
       box.classList.add("urgent");
-      box.insertAdjacentHTML("beforeend", "<small>作り直して Secrets の KOTORI_THREADS_TOKEN を更新してください</small>");
+      box.insertAdjacentHTML("beforeend", "<small>作り直して Secrets の KOTORI_THREADS_TOKEN を更新してください（手順は Google カレンダーの予定に書いてあります）</small>");
     }
     box.classList.add("show");
   })
