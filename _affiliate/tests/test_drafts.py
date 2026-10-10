@@ -263,16 +263,15 @@ def test_claude_falls_back_to_gemini(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     monkeypatch.setenv("GEMINI_API_KEY", "y")
 
-    def broke(*_):
+    def broke(*_a, **_k):
         raise RuntimeError("Your credit balance is too low to access the Anthropic API")
 
     calls = []
     monkeypatch.setattr(llm, "_call_claude", broke)
-    monkeypatch.setattr(llm, "_call_gemini", lambda *a: calls.append(1) or json.dumps(FIXTURES["reference"]))
+    monkeypatch.setattr(llm, "_call_gemini", lambda *a, **k: calls.append(1) or json.dumps(FIXTURES["reference"]))
     gen = llm.Generator()
-    assert gen.provider == "claude"
-    assert gen("s", "u", prompts.REFERENCE_SCHEMA)["summary"]
-    assert gen.provider == "gemini" and "残高" in gen.notice
+    assert gen("s", "u", prompts.REFERENCE_SCHEMA, tier="important")["summary"]
+    assert "残高" in gen.notice and "Gemini" in gen.label
     gen("s", "u", prompts.REFERENCE_SCHEMA)  # 2回目からは最初から Gemini
     assert len(calls) == 2
 
@@ -281,15 +280,46 @@ def test_claude_error_without_gemini_key_is_raised(monkeypatch):
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.setattr(llm, "_call_claude", lambda *a: (_ for _ in ()).throw(RuntimeError("down")))
+    monkeypatch.setattr(llm, "_call_claude", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down")))
     with pytest.raises(RuntimeError):
         llm.Generator()("s", "u", prompts.REFERENCE_SCHEMA)
+
+
+def test_tiers_pick_models(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.setenv("GEMINI_API_KEY", "y")
+    seen = []
+    monkeypatch.setattr(llm, "_call_claude", lambda s, u, model, effort, schema=None, search=False:
+                        seen.append(("claude", model, effort, search)) or json.dumps(FIXTURES["reference"]))
+    monkeypatch.setattr(llm, "_call_gemini", lambda s, u, schema=None, search=False:
+                        seen.append(("gemini", search)) or json.dumps(FIXTURES["reference"]))
+    gen = llm.Generator()
+    gen("s", "u", prompts.REFERENCE_SCHEMA, tier="important")
+    gen("s", "u", prompts.REFERENCE_SCHEMA, tier="standard")
+    gen("s", "u", prompts.REFERENCE_SCHEMA, tier="casual")
+    gen.research("s", "u")
+    assert seen == [("claude", "claude-opus-5-5", "high", False), ("claude", "claude-sonnet-5-5", "medium", False),
+                    ("gemini", False), ("claude", "claude-opus-5-5", "high", True)]
+
+
+def test_casual_falls_back_to_claude_sonnet(monkeypatch):
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.setenv("GEMINI_API_KEY", "y")
+    monkeypatch.setattr(llm, "_call_gemini", lambda *a, **k: (_ for _ in ()).throw(llm.LLMError("429")))
+    models = []
+    monkeypatch.setattr(llm, "_call_claude", lambda s, u, model, *a, **k:
+                        models.append(model) or json.dumps(FIXTURES["reference"]))
+    llm.Generator()("s", "u", prompts.REFERENCE_SCHEMA, tier="casual")
+    assert models == ["claude-sonnet-5-5"]
 
 
 def test_gemini_when_no_claude_key(monkeypatch):
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert llm.Generator().provider == "gemini"
+    monkeypatch.setenv("GEMINI_API_KEY", "y")
+    assert llm.Generator()._plan("important") == [("gemini", llm.GEMINI_MODEL)]
 
 
 # ---------------- forms & patterns ----------------
@@ -350,7 +380,7 @@ def test_rewrite_loop_feeds_errors_back():
     analysis = json.loads(json.dumps(FIXTURES["analysis"]))
     calls = []
 
-    def generate(system, user, schema):
+    def generate(system, user, schema, tier="standard"):
         calls.append(user)
         result = json.loads(json.dumps(FIXTURES["write"]))
         if len(calls) == 1:

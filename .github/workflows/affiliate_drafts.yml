@@ -42,7 +42,9 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       # この Secret を登録すると Claude を優先して使い、使えないときは Gemini に自動で切り替わる
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      # 勝ちパターン（参考投稿の分析結果）を Issue から読むため
+      # 投稿の反響（いいね数など）を取って、反響の大きかった話題の PR 投稿を作るため
+      KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
+      # 勝ちパターン（参考投稿の分析結果）・ネタ帳を Issue から読むため
       GITHUB_TOKEN: ${{ github.token }}
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -85,6 +87,7 @@ jobs:
         run: |
           gh label create "下書き" --color FFD966 --description "ことりの投稿下書き" --force
           gh label create "投稿レポート" --color B6D7A8 --description "自動投稿の結果" --force
+          gh label create "ネタ帳" --color D9EAD3 --description "つぶやきのネタ（本人の出来事）" --force
 
       - name: 7a. 自動投稿モード：下書きを保存して、今日のレポートを作る
         if: steps.generate.outcome == 'success' && steps.generate.outputs.auto_post == 'true'
@@ -105,7 +108,8 @@ jobs:
 
           今日の下書き: ${{ github.server_url }}/${{ github.repository }}/blob/main/$rel
 
-          このあと 朝・昼・夜 の3回、自動で Threads に投稿し、結果をこの Issue にコメントします。
+          このあと 7:40 集客投稿・10:10 つぶやき・12:20 役立つ投稿・15:40 つぶやき・20:10 PR 投稿 の5回、
+          自動で Threads に投稿し、結果をこの Issue にコメントします。
           良くない投稿は Threads アプリで削除してください。自動投稿を止めたいときは _affiliate/config.yaml の auto_post.enabled を false に。"
 
       - name: 7b. 確認用の PR を作る
@@ -115,6 +119,7 @@ jobs:
           branch: drafts/${{ github.run_id }}
           add-paths: |
             _affiliate/drafts/*.md
+            _affiliate/drafts/*.json
             _affiliate/data/history/*.json
             _affiliate/data/themes/*.json
             _affiliate/data/snapshots/*.json
@@ -125,14 +130,21 @@ jobs:
           labels: 下書き
           delete-branch: true
 
-      - name: AI の切り替えを知らせる
+      - name: AI の切り替えを知らせる（同じお知らせが開いている間は、新しく作らない）
         if: steps.generate.outputs.notice != ''
         env:
           NOTICE: ${{ steps.generate.outputs.notice }}
         run: |
-          gh issue create --repo "${{ github.repository }}" \
-            --title "ℹ️ 今日の下書きは Gemini で作りました（$(TZ=Asia/Tokyo date +%Y-%m-%d)）" \
-            --body "$NOTICE"
+          gh label create "AI切り替え" --color F4CCCC --description "Claude が使えず Gemini で作った" --force
+          open=$(gh issue list --repo "${{ github.repository }}" --label "AI切り替え" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -z "$open" ]; then
+            gh issue create --repo "${{ github.repository }}" --label "AI切り替え" \
+              --title "ℹ️ Claude が使えないため、Gemini で下書きを作っています" \
+              --body "$NOTICE
+
+          Claude をチャージ（または API キーを登録）したら、この Issue を Close してください。
+          Close するまでは、毎日同じお知らせは届きません（下書きは Gemini で作り続けます）。"
+          fi
 
       - name: 失敗したら Issue で知らせる
         if: failure()
