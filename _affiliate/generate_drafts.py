@@ -141,30 +141,56 @@ def ensure_theme_bank(config, today, generate, force=False):
 
 # ---------------------------------------------------------------- 候補探し
 
+MAX_THEME_TRIES = 15
+# どのテーマでも条件に合う商品がなかったとき、最後に使うゆるめの条件
+RELAXED_FILTERS = {"min_review_count": 3, "min_review_average": 3.8}
+
+
+def _score(config, theme, cands, trend_map, ranking, notes):
+    ranks = {}
+    if theme["source"] == "ichiba":
+        for genre in list(dict.fromkeys(c.get("genre_id") for c in cands if c.get("genre_id")))[:2]:
+            try:
+                ranks.update(ranking(genre))
+            except Exception as e:  # noqa: BLE001 - ランキングは補助なので、取れなくても続ける
+                notes.append(f"ランキングを取得できませんでした（需要はレビュー件数で判定）: {str(e)[:80]}")
+                break
+    scored = selector.score_items(cands, config["scoring"], trend_map, ranks)
+    return scored[: config["filters"]["max_candidates"]]
+
+
 def find_candidates(config, ordered_themes, today, history, search, ranking, gem_day):
-    notes = []
-    for theme in ordered_themes[:8]:
-        items = search(theme["source"], theme["keyword"])
-        trend_map = selector.trends(DATA / "snapshots", today, items)
+    """テーマを順に試して、条件に合う商品が見つかったテーマと候補を返す。
+    AI が考えたテーマは検索語が細かすぎて商品が見つからないことがあるので、固定テーマも必ず試し、
+    それでもだめなら条件をゆるめる。"""
+    notes, tried = [], []
+    fixed = [t for t in themes_mod.fixed_themes(config) if t["id"] not in {x["id"] for x in ordered_themes[:MAX_THEME_TRIES]}]
+    for theme in ordered_themes[:MAX_THEME_TRIES] + fixed:
+        try:
+            items = search(theme["source"], theme["keyword"])
+        except Exception as e:  # noqa: BLE001 - 1つのテーマの検索失敗で止めない
+            print(f"⚠️ 「{theme['keyword']}」を検索できませんでした: {str(e)[:100]}")
+            continue
+        trend_map = selector.trends(DATA / "snapshots", today, items)  # 保存する前に、前回の記録と比べる
         selector.save_snapshot(DATA / "snapshots", today, items)
         gem = config["hidden_gems"] if gem_day else None
         cands = selector.filter_items(items, history, today, config["filters"], gem)
         if gem and not cands:
             cands = selector.filter_items(items, history, today, config["filters"])
-            notes.append("今日は発掘枠の日でしたが、条件に合う商品がなかったため通常の候補から選びました")
+            if cands:
+                notes.append("今日は発掘枠の日でしたが、条件に合う商品がなかったため通常の候補から選びました")
         print(f"🔎 「{theme['keyword']}」: {len(items)}件取得 → 条件に合う候補 {len(cands)}件")
-        if not cands:
-            continue
-        ranks = {}
-        if theme["source"] == "ichiba":
-            for genre in list(dict.fromkeys(c.get("genre_id") for c in cands if c.get("genre_id")))[:2]:
-                try:
-                    ranks.update(ranking(genre))
-                except Exception as e:  # noqa: BLE001 - ランキングは補助なので、取れなくても続ける
-                    notes.append(f"ランキングを取得できませんでした（需要はレビュー件数で判定）: {str(e)[:80]}")
-                    break
-        scored = selector.score_items(cands, config["scoring"], trend_map, ranks)
-        return theme, scored[: config["filters"]["max_candidates"]], notes
+        if cands:
+            return theme, _score(config, theme, cands, trend_map, ranking, notes), notes
+        if items:
+            tried.append((theme, items, trend_map))
+    relaxed = dict(config["filters"], **RELAXED_FILTERS)
+    for theme, items, trend_map in tried:
+        cands = selector.filter_items(items, history, today, relaxed)
+        if cands:
+            print(f"🔎 条件をゆるめて「{theme['keyword']}」から候補 {len(cands)}件")
+            notes.append("条件に合う商品が少なかったため、レビュー数の条件をゆるめて選びました。商品ページも確認してください")
+            return theme, _score(config, theme, cands, trend_map, ranking, notes), notes
     raise RuntimeError("どのテーマでも条件に合う候補が見つかりませんでした（config.yaml の filters を緩めてください）")
 
 

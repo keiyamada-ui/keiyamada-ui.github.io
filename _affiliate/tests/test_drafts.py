@@ -392,6 +392,22 @@ def test_dry_run_reference(out_dir, monkeypatch):
     assert patterns.parse_comment((out_dir / "reference_comment.md").read_text(encoding="utf-8"))
 
 
+def test_find_candidates_falls_back_to_fixed_themes_and_relaxed_filters():
+    bank = [themes._make("AI", "ichiba", f"細かすぎる 検索語 {n}", "") for n in range(20)]
+    seen = []
+
+    def search(source, keyword, hits=30):
+        seen.append(keyword)
+        return [] if keyword.startswith("細かすぎる") else [dict(item(1), source=source)]
+    theme, cands, notes = generate_drafts.find_candidates(CONFIG, bank, TODAY, [], search, lambda g: {}, False)
+    assert theme["origin"] == "固定" and cands  # AI のテーマで見つからなくても、固定テーマで見つける
+    assert len([k for k in seen if k.startswith("細かすぎる")]) == generate_drafts.MAX_THEME_TRIES
+
+    few = lambda source, keyword, hits=30: [dict(item(1), source=source, review_count=5)]  # noqa: E731
+    theme, cands, notes = generate_drafts.find_candidates(CONFIG, bank[:1], TODAY, [], few, lambda g: {}, False)
+    assert cands and any("ゆるめて" in n for n in notes)
+
+
 def test_rewrite_loop_feeds_errors_back():
     theme = themes.fixed_themes(CONFIG)[0]
     chosen = dict(item(1), shop="店", caption="")
