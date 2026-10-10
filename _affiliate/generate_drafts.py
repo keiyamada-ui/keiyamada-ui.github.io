@@ -99,7 +99,22 @@ def check_api(config):
         print(f"   ⚠️ 取得できなかった出どころ: {name}")
     if not os.environ.get("RAKUTEN_AFFILIATE_ID"):
         print("⚠️ RAKUTEN_AFFILIATE_ID が未設定です。リンクから購入されても報酬になりません")
+    check_ai(config)
     return 1 if failed else 0
+
+
+def check_ai(config):
+    """AI がつながるか、重要度ごとにごく短い質問で確かめる（料金は1円未満）。"""
+    schema = prompts.obj(answer=prompts.STR)
+    for tier in ("important", "standard", "casual"):
+        gen = llm.Generator(config.get("ai"))
+        try:
+            gen("短く答えてください。", "「こんにちは」と返してください。", schema, tier=tier)
+            print(f"✅ AI（{tier}）: {gen.label} で動きました")
+        except Exception as e:  # noqa: BLE001 - 接続確認なので、全部の結果を表示する
+            print(f"❌ AI（{tier}）: {str(e)[:200]}")
+        if gen.notice:
+            print(f"   ⚠️ {gen.notice}")
 
 
 # ---------------------------------------------------------------- テーマ
