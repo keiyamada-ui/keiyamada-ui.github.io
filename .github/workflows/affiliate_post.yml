@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       slot:
-        description: 'auto = 今の時間帯 / 1 = 朝（集客） / 2 = 午前（つぶやき） / 3 = 昼（役立つ） / 4 = 午後（つぶやき） / 5 = 夜（PR） / check = Threads の接続確認'
+        description: 'auto = 出し損ねた枠があれば出す / 1〜5 = その枠を今すぐ / comments = コメントだけ確認 / check = Threads の接続確認'
         type: choice
-        options: [auto, '1', '2', '3', '4', '5', check]
+        options: [auto, '1', '2', '3', '4', '5', comments, check]
         default: auto
       dry_run:
         description: '投稿せず、何を投稿するかだけ表示する'
@@ -49,7 +49,7 @@ jobs:
         run: python _affiliate/autopost.py --check
 
       - name: 今日の下書きがまだなければ作る（朝の下書き作りの起動が遅れたとき）
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || inputs.slot == 'auto'
         run: |
           day=$(TZ=Asia/Tokyo date +%F)
           hour=$(TZ=Asia/Tokyo date +%-H)
@@ -68,7 +68,7 @@ jobs:
 
       - name: 投稿する
         id: post
-        if: inputs.slot != 'check'
+        if: inputs.slot != 'check' && inputs.slot != 'comments'
         env:
           SLOT: ${{ inputs.slot || 'auto' }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -82,12 +82,14 @@ jobs:
 
       - name: コメントを確認して、返信文の案を作る
         id: comments
-        if: steps.post.outcome == 'success' && inputs.dry_run != true
+        if: (steps.post.outcome == 'success' || inputs.slot == 'comments') && inputs.dry_run != true
         continue-on-error: true
-        run: python _affiliate/comments.py
+        run: |
+          git pull -q origin main
+          python _affiliate/comments.py
 
       - name: 投稿の記録を保存する
-        if: always() && steps.post.outcome != 'skipped' && inputs.dry_run != true
+        if: always() && (steps.post.outcome != 'skipped' || inputs.slot == 'comments') && inputs.dry_run != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

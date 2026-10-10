@@ -57,6 +57,22 @@ async function rawText(path) {
   } catch (e) { return ""; }
 }
 
+// 最新のファイルを読む。合い鍵があれば GitHub API から直接読む（公開ファイルの配信は数分遅れることがあるため）
+async function fresh(path) {
+  if (!Key.get()) return raw(path);
+  try {
+    const r = await fetch(`${API}/repos/${REPO}/contents/${path}?ref=main&t=${Date.now()}`,
+      { headers: { Accept: "application/vnd.github.raw+json", Authorization: "Bearer " + Key.get() } });
+    if (r.status === 404) return null;
+    return r.ok ? await r.json() : raw(path);
+  } catch (e) { return raw(path); }
+}
+
+// ワークフローを今すぐ動かす（合い鍵が必要）
+async function dispatch(file, inputs) {
+  return gh(`/repos/${REPO}/actions/workflows/${file}/dispatches`, { method: "POST", body: { ref: "main", inputs } });
+}
+
 // GitHub API。合い鍵があれば付ける（なくても公開情報は読める）
 async function gh(path, { method = "GET", body } = {}) {
   const headers = { Accept: "application/vnd.github+json" };

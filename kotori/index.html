@@ -70,7 +70,7 @@
   <a class="btn main" href="posts.html">
     <span class="icon">📣</span><span class="label">今日の投稿</span>
     <span class="desc">5回分の予定と結果・下書き。良くない投稿は Threads アプリで削除</span></a>
-  <a class="btn main" href="stock.html#comments">
+  <a class="btn main" href="comments.html">
     <span class="icon">💬</span><span class="label">コメント返し</span>
     <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></a>
   <a class="btn" href="posts.html#insights">
@@ -168,6 +168,16 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
   box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
   box.classList.add("show");
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
+  // GitHub の定期実行は遅れることがあるので、管理画面を開いたときにも「出し損ねた投稿・新しいコメント」を確認させる
+  // （出す枠がなければ何もしない。30分に1回まで）
+  if (Key.get()) {
+    let last = 0;
+    try { last = +localStorage.getItem("kotori-nudge") || 0; } catch (e) {}
+    if (Date.now() - last > 30 * 60000) {
+      try { localStorage.setItem("kotori-nudge", String(Date.now())); } catch (e) {}
+      dispatch("affiliate_post.yml", { slot: "auto" }).catch(() => {});
+    }
+  }
   try {
     const issues = await gh(`/repos/${REPO}/issues?state=open&per_page=50`);
     const hide = ["投稿レポート", "勝ちパターン", "ネタ帳", "下書き"];
