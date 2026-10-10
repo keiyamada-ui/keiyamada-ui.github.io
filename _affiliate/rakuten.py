@@ -34,11 +34,21 @@ class RakutenClient:
         self.session = session or requests.Session()
         self._last_call = 0.0
 
-    def _get(self, source, params):
+    def _get(self, source, params, retries=3):
+        """楽天は1秒あたりの回数制限が厳しいので、間隔をあけ、429（速すぎる）なら待って再試行する。"""
+        for attempt in range(retries + 1):
+            res = self._request(source, params)
+            if res.status_code != 429 or attempt == retries:
+                break
+            delay = 2 ** (attempt + 1)
+            print(f"⏳ 楽天API（{source}）が混み合っています。{delay}秒待って再試行します")
+            time.sleep(delay)
+        return self._handle(source, res)
+
+    def _request(self, source, params):
         wait = self.min_interval - (time.monotonic() - self._last_call)
         if wait > 0:
             time.sleep(wait)
-        self._last_call = time.monotonic()
 
         query = {
             "applicationId": self.app_id,
@@ -56,6 +66,10 @@ class RakutenClient:
         }
         res = self.session.get(self.endpoints[source], params=query,
                                headers=headers, timeout=30)
+        self._last_call = time.monotonic()
+        return res
+
+    def _handle(self, source, res):
         if res.status_code == 404 and "not_found" in res.text:
             # 検索結果が0件のとき楽天は404を返す
             return {}

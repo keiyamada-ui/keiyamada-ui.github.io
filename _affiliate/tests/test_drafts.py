@@ -219,6 +219,30 @@ def test_client_lookup_by_item_url():
     assert found["id"] == "shop:ball" and session.calls[0][1]["itemCode"] == "shop:ball"
 
 
+class SequenceSession(FakeSession):
+    def __init__(self, responses):
+        super().__init__(None)
+        self.responses = list(responses)
+
+    def get(self, url, params, headers, timeout):
+        self.calls.append((url, params, headers))
+        return self.responses.pop(0)
+
+
+def test_client_retries_when_rate_limited(monkeypatch):
+    monkeypatch.setattr(rakuten.time, "sleep", lambda s: None)
+    session = SequenceSession([FakeResponse(429, {"message": "Rate limit is exceeded"}),
+                               FakeResponse(200, {"Items": [{"isbn": "978", "title": "図鑑", "itemPrice": 1}]})])
+    c = rakuten.RakutenClient("app", "key", None, {"books": "https://api/books"}, "https://site/",
+                              min_interval_seconds=0, session=session)
+    assert c.search("books", "図鑑")[0]["name"] == "図鑑" and len(session.calls) == 2
+    always = SequenceSession([FakeResponse(429, {"message": "slow down"})] * 4)
+    c.session = always
+    with pytest.raises(rakuten.RakutenError, match="429"):
+        c.search("books", "図鑑")
+    assert len(always.calls) == 4
+
+
 def test_client_raises_on_error():
     c, _ = client(FakeResponse(403, {"error": "REQUEST_CONTEXT_BODY_HTTP_REFERRER_MISSING"}))
     with pytest.raises(rakuten.RakutenError, match="403"):
