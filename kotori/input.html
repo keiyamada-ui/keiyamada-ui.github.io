@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>入力・操作</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>✏️ 入力・操作</h1></header>
+<div class="tabs" role="tablist">
+  <button class="tab" id="t-neta" role="tab">ネタ帳</button>
+  <button class="tab" id="t-recommend" role="tab">推し商品</button>
+  <button class="tab" id="t-reference" role="tab">参考投稿</button>
+  <button class="tab" id="t-actions" role="tab">操作</button>
+</div>
+<div id="keybox"></div>
+<main id="main"></main>
+
+<script src="app.js"></script>
+<script>
+const main = document.getElementById("main");
+const NO = "_No response_";
+const field = (label, input, hint) => [el("label", { class: "field" }, [label, hint ? el("small", { text: "　" + hint }) : null]), input];
+const v = x => (x || "").trim() || NO;
+
+async function createIssue(title, body, labels, btn, done) {
+  if (!Key.get()) { location.href = "key.html"; return false; }
+  btn.disabled = true;
+  try {
+    await gh(`/repos/${REPO}/issues`, { method: "POST", body: { title, body, labels } });
+    toast(done);
+    return true;
+  } catch (e) { toast(e.message); return false; }
+  finally { btn.disabled = false; }
+}
+
+function showNeta() {
+  const text = el("textarea", { placeholder: "例）朝、体操服を忘れたことに家を出てから気づいて走って取りに帰った" });
+  const btn = el("button", { class: "btn primary", text: "ネタ帳に入れる" });
+  btn.addEventListener("click", async () => {
+    const t = text.value.trim();
+    if (!t) { toast("あったことを書いてください"); return; }
+    if (await createIssue("[ネタ帳] " + t.slice(0, 24), "### あったこと\n\n" + t, ["ネタ帳"], btn,
+                          "入れました。翌朝のつぶやきに使います")) text.value = "";
+  });
+  main.replaceChildren(el("section", { class: "card" }, [
+    el("div", { class: "title", text: "📝 今日あったこと" }),
+    el("p", { class: "note", style: "margin-top:6px", text: "子どもの一言、朝のバタバタ、習い事でのこと など、短くてOK。翌朝 5時ごろに、つぶやき（短い投稿）にします。あなたの体験として書けるのは、ここに書いたことだけです。名前・学校名など個人が分かることは書かないでください。" }),
+    text, el("div", { class: "actions" }, [btn])]));
+}
+
+function showRecommend() {
+  const url = el("input", { type: "url", placeholder: "https://item.rakuten.co.jp/..." });
+  const isbn = el("input", { type: "text", inputmode: "numeric", placeholder: "9784..." });
+  const memo = el("textarea", { placeholder: "良いと思った点・使ってみた感想など（事実として投稿に使われます）" });
+  const used = el("input", { type: "checkbox", id: "used" });
+  const btn = el("button", { class: "btn primary", text: "この商品の下書きを作る" });
+  btn.addEventListener("click", async () => {
+    if (!url.value.trim() && !isbn.value.trim()) { toast("商品のURLか ISBN を入れてください"); return; }
+    const body = [`### 商品のURL\n\n${v(url.value)}`, `### ISBN（本の場合）\n\n${v(isbn.value)}`,
+                  `### ひとことメモ\n\n${v(memo.value)}`,
+                  `### 実際に使いましたか？\n\n- [${used.checked ? "X" : " "}] 使ったことがある（体験談として書いてOK）`].join("\n\n");
+    if (await createIssue("[推し商品] " + (url.value.trim() || isbn.value.trim()).slice(0, 40), body, [], btn,
+                          "受け付けました。数分で下書きができ、夜の PR 投稿の枠で優先して投稿します")) {
+      url.value = isbn.value = memo.value = ""; used.checked = false;
+    }
+  });
+  main.replaceChildren(el("section", { class: "card" }, [
+    el("div", { class: "title", text: "🛒 この商品を紹介したい" }),
+    el("p", { class: "note", style: "margin-top:6px", text: "楽天市場・楽天トラベルの商品ページの URL（楽天アプリの共有リンクも可）。本は URL の代わりに ISBN でもOK。" }),
+    ...field("商品のURL", url), ...field("ISBN", isbn, "本の場合"), ...field("ひとことメモ", memo, "任意"),
+    el("label", { class: "check", for: "used" }, [used, "実際に使ったことがある（体験談として書いてOK）"]),
+    el("div", { class: "actions" }, [btn])]));
+}
+
+function showReference() {
+  const url = el("input", { type: "url", placeholder: "https://www.threads.com/@.../post/..." });
+  const text = el("textarea", { placeholder: "伸びている投稿の文章を貼り付け（ツリーは続けてOK）" });
+  const likes = el("input", { type: "number", inputmode: "numeric", placeholder: "120" });
+  const memo = el("textarea", { placeholder: "どこが良いと思ったか（任意）" });
+  const btn = el("button", { class: "btn primary", text: "型を分析してもらう" });
+  btn.addEventListener("click", async () => {
+    if (!text.value.trim()) { toast("投稿の本文を貼り付けてください"); return; }
+    const body = [`### 投稿のURL\n\n${v(url.value)}`, `### 投稿の本文\n\n${text.value.trim()}`,
+                  `### いいねの数\n\n${v(likes.value)}`, `### ひとことメモ\n\n${v(memo.value)}`].join("\n\n");
+    if (await createIssue("[参考投稿] " + text.value.trim().slice(0, 24), body, [], btn,
+                          "受け付けました。数分で分析が終わり、勝ちパターンに入ります")) {
+      url.value = text.value = likes.value = memo.value = "";
+    }
+  });
+  main.replaceChildren(el("section", { class: "card" }, [
+    el("div", { class: "title", text: "⭐ 参考になる投稿を登録" }),
+    el("p", { class: "note", style: "margin-top:6px", text: "伸びている投稿を貼ると、AI が書き出しや構成の「型」だけを学んで、毎朝の下書きに活かします（文章はまねしません）。" }),
+    ...field("投稿の本文", text), ...field("投稿のURL", url, "任意"), ...field("いいねの数", likes, "任意"),
+    ...field("ひとことメモ", memo, "任意"),
+    el("div", { class: "actions" }, [btn]),
+    el("div", { class: "actions" }, [el("a", { class: "btn", href: "notices.html#patterns", text: "🏆 勝ちパターン一覧を見る" })])]));
+}
+
+async function showActions() {
+  const state = el("span", { class: "badge gray", text: "確認中…" });
+  const toggle = el("button", { class: "btn", text: "…", disabled: "" });
+  let active = null;
+  const refresh = async () => {
+    try {
+      active = (await gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml`)).state === "active";
+      state.className = "badge " + (active ? "ok" : "ng");
+      state.textContent = active ? "▶️ 動いています" : "⏸ 止まっています";
+      toggle.textContent = active ? "⏸ 自動投稿を止める" : "▶️ 自動投稿を再開する";
+      toggle.className = "btn " + (active ? "danger" : "primary");
+      toggle.disabled = false;
+    } catch (e) { state.textContent = "確認できません"; }
+  };
+  toggle.addEventListener("click", async () => {
+    if (!Key.get()) { location.href = "key.html"; return; }
+    if (active && !confirm("自動投稿を止めますか？（再開するまで Threads に投稿されません）")) return;
+    toggle.disabled = true;
+    try {
+      await gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml/${active ? "disable" : "enable"}`, { method: "PUT" });
+      toast(active ? "止めました" : "再開しました");
+    } catch (e) { toast(e.message); }
+    refresh();
+  });
+  const dispatch = (file, inputs, msg, ask) => async ev => {
+    if (!Key.get()) { location.href = "key.html"; return; }
+    if (ask && !confirm(ask)) return;
+    const b = ev.currentTarget; b.disabled = true;
+    try {
+      await gh(`/repos/${REPO}/actions/workflows/${file}/dispatches`, { method: "POST", body: { ref: "main", inputs } });
+      toast(msg);
+    } catch (e) { toast(e.message); }
+    b.disabled = false;
+  };
+  main.replaceChildren(
+    el("section", { class: "card" }, [
+      el("div", { class: "row between" }, [el("div", { class: "title", text: "📣 自動投稿" }), state]),
+      el("p", { class: "note", style: "margin-top:6px", text: "止めている間は Threads に投稿しません（下書きは毎朝作られます）。" }),
+      el("div", { class: "actions" }, [toggle])]),
+    el("section", { class: "card" }, [
+      el("div", { class: "title", text: "▶️ 今すぐ下書きを作る" }),
+      el("p", { class: "note", style: "margin-top:6px", text: "毎朝 5:15 の下書き作りを、今すぐもう一度行います。今日の下書きは作り直されます（すでに投稿した分は二重に出ません）。2〜5分かかります。" }),
+      el("div", { class: "actions" }, [el("button", { class: "btn primary", text: "下書きを作る",
+        onclick: dispatch("affiliate_drafts.yml", { mode: "drafts" }, "始めました。2〜5分後に「今日の投稿」で確認できます", "今日の下書きを作り直しますか？") })])]),
+    el("section", { class: "card" }, [
+      el("div", { class: "title", text: "🔌 接続確認" }),
+      el("p", { class: "note", style: "margin-top:6px", text: "Threads・楽天・AI につながるか確かめます。結果は「お知らせ・状況」の動作状況で見られます。" }),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn", text: "Threads", onclick: dispatch("affiliate_post.yml", { slot: "check" }, "確認を始めました") }),
+        el("button", { class: "btn", text: "楽天・AI", onclick: dispatch("affiliate_drafts.yml", { mode: "check-api" }, "確認を始めました") })])]),
+  );
+  refresh();
+}
+
+if (!Key.get()) document.getElementById("keybox").append(needKeyBox());
+setupTabs([["t-neta", "neta"], ["t-recommend", "recommend"], ["t-reference", "reference"], ["t-actions", "actions"]],
+  name => ({ neta: showNeta, recommend: showRecommend, reference: showReference, actions: showActions })[name]());
+</script>
+</body>
+</html>
