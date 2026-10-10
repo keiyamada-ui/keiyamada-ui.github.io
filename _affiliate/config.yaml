@@ -31,7 +31,7 @@ auto_post:
   # false にすると自動投稿を止め、これまでどおり確認用の PR で届く
   enabled: true
   # この日より前は、リンク付きの PR 投稿をしない（アカウントを育てる期間）
-  pr_posts_from: 2026-10-24
+  pr_posts_from: 2026-10-12
   # PR 投稿どうしの間隔（日）。1 にすると毎日
   pr_min_interval_days: 2
   # Threads のトークンを Secrets に登録した日。60日で切れるので、50日たったら Issue で知らせる
