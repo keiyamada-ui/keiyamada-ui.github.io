@@ -16,7 +16,7 @@ account:
 rakuten:
   referer: https://keiyamada-ui.github.io/
   endpoints:
-    ichiba: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
+    ichiba: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701
     books: https://openapi.rakuten.co.jp/services/api/BooksTotal/Search/20170404
     travel: https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20260731
     # 推し商品フォームで宿のURLが貼られたとき、宿番号で1件を取る
