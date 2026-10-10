@@ -1,0 +1,31 @@
+name: 🛒 この商品を紹介したい
+description: 楽天の商品ページのURLを貼るだけで、その商品の投稿下書きが届きます
+title: "[推し商品] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        楽天市場・楽天トラベルの商品ページのURL（楽天アプリの共有リンクも可）を貼ってください。
+        本の場合は URL の代わりに ISBN（本の裏の 978 から始まる番号）を入れてください。
+        数分後に、下書きの PR が届きます。
+  - type: input
+    id: url
+    attributes:
+      label: 商品のURL
+      placeholder: https://item.rakuten.co.jp/...
+  - type: input
+    id: isbn
+    attributes:
+      label: ISBN（本の場合）
+      placeholder: "9784..."
+  - type: textarea
+    id: memo
+    attributes:
+      label: ひとことメモ
+      description: 良いと思った点・使ってみた感想など。書いた内容は事実として投稿に使われます
+  - type: checkboxes
+    id: used
+    attributes:
+      label: 実際に使いましたか？
+      options:
+        - label: 使ったことがある（体験談として書いてOK）

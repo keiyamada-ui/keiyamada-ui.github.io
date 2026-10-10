@@ -1,0 +1,13 @@
+{
+  "name": "ことり 管理画面",
+  "short_name": "ことり",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFF4D6",
+  "theme_color": "#FFC83C",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

@@ -1,0 +1,30 @@
+name: ⭐ 参考になる投稿を登録
+description: 伸びている投稿を貼ると、AI が「型」を分析して勝ちパターンとして毎朝の下書きに活かします
+title: "[参考投稿] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Threads などで伸びている投稿の文章を貼ってください（ツリーは続けて貼ってOK）。
+        文章をそのまま真似するのではなく、書き出しや構成の「型」だけを学びます。
+  - type: input
+    id: url
+    attributes:
+      label: 投稿のURL
+      placeholder: https://www.threads.com/@.../post/...
+  - type: textarea
+    id: text
+    attributes:
+      label: 投稿の本文
+    validations:
+      required: true
+  - type: input
+    id: likes
+    attributes:
+      label: いいねの数
+      placeholder: "120"
+  - type: textarea
+    id: memo
+    attributes:
+      label: ひとことメモ
+      description: どこが良いと思ったか（任意）

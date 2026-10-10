@@ -1,0 +1,116 @@
+# ことり｜子育て家族の"買ってよかった"まとめ — 投稿下書きの設定ファイル
+#
+# このファイルを書き換えるだけで、テーマ・検索キーワード・絞り込み条件を変えられます。
+# 「#」で始まる行はメモ（プログラムは読みません）。
+
+account:
+  name: ことり
+  threads_url: https://www.threads.com/@kotori.family
+  persona: >-
+    小学生の子をもつ親。子供の習い事・知育グッズ、家族旅行の宿、
+    セールで買うべきものを、レビューと価格を比べてまとめている。
+
+# 楽天ウェブサービスの窓口（エンドポイント）。
+# 2026年の仕様変更で URL が変わったため、ここで一括管理する。
+# 楽天側で再び変わった場合は、ここを書き換えるだけで直せる。
+rakuten:
+  referer: https://keiyamada-ui.github.io/
+  endpoints:
+    ichiba: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
+    books: https://openapi.rakuten.co.jp/services/api/BooksTotal/Search/20170404
+    travel: https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20260731
+    # 推し商品フォームで宿のURLが貼られたとき、宿番号で1件を取る
+    travel_hotel: https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20260731
+    # ジャンル別ランキング（需要の判定に使う。つながらなくても下書きは作れる）
+    ranking: https://openapi.rakuten.co.jp/ichibaranking/api/IchibaItem/Ranking/20220601
+  # 楽天の利用規約上、1秒に1回程度まで
+  min_interval_seconds: 1.2
+
+# 商品を候補に残す条件
+filters:
+  min_review_count: 20
+  min_review_average: 4.0
+  # 同じ商品を再び紹介するまでに空ける日数
+  reuse_after_days: 60
+  # AI に渡す候補の数（AI が5つの基準で採点して1つ選ぶ）
+  max_candidates: 5
+
+# 発掘枠: まだ知られていない高評価アイテムを探す日（0=月曜 … 6=日曜）
+hidden_gems:
+  weekdays: [2, 5]
+  min_review_average: 4.5
+  min_review_count: 5
+  max_review_count: 60
+
+# 点数付けの重み（合計1になるように）
+scoring:
+  weights:
+    demand: 0.30      # 需要（レビュー件数・ランキング）
+    quality: 0.25     # 評価の高さ
+    profit: 0.25      # 1件売れたときの報酬の目安（価格×料率）
+    trend: 0.20       # 勢い（レビュー数の伸び）
+  # 料率が取れない場合の目安（%）。楽天アフィリエイトの料率表で確認して調整する
+  default_affiliate_rate:
+    ichiba: 2.0
+    books: 2.0
+    travel: 1.0
+
+# 悩み起点のテーマ
+themes:
+  # AI が月に1回、季節・行事・生活の悩みからテーマを考えて保存する数
+  monthly_count: 30
+  # 同じテーマを再び使うまでに空ける日数
+  reuse_after_days: 21
+
+# 固定テーマ（柱）。AI が考えたテーマと混ぜて使う。
+# persona = 「誰が＋どんな条件で探しているか」。AI の書き出しの軸になる。
+pillars:
+  - id: kids_learning
+    label: 子供の教育・習い事
+    source: ichiba
+    queries:
+      - persona: 小学生の子に家でサッカーの練習をさせたい親
+        keyword: サッカー 練習 子供
+      - persona: 子供がひとりでリフティング練習できる道具を探している親
+        keyword: リフティング ボール 子供
+      - persona: 遊びながら考える力をつけさせたい小学生の親
+        keyword: 知育玩具 小学生
+      - persona: 子供が勉強に集中できる環境を作りたい親
+        keyword: 学習タイマー 子供
+      - persona: 運動が苦手な子に家でできる練習をさせたい親
+        keyword: なわとび 子供 練習
+
+  - id: kids_books
+    label: 子供の本・図鑑
+    source: books
+    queries:
+      - persona: 子供に図鑑で調べる習慣をつけたい親
+        keyword: 図鑑 小学生
+      - persona: サッカーをがんばる子に上達のヒントをあげたい親
+        keyword: サッカー 上達 小学生
+      - persona: 本を読まない子に1冊目を探している親
+        keyword: 児童書 小学生 おすすめ
+
+  - id: family_travel
+    label: 家族のお出かけ・旅行
+    source: travel
+    queries:
+      - persona: 子連れでディズニーに行くため、パーク近くの宿を探している家族
+        keyword: 舞浜
+      - persona: 子連れでディズニーに行くため、少し安めの近隣ホテルを探している家族
+        keyword: 浦安
+      - persona: 紅葉の季節に子連れで温泉に行きたい家族
+        keyword: 箱根 家族
+      - persona: 子連れで行きやすい温泉宿を探している家族
+        keyword: 草津 子供
+
+  - id: sale_prep
+    label: セール前の"買っておくと助かる"もの
+    source: ichiba
+    queries:
+      - persona: 寒くなる前に子供の防寒グッズをまとめて買いたい親
+        keyword: 子供 ネックウォーマー
+      - persona: 毎朝の支度を少しでもラクにしたい共働きの親
+        keyword: 子供 ランドセル 収納
+      - persona: 習い事の送り迎えで使える便利グッズを探している親
+        keyword: 子供 水筒 1リットル
