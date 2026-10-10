@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>お知らせ</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>🔔 お知らせ・状況</h1></header>
+<div class="tabs" role="tablist">
+  <button class="tab" id="t-notices" role="tab">お知らせ</button>
+  <button class="tab" id="t-patterns" role="tab">勝ちパターン</button>
+  <button class="tab" id="t-runs" role="tab">動作状況</button>
+  <button class="tab" id="t-themes" role="tab">テーマ</button>
+</div>
+<main id="main"><p class="empty">読み込み中…</p></main>
+
+<script src="app.js"></script>
+<script>
+const main = document.getElementById("main");
+const BOT = "github-actions[bot]";
+const HIDE_LABELS = ["投稿レポート", "勝ちパターン", "ネタ帳", "下書き"];
+const RUN_NAMES = { "ことり 投稿下書き": "📝 下書き作り", "ことり 自動投稿": "📣 自動投稿",
+                    "ことり フォーム（推し商品・参考投稿）": "📮 フォームの処理", "ことり Threads の接続確認": "🔑 トークン確認" };
+
+function fail(e) { main.replaceChildren(el("div", { class: "warn", text: "⚠️ " + e.message })); }
+const trustworthy = i => i.user && (i.user.login === OWNER || i.user.login === BOT);  // 公開リポジトリなので、他人の書き込みは表示しない
+
+async function closeIssue(num, btn, done) {
+  if (!Key.get()) { location.href = "key.html"; return; }
+  btn.disabled = true;
+  try {
+    await gh(`/repos/${REPO}/issues/${num}`, { method: "PATCH", body: { state: "closed", state_reason: "completed" } });
+    toast(done);
+    btn.closest("section").remove();
+  } catch (e) { btn.disabled = false; toast(e.message); }
+}
+
+async function showNotices() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  let issues;
+  try { issues = await gh(`/repos/${REPO}/issues?state=open&per_page=50`); } catch (e) { return fail(e); }
+  const list = issues.filter(i => !i.pull_request && trustworthy(i) &&
+    !(i.labels || []).some(l => HIDE_LABELS.includes(l.name)) && !/^\[(推し商品|参考投稿|ネタ帳)\]/.test(i.title));
+  const nodes = [el("p", { class: "note", text: "失敗や AI の切り替えなど、確認してほしいことが届きます。読んで対応したら「確認した」で消せます。" })];
+  if (!list.length) nodes.push(el("p", { class: "empty", text: "新しいお知らせはありません 🎉" }));
+  for (const i of list) {
+    const btn = el("button", { class: "btn", text: "確認した（閉じる）" });
+    btn.addEventListener("click", () => closeIssue(i.number, btn, "閉じました"));
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "muted", text: jstTime(i.created_at) }),
+      el("div", { class: "title", text: i.title }),
+      i.body ? el("details", {}, [el("summary", { text: "くわしく" }), el("div", { class: "text", text: i.body.slice(0, 1500) })]) : null,
+      el("div", { class: "actions" }, [btn]),
+    ]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+async function showPatterns() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  let issues;
+  try { issues = await gh(`/repos/${REPO}/issues?state=open&labels=${encodeURIComponent("勝ちパターン")}&per_page=20`); }
+  catch (e) { return fail(e); }
+  const nodes = [el("p", { class: "note" }, ["参考投稿から学んだ「型」です。毎朝の下書きで参考にされます。合わない型は「外す」で使われなくなります。",
+                                              el("br"), el("a", { href: "input.html#reference", text: "⭐ 参考投稿を登録する →" })])];
+  const own = issues.filter(i => i.user && i.user.login === OWNER);
+  if (!own.length) nodes.push(el("p", { class: "empty", text: "まだ勝ちパターンはありません" }));
+  for (const i of own) {
+    let data = null;
+    try {
+      const comments = await gh(`/repos/${REPO}/issues/${i.number}/comments`);
+      for (const c of comments) {
+        const m = c.user.login === BOT && c.body.includes("kotori-pattern") && c.body.match(/```json\n([\s\S]*?)\n```/);
+        if (m) data = JSON.parse(m[1]);
+      }
+    } catch (e) { /* 読めなければタイトルだけ出す */ }
+    const btn = el("button", { class: "btn danger", text: "この型を外す" });
+    btn.addEventListener("click", () => closeIssue(i.number, btn, "外しました"));
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "row" }, [el("span", { class: "badge", text: data ? data.hook_type : "分析中" })]),
+      el("div", { class: "title", style: "margin-top:6px", text: data ? data.reusable_pattern : i.title }),
+      data ? el("div", { class: "muted", style: "margin-top:6px", text: "元の投稿: " + data.summary }) : null,
+      data && data.why_it_worked ? el("details", {}, [el("summary", { text: "伸びた理由" }),
+        el("div", { class: "text", text: data.why_it_worked.map(x => "・" + x).join("\n") })]) : null,
+      el("div", { class: "actions" }, [btn]),
+    ]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+async function showRuns() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  let runs, wf;
+  try {
+    [runs, wf] = await Promise.all([gh(`/repos/${REPO}/actions/runs?per_page=30`),
+                                    gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml`)]);
+  } catch (e) { return fail(e); }
+  const active = wf.state === "active";
+  const nodes = [el("section", { class: "card" }, [
+    el("div", { class: "row between" }, [el("div", { class: "title", text: "自動投稿" }),
+      el("span", { class: "badge " + (active ? "ok" : "ng"), text: active ? "▶️ 動いています" : "⏸ 止まっています" })]),
+    el("div", { class: "actions" }, [el("a", { class: "btn", href: "input.html#actions", text: active ? "止める・今すぐ下書きを作る" : "再開する" })]),
+  ])];
+  nodes.push(el("h2", { text: "最近の動き" }));
+  const list = runs.workflow_runs.filter(r => RUN_NAMES[r.name]);
+  if (!list.length) nodes.push(el("p", { class: "empty", text: "まだ記録がありません" }));
+  for (const r of list) {
+    const state = r.status !== "completed" ? ["⏳ 実行中", ""] : r.conclusion === "success" ? ["✅ 成功", "ok"]
+                : r.conclusion === "skipped" ? ["— スキップ", "gray"] : ["❌ 失敗", "ng"];
+    const how = { schedule: "時刻で自動", workflow_dispatch: "手動", issues: "フォーム" }[r.event] || r.event;
+    nodes.push(el("section", { class: "card", style: "padding:10px 14px" }, [
+      el("div", { class: "row between" }, [el("span", { class: "title", style: "font-size:14px", text: RUN_NAMES[r.name] }),
+                                           el("span", { class: "badge " + state[1], text: state[0] })]),
+      el("div", { class: "muted", text: `${jstTime(r.created_at)}（${how}）` }),
+    ]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+async function showThemes() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  const month = jstDate().slice(0, 7);
+  const themes = await raw(`_affiliate/data/themes/${month}.json`);
+  const nodes = [el("p", { class: "note", text: "AI が今月の季節・行事・生活の悩みから考えたテーマです。毎朝、この中と固定テーマから1つ選んで商品を探します。" })];
+  if (!themes || !themes.length) nodes.push(el("p", { class: "empty", text: "今月のテーマはまだありません（月の最初の下書き作りで作られます）" }));
+  for (const t of (themes || []).slice().sort((a, b) => b.urgency - a.urgency)) {
+    nodes.push(el("section", { class: "card", style: "padding:12px 14px" }, [
+      el("div", { class: "row between" }, [el("span", { class: "title", style: "font-size:14px", text: t.category }),
+                                           el("span", { class: "muted", text: "🔥".repeat(Math.min(t.urgency, 5)) })]),
+      el("div", { class: "muted", text: `${t.who}｜${t.scene}` }),
+      el("div", { class: "muted", text: `楽天で「${t.keyword}」を検索` }),
+    ]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+setupTabs([["t-notices", "notices"], ["t-patterns", "patterns"], ["t-runs", "runs"], ["t-themes", "themes"]],
+  name => ({ notices: showNotices, patterns: showPatterns, runs: showRuns, themes: showThemes })[name]());
+</script>
+</body>
+</html>

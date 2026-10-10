@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>合い鍵の設定</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>🔑 合い鍵の設定</h1></header>
+
+<div id="status"></div>
+
+<p class="note">ネタ帳・推し商品・参考投稿の送信や、「今すぐ下書きを作る」「自動投稿を止める」をこの管理画面から行うための鍵です。
+この端末（ブラウザ）の中だけに保存され、ネットやリポジトリには置きません。見るだけなら合い鍵はいりません。</p>
+
+<section class="card">
+  <div class="title">① GitHub で合い鍵を作る（最初に1回だけ）</div>
+  <ol class="steps">
+    <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">合い鍵を作る画面を開く</a></li>
+    <li><b>Token name</b>: <code>kotori-dashboard</code></li>
+    <li><b>Expiration</b>: Custom → 1年後の日付（例 <code>2027-10-10</code>）</li>
+    <li><b>Repository access</b>: 「Only select repositories」→ <code>keiyamada-ui.github.io</code> だけを選ぶ</li>
+    <li><b>Permissions</b> →「Repository permissions」で次の2つを <b>Read and write</b> に:
+      <br><code>Actions</code>・<code>Issues</code>（ほかは触らない）</li>
+    <li>一番下の <b>Generate token</b> → 表示された <code>github_pat_</code> で始まる文字列をコピー</li>
+  </ol>
+</section>
+
+<section class="card">
+  <div class="title">② ここに貼り付けて保存</div>
+  <label class="field" for="key">合い鍵 <small>（github_pat_ で始まる文字列）</small></label>
+  <input type="password" id="key" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_...">
+  <div class="actions">
+    <button class="btn primary" id="save">保存して確認する</button>
+  </div>
+  <div class="actions">
+    <button class="btn danger" id="clear">この端末から合い鍵を消す</button>
+  </div>
+</section>
+
+<p class="note">スマホとパソコンの両方で使う場合は、それぞれで1回ずつ貼り付けてください。<br>
+合い鍵を落とした・心配なときは、<a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">GitHub の合い鍵一覧</a>で削除すれば、すぐ使えなくなります。</p>
+
+<script src="app.js"></script>
+<script>
+const statusBox = document.getElementById("status");
+
+async function check() {
+  statusBox.replaceChildren();
+  if (!Key.get()) {
+    statusBox.append(el("div", { class: "info", text: "まだ合い鍵は登録されていません。" }));
+    return;
+  }
+  statusBox.append(el("div", { class: "info", text: "確認中…" }));
+  try {
+    const me = await gh("/user");
+    await gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml`);
+    if (me.login !== OWNER) throw new Error(`${me.login} の合い鍵です。${OWNER} のアカウントで作ってください`);
+    statusBox.replaceChildren(el("div", { class: "info" }, [
+      `✅ 合い鍵は使える状態です（@${me.login}）。`, el("br"),
+      el("a", { href: "input.html", text: "✏️ 入力・操作の画面へ →" })]));
+  } catch (e) {
+    statusBox.replaceChildren(el("div", { class: "warn", text: "⚠️ " + e.message }));
+  }
+}
+
+document.getElementById("save").addEventListener("click", () => {
+  const v = document.getElementById("key").value.trim();
+  if (!v) { toast("合い鍵を貼り付けてください"); return; }
+  Key.set(v);
+  document.getElementById("key").value = "";
+  check();
+});
+document.getElementById("clear").addEventListener("click", () => {
+  if (!confirm("この端末から合い鍵を消しますか？（GitHub 側の合い鍵は残ります）")) return;
+  Key.clear();
+  check();
+});
+check();
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>今日の投稿</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📣 投稿</h1></header>
+<div class="tabs" role="tablist">
+  <button class="tab" id="t-day" role="tab">今日の投稿</button>
+  <button class="tab" id="t-insights" role="tab">📈 反響</button>
+</div>
+<main id="main"><p class="empty">読み込み中…</p></main>
+
+<script src="app.js"></script>
+<script>
+const SLOTS = [
+  { n: 1, time: "7:40", min: 460, plan: "buzz" },
+  { n: 2, time: "10:10", min: 610, plan: "casual" },
+  { n: 3, time: "12:20", min: 740, plan: "value" },
+  { n: 4, time: "15:40", min: 940, plan: "casual" },
+  { n: 5, time: "20:10", min: 1210, plan: "pr" },
+];
+const draftCache = {};
+async function draft(name) {
+  if (!(name in draftCache)) draftCache[name] = await raw("_affiliate/drafts/" + name);
+  return draftCache[name];
+}
+async function postOf(entry) {
+  const d = await draft(entry.draft);
+  return d && d.posts ? d.posts[entry.post_index] : null;
+}
+let day = jstDate();
+const main = document.getElementById("main");
+
+function postBlock(post, extra = []) {
+  const parts = post.thread_parts || [];
+  const all = [post.text, ...parts].join("\n\n――\n\n");
+  return [el("div", { class: "text", text: all }),
+          post.reply_text ? el("div", { class: "muted", text: "返信（リンク）: " + post.reply_text }) : null,
+          el("div", { class: "actions" }, [el("button", { class: "btn", text: "コピー", onclick: () => copy(post.text) }), ...extra])]
+    .filter(Boolean);
+}
+
+async function showDay() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  const [daily, buzz, casual, posted] = await Promise.all([
+    draft(day + ".json"), draft(day + "-buzz.json"), draft(day + "-casual.json"),
+    raw("_affiliate/data/posted/" + day + ".json")]);
+  const done = posted || [];
+  const today = jstDate();
+  const now = new Date(Date.now() + 9 * 3600000);
+  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const nodes = [];
+
+  nodes.push(el("div", { class: "row between", style: "margin-bottom:12px" }, [
+    el("button", { class: "btn", style: "flex:0 0 auto", text: "‹ 前の日", onclick: () => { day = addDays(day, -1); showDay(); } }),
+    el("div", { class: "title", text: `${day.slice(5).replace("-", "/")}（${weekday(day)}）${day === today ? " 今日" : ""}` }),
+    el("button", { class: "btn", style: "flex:0 0 auto", text: "次の日 ›", disabled: day >= today ? "" : null,
+                  onclick: () => { day = addDays(day, 1); showDay(); } }),
+  ]));
+
+  // 5回の投稿枠
+  const sched = el("section", { class: "card" }, [el("div", { class: "title", text: "投稿の予定と結果" })]);
+  const box = el("div", { style: "margin-top:10px" });
+  for (const s of SLOTS) {
+    const hit = done.find(p => p.slot === s.n);
+    const right = el("div");
+    if (hit) {
+      const post = await postOf(hit);
+      right.append(el("div", { class: "row" }, [
+        el("span", { class: "badge ok", text: "✅ 投稿済み " + (hit.at ? hit.at.slice(11, 16) : "") }),
+        el("span", { class: "badge" + (hit.kind === "pr" ? " pr" : ""), text: KIND[hit.kind] || hit.kind })]));
+      if (hit.partial) right.append(el("div", { class: "muted", text: "⚠️ 途中までしか投稿できませんでした" }));
+      if (post) right.append(...postBlock(post, hit.permalink ? [el("a", { class: "btn", href: hit.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })] : []));
+    } else {
+      const passed = day < today || (day === today && nowMin > s.min + 90);
+      right.append(el("div", { class: "row" }, [
+        el("span", { class: "badge " + (passed ? "gray" : ""), text: passed ? "— 投稿なし" : "⏳ 予定" }),
+        el("span", { class: "badge gray", text: KIND[s.plan] })]));
+      if (s.n === 5) right.append(el("div", { class: "muted", text: "PR 投稿は2日おき。PR のない日は役立つ投稿かつぶやきを出します" }));
+    }
+    box.append(el("div", { class: "slot" }, [el("div", { class: "time", text: s.time }), right]));
+  }
+  sched.append(box);
+  nodes.push(sched);
+
+  // その日の下書き
+  const isDone = (name, i) => done.some(p => p.draft === name && p.post_index === i);
+  const groups = [[buzz, day + "-buzz.json"], [casual, day + "-casual.json"], [daily, day + ".json"]];
+  const any = groups.some(([d]) => d && d.posts && d.posts.length);
+  nodes.push(el("h2", { text: "この日の下書き" }));
+  if (!any) nodes.push(el("p", { class: "empty", text: "この日の下書きはありません（毎朝 5:15 ごろに作られます）" }));
+  for (const [d, name] of groups) {
+    if (!d || !d.posts) continue;
+    const card = el("section", { class: "card" });
+    if (d.topic) card.append(el("div", { class: "muted", text: "話題: " + d.topic }));
+    if (d.title && name === day + ".json") card.append(el("div", { class: "title", text: d.title }));
+    if (d.followup) card.append(el("div", { class: "info", text: `🔥 反響のあった投稿（いいね${d.followup.likes}件）の話題から選んだ商品です` }));
+    if (d.chosen && d.chosen.name) card.append(el("div", { class: "muted" }, ["商品: ", el("a", { href: d.chosen.url, target: "_blank", rel: "noopener", text: d.chosen.name.slice(0, 50) })]));
+    if (d.errors && d.errors.length) card.append(el("div", { class: "warn", text: "❌ 自動チェックのエラーがあるため投稿しません:\n" + d.errors.join("\n") }));
+    d.posts.forEach((p, i) => {
+      card.append(el("div", { class: "row", style: "margin-top:12px" }, [
+        el("span", { class: "badge" + (p.type === "pr" ? " pr" : ""), text: KIND[p.type] || p.type }),
+        el("span", { class: "badge " + (isDone(name, i) ? "ok" : "gray"), text: isDone(name, i) ? "投稿済み" : "未投稿" }),
+        p.angle ? el("span", { class: "muted", text: p.angle }) : null]));
+      card.append(...postBlock(p));
+    });
+    nodes.push(card);
+  }
+  main.replaceChildren(...nodes);
+}
+
+async function showInsights() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  const store = await raw("_affiliate/data/insights/latest.json");
+  const rows = Object.values(store || {}).sort((a, b) => (b.date + b.draft).localeCompare(a.date + a.draft));
+  if (!rows.length) {
+    main.replaceChildren(el("p", { class: "empty", text: "まだ反響の記録はありません（投稿の翌朝から集まります）" }));
+    return;
+  }
+  const likes = rows.map(r => r.metrics.likes || 0).sort((a, b) => a - b);
+  const median = likes[Math.floor(likes.length / 2)];
+  const nodes = [el("p", { class: "note", text: "毎朝、直近1週間の投稿の数字を取りに行きます。🔥 は、いいねがいつもの2倍以上（10件以上）の投稿です。" })];
+
+  const byKind = {};
+  for (const r of rows) (byKind[r.kind] = byKind[r.kind] || []).push(r.metrics);
+  const avg = (ms, k) => (ms.reduce((s, m) => s + (m[k] || 0), 0) / ms.length);
+  const sum = el("section", { class: "card" }, [el("div", { class: "title", text: "種類ごとの平均" })]);
+  for (const [k, ms] of Object.entries(byKind)) {
+    sum.append(el("div", { class: "row between", style: "margin-top:8px" }, [
+      el("span", { text: `${KIND[k] || k}（${ms.length}件）` }),
+      el("span", { class: "muted", text: `いいね ${avg(ms, "likes").toFixed(1)} ／ 表示 ${avg(ms, "views").toFixed(0)}` })]));
+  }
+  nodes.push(sum);
+
+  for (const r of rows) {
+    const m = r.metrics;
+    const hot = (m.likes || 0) >= 10 && (m.likes || 0) >= 2 * median;
+    const post = await postOf(r);
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "row between" }, [
+        el("span", { class: "badge" + (r.kind === "pr" ? " pr" : ""), text: (hot ? "🔥 " : "") + (KIND[r.kind] || r.kind) }),
+        el("span", { class: "muted", text: r.date })]),
+      post ? el("div", { class: "text", text: post.text.slice(0, 140) + (post.text.length > 140 ? "…" : "") }) : null,
+      el("div", { class: "stat" }, [
+        el("div", {}, [el("b", { text: String(m.likes || 0) }), el("span", { text: "いいね" })]),
+        el("div", {}, [el("b", { text: String(m.views || 0) }), el("span", { text: "表示" })]),
+        el("div", {}, [el("b", { text: String((m.replies || 0) + (m.reposts || 0) + (m.quotes || 0)) }), el("span", { text: "返信・再投稿" })])]),
+      r.permalink ? el("div", { class: "actions" }, [el("a", { class: "btn", href: r.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })]) : null,
+    ]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+setupTabs([["t-day", "day"], ["t-insights", "insights"]], name => name === "day" ? showDay() : showInsights());
+</script>
+</body>
+</html>

@@ -44,6 +44,12 @@
   .token.urgent { background: #FDECEA; border-color: #D9534F; color: #A12A26; font-weight: 700; }
   @media (prefers-color-scheme: dark) { .token.urgent { background: #3D2423; border-color: #FF8A80; color: #FF8A80; } }
   .token small { display: block; font-weight: 400; opacity: .85; }
+  .today { display: none; border-radius: 14px; padding: 12px 14px; margin: 8px 0 4px; font-size: 14px; line-height: 1.5;
+           background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+  .today.show { display: block; }
+  .count { display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #D9534F; color: #fff;
+           font-size: 12px; text-align: center; vertical-align: 2px; }
+  .count:empty { display: none; }
   footer { margin-top: 28px; color: var(--sub); font-size: 11px; line-height: 1.6; }
 </style>
 </head>
@@ -57,68 +63,75 @@
 </header>
 
 <a class="token" id="token" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/README.md"></a>
+<a class="today" id="today" href="posts.html"></a>
 
 <h2>毎日</h2>
 <div class="grid">
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/pulls?q=is%3Apr+is%3Aopen+label%3A%E4%B8%8B%E6%9B%B8%E3%81%8D">
-    <span class="icon">📝</span><span class="label">下書き（確認モードのとき）</span>
-    <span class="desc">自動投稿を止めているときは、ここに下書きの PR が届く</span></a>
-  <a class="btn main" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues?q=is%3Aissue+label%3A%E6%8A%95%E7%A8%BF%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88">
-    <span class="icon">📣</span><span class="label">今日の投稿レポート</span>
-    <span class="desc">自動で投稿した内容とリンク。良くない投稿は Threads アプリで削除</span></a>
-  <a class="btn main" href="stock.html">
-    <span class="icon">✋</span><span class="label">手動投稿ストック</span>
-    <span class="desc">自動投稿とは別の下書き。選んでコピー → 自分の手で投稿</span></a>
-  <a class="btn" href="https://www.threads.com/@kotori.family">
-    <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
-  <a class="btn" href="stock.html#room">
-    <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の3件を投稿</span></a>
+  <a class="btn main" href="posts.html">
+    <span class="icon">📣</span><span class="label">今日の投稿</span>
+    <span class="desc">5回分の予定と結果・下書き。良くない投稿は Threads アプリで削除</span></a>
   <a class="btn main" href="stock.html#comments">
     <span class="icon">💬</span><span class="label">コメント返し</span>
     <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></a>
+  <a class="btn" href="posts.html#insights">
+    <span class="icon">📈</span><span class="label">反響</span><span class="desc">いいね・表示の数</span></a>
+  <a class="btn" href="stock.html#threads">
+    <span class="icon">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
+  <a class="btn" href="stock.html#room">
+    <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の3件を投稿</span></a>
+  <a class="btn" href="https://www.threads.com/@kotori.family">
+    <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
 </div>
 
-<h2>ネタを入れる</h2>
+<h2>入力・操作</h2>
 <div class="grid">
-  <a class="btn main" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues/new?template=neta.yml">
+  <a class="btn main" href="input.html#neta">
     <span class="icon">✏️</span><span class="label">ネタ帳（今日あったこと）</span>
     <span class="desc">一言書くと、翌朝のつぶやきになる。あなたの体験として書けるのはここだけ</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues/new?template=recommend.yml">
-    <span class="icon">🛒</span><span class="label">推し商品を紹介</span>
-    <span class="desc">楽天のURLを貼るだけ</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues/new?template=reference.yml">
-    <span class="icon">⭐</span><span class="label">参考投稿を登録</span>
-    <span class="desc">伸びている投稿の型を学ぶ</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues?q=is%3Aissue+is%3Aopen+label%3A%E5%8B%9D%E3%81%A1%E3%83%91%E3%82%BF%E3%83%BC%E3%83%B3">
-    <span class="icon">🏆</span><span class="label">勝ちパターン一覧</span>
-    <span class="desc">外したい型は Close</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/actions/workflows/affiliate_drafts.yml">
-    <span class="icon">▶️</span><span class="label">今すぐ下書きを作る</span>
-    <span class="desc">「Run workflow」を押す</span></a>
+  <a class="btn" href="input.html#recommend">
+    <span class="icon">🛒</span><span class="label">推し商品を紹介</span><span class="desc">楽天のURLを貼るだけ</span></a>
+  <a class="btn" href="input.html#reference">
+    <span class="icon">⭐</span><span class="label">参考投稿を登録</span><span class="desc">伸びている投稿の型を学ぶ</span></a>
+  <a class="btn" href="input.html#actions">
+    <span class="icon">⏯️</span><span class="label">止める・今すぐ作る</span><span class="desc">自動投稿の停止・再開、下書き作り</span></a>
+  <a class="btn" href="notices.html#patterns">
+    <span class="icon">🏆</span><span class="label">勝ちパターン</span><span class="desc">学んだ型の一覧</span></a>
 </div>
 
-<h2>確認・設定</h2>
+<h2>確認</h2>
 <div class="grid">
+  <a class="btn" href="notices.html">
+    <span class="icon">🔔</span><span class="label">お知らせ <span class="count" id="count"></span></span>
+    <span class="desc">失敗・AI切り替えの通知</span></a>
+  <a class="btn" href="notices.html#runs">
+    <span class="icon">⚙️</span><span class="label">動作状況</span><span class="desc">自動投稿・下書き作りの記録</span></a>
+  <a class="btn" href="notices.html#themes">
+    <span class="icon">🧭</span><span class="label">今月のテーマ</span><span class="desc">AI が考えた悩みテーマ</span></a>
+</div>
+
+<h2>お金</h2>
+<div class="grid">
+  <a class="btn" href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">
+    <span class="icon">💳</span><span class="label">Claude にチャージ</span>
+    <span class="desc">支払いページが開く →「残高を追加」</span></a>
   <a class="btn" href="https://affiliate.rakuten.co.jp/">
     <span class="icon">💴</span><span class="label">楽天アフィリエイト</span>
     <span class="desc">クリック数・売上のレポート</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/issues?q=is%3Aissue+is%3Aopen">
-    <span class="icon">🔔</span><span class="label">お知らせ</span>
-    <span class="desc">失敗・AI切り替えの通知</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/actions/workflows/affiliate_post.yml">
-    <span class="icon">⏸️</span><span class="label">自動投稿を止める</span>
-    <span class="desc">「…」→「Disable workflow」</span></a>
+</div>
+
+<h2>設定</h2>
+<div class="grid">
+  <a class="btn" href="key.html">
+    <span class="icon">🔑</span><span class="label">合い鍵の設定</span>
+    <span class="desc" id="keydesc">入力・操作に使う鍵（最初に1回）</span></a>
   <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/config.yaml">
-    <span class="icon">⚙️</span><span class="label">テーマ・条件の設定</span>
-    <span class="desc">ジャンルの追加など</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/tree/main/_affiliate/data/themes">
-    <span class="icon">🧭</span><span class="label">今月のテーマ</span>
-    <span class="desc">AI が考えた悩みテーマ</span></a>
+    <span class="icon">🛠️</span><span class="label">細かい設定</span>
+    <span class="desc">テーマ・投稿の条件（GitHub）</span></a>
 </div>
 
 <footer>
   ホーム画面に追加: Safari の共有ボタン →「ホーム画面に追加」／ Chrome のメニュー →「ホーム画面に追加」<br>
-  このページにはリンクだけを置いています（鍵や売上の数字は載せていません）。
+  鍵や売上の数字はこのページに載せていません。合い鍵は、この端末の中だけに保存されます。
 </footer>
 <script>
 // Threads のトークン（60日で切れる）の残り日数を、設定ファイルの token_updated から計算して表示する
@@ -143,6 +156,25 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
     box.classList.add("show");
   })
   .catch(() => {});
+</script>
+<script src="app.js"></script>
+<script>
+// 今日の投稿の数・お知らせの数・合い鍵の有無
+(async () => {
+  const day = jstDate();
+  const posted = (await raw(`_affiliate/data/posted/${day}.json`)) || [];
+  const box = document.getElementById("today");
+  box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${posted.length} / 5 回`;
+  box.classList.add("show");
+  document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
+  try {
+    const issues = await gh(`/repos/${REPO}/issues?state=open&per_page=50`);
+    const hide = ["投稿レポート", "勝ちパターン", "ネタ帳", "下書き"];
+    const n = issues.filter(i => !i.pull_request && i.user && ["github-actions[bot]", OWNER].includes(i.user.login) &&
+      !(i.labels || []).some(l => hide.includes(l.name)) && !/^\[(推し商品|参考投稿|ネタ帳)\]/.test(i.title)).length;
+    document.getElementById("count").textContent = n ? String(n) : "";
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
