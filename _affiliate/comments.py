@@ -120,7 +120,7 @@ def report(items):
     counts = {a: sum(1 for i in items if i["action"] == a) for a in ACTIONS}
     lines = [f"💬 **新しいコメントが {len(items)} 件** あります（" +
              "・".join(f"{ACTIONS[a]} {n}" for a, n in counts.items() if n) + "）",
-             "管理画面の「💬 コメント」で返信文の案をコピーして返してください: https://keiyamada-ui.github.io/kotori/stock.html#comments"]
+             "管理画面の「💬 コメント返し」で返信文の案をコピーして返してください: https://keiyamada-ui.github.io/kotori/comments.html"]
     for i in items[:5]:
         lines.append(f"- @{i['username']}: {i['text'][:40]} → {ACTIONS[i['action']]}")
     return "\n" + "\n".join(lines) + "\n"
