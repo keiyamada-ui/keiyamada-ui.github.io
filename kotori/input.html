@@ -28,7 +28,7 @@ const field = (label, input, hint) => [el("label", { class: "field" }, [label, h
 const v = x => (x || "").trim() || NO;
 
 async function createIssue(title, body, labels, btn, done) {
-  if (!Key.get()) { location.href = "key.html"; return false; }
+  if (!Key.get()) { toast("送るには合い鍵が必要です（上の案内から登録してください）"); window.scrollTo(0, 0); return false; }
   btn.disabled = true;
   try {
     await gh(`/repos/${REPO}/issues`, { method: "POST", body: { title, body, labels } });
@@ -116,7 +116,7 @@ async function showActions() {
     } catch (e) { state.textContent = "確認できません"; }
   };
   toggle.addEventListener("click", async () => {
-    if (!Key.get()) { location.href = "key.html"; return; }
+    if (!Key.get()) { toast("操作には合い鍵が必要です（上の案内から登録してください）"); window.scrollTo(0, 0); return; }
     if (active && !confirm("自動投稿を止めますか？（再開するまで Threads に投稿されません）")) return;
     toggle.disabled = true;
     try {
@@ -126,7 +126,7 @@ async function showActions() {
     refresh();
   });
   const dispatch = (file, inputs, msg, ask) => async ev => {
-    if (!Key.get()) { location.href = "key.html"; return; }
+    if (!Key.get()) { toast("操作には合い鍵が必要です（上の案内から登録してください）"); window.scrollTo(0, 0); return; }
     if (ask && !confirm(ask)) return;
     const b = ev.currentTarget; b.disabled = true;
     try {

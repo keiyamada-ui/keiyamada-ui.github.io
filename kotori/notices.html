@@ -31,7 +31,12 @@ function fail(e) { main.replaceChildren(el("div", { class: "warn", text: "⚠️
 const trustworthy = i => i.user && (i.user.login === OWNER || i.user.login === BOT);  // 公開リポジトリなので、他人の書き込みは表示しない
 
 async function closeIssue(num, btn, done) {
-  if (!Key.get()) { location.href = "key.html"; return; }
+  if (!Key.get()) {
+    // 合い鍵がないと閉じられない。いきなり別の画面に移らず、ここで案内する
+    const box = btn.closest("section");
+    if (!box.querySelector(".info")) box.append(needKeyBox());
+    return;
+  }
   btn.disabled = true;
   try {
     await gh(`/repos/${REPO}/issues/${num}`, { method: "PATCH", body: { state: "closed", state_reason: "completed" } });
