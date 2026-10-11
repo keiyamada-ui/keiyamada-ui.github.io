@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-12",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-12",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "連休最終日のこの時間、明日からの時間割とか連絡帳のチェックを始めるだけで急にどっと疲れるのなんでだろう。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "明日持っていくペットボトルのキャップ、急に言われても家にそんなにないってなるの連休明けあるあるだと思う。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "3連休ずっとごはん作ってた気がする。今夜はもう冷凍餃子焼くだけにして自分を甘やかしたい。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

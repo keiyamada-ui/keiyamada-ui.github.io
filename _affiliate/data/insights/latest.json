@@ -1,1 +1,77 @@
-{}
+{
+ "18228423523332505": {
+  "date": "2026-10-11",
+  "kind": "buzz",
+  "draft": "2026-10-11-buzz.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DeVNrYlD_XQ",
+  "metrics": {
+   "views": 239,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "fetched": "2026-10-12"
+ },
+ "18134864179674025": {
+  "date": "2026-10-11",
+  "kind": "casual",
+  "draft": "2026-10-11-casual.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DeVedDiET3l",
+  "metrics": {
+   "views": 201,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "fetched": "2026-10-12"
+ },
+ "18079269773706847": {
+  "date": "2026-10-11",
+  "kind": "value",
+  "draft": "2026-10-11.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DeVvCX4DpxA",
+  "metrics": {
+   "views": 39,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "fetched": "2026-10-12"
+ },
+ "17873736954650238": {
+  "date": "2026-10-11",
+  "kind": "casual",
+  "draft": "2026-10-11-casual.json",
+  "post_index": 1,
+  "permalink": "https://www.threads.com/@kotori.family/post/DeWP9LvlSPt",
+  "metrics": {
+   "views": 453,
+   "likes": 1,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "fetched": "2026-10-12"
+ },
+ "18083339759331510": {
+  "date": "2026-10-11",
+  "kind": "value",
+  "draft": "2026-10-11.json",
+  "post_index": 1,
+  "permalink": "https://www.threads.com/@kotori.family/post/DeWlSHmlr2n",
+  "metrics": {
+   "views": 164,
+   "likes": 0,
+   "replies": 4,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "fetched": "2026-10-12"
+ }
+}
