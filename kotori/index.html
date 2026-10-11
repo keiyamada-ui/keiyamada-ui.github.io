@@ -50,6 +50,10 @@
   .count { display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #D9534F; color: #fff;
            font-size: 12px; text-align: center; vertical-align: 2px; }
   .count:empty { display: none; }
+  a.btn { position: relative; }
+  .nbadge { position: absolute; top: 10px; right: 10px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px;
+            background: #D9534F; color: #fff; font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; }
+  .nbadge:empty { display: none; }
   footer { margin-top: 28px; color: var(--sub); font-size: 11px; line-height: 1.6; }
 </style>
 </head>
@@ -67,17 +71,17 @@
 
 <h2>毎日</h2>
 <div class="grid">
-  <a class="btn main" href="posts.html">
+  <a class="btn main" href="posts.html"><span class="nbadge" id="b-posts"></span>
     <span class="icon">📣</span><span class="label">今日の投稿</span>
     <span class="desc">5回分の予定と結果・下書き。良くない投稿は Threads アプリで削除</span></a>
-  <a class="btn main" href="comments.html">
+  <a class="btn main" href="comments.html"><span class="nbadge" id="b-comments"></span>
     <span class="icon">💬</span><span class="label">コメント返し</span>
     <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></a>
-  <a class="btn" href="posts.html#insights">
+  <a class="btn" href="posts.html#insights"><span class="nbadge" id="b-insights"></span>
     <span class="icon">📈</span><span class="label">反響</span><span class="desc">いいね・表示の数</span></a>
-  <a class="btn" href="stock.html#threads">
+  <a class="btn" href="stock.html#threads"><span class="nbadge" id="b-stock"></span>
     <span class="icon">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
-  <a class="btn" href="stock.html#room">
+  <a class="btn" href="stock.html#room"><span class="nbadge" id="b-room"></span>
     <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の3件を投稿</span></a>
   <a class="btn" href="https://www.threads.com/@kotori.family">
     <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
@@ -94,14 +98,14 @@
     <span class="icon">⭐</span><span class="label">参考投稿を登録</span><span class="desc">伸びている投稿の型を学ぶ</span></a>
   <a class="btn" href="input.html#actions">
     <span class="icon">⏯️</span><span class="label">止める・今すぐ作る</span><span class="desc">自動投稿の停止・再開、下書き作り</span></a>
-  <a class="btn" href="notices.html#patterns">
+  <a class="btn" href="notices.html#patterns"><span class="nbadge" id="b-patterns"></span>
     <span class="icon">🏆</span><span class="label">勝ちパターン</span><span class="desc">学んだ型の一覧</span></a>
 </div>
 
 <h2>確認</h2>
 <div class="grid">
   <a class="btn" href="notices.html">
-    <span class="icon">🔔</span><span class="label">お知らせ <span class="count" id="count"></span></span>
+    <span class="nbadge" id="count"></span><span class="icon">🔔</span><span class="label">お知らせ</span>
     <span class="desc">失敗・AI切り替えの通知</span></a>
   <a class="btn" href="notices.html#runs">
     <span class="icon">⚙️</span><span class="label">動作状況</span><span class="desc">自動投稿・下書き作りの記録</span></a>
@@ -159,6 +163,36 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
 </script>
 <script src="app.js"></script>
 <script>
+// 赤いバッジ: 前に見たときから増えたもの・まだ対応していないものの数
+function badge(id, n) { const b = document.getElementById(id); if (b) b.textContent = n > 0 ? (n > 99 ? "99+" : String(n)) : ""; }
+
+async function updateBadges(day, posted) {
+  const seen = Seen.get();
+  let used = {};
+  try { used = JSON.parse(localStorage.getItem("kotori-used-v1") || "{}"); } catch (e) {}
+  // 📣 前に「今日の投稿」を見たあとに自動で投稿された数
+  badge("b-posts", posted.filter(p => !p.manual && p.at && (!seen.posts || p.at > seen.posts)).length);
+  const [comments, room, stock, store] = await Promise.all([
+    fresh("_affiliate/manual/comments.json"), raw("_affiliate/manual/room.json"),
+    raw("_affiliate/manual/index.json"), raw("_affiliate/data/insights/latest.json")]);
+  // 💬 まだ対応していないコメント（返さないものは数えない）
+  badge("b-comments", ((comments && comments.comments) || []).filter(c => c.action !== "ignore" && !used["comment:" + c.id]).length);
+  // 🛍️ 直近3日の ROOM 候補で、まだ投稿していないもの
+  const since = addDays(day, -2);
+  badge("b-room", (room || []).filter(r => r.date >= since && !used["room:" + r.key]).length);
+  // ✋ 今日の手動投稿ストックで、まだ使っていないもの
+  const set = stock && stock.sets && stock.sets[0];
+  badge("b-stock", set && set.date === day ? set.posts.filter((p, i) => !used[`${set.id}:${i}`]).length : 0);
+  // 📈 前に見たあとに見つかった、反響の大きい投稿（🔥）
+  const rows = Object.values(store || {});
+  if (rows.length) {
+    const likes = rows.map(r => r.metrics.likes || 0).sort((a, b) => a - b);
+    const median = likes[Math.floor(likes.length / 2)];
+    badge("b-insights", rows.filter(r => (r.metrics.likes || 0) >= 10 && (r.metrics.likes || 0) >= 2 * median
+      && (!seen.insights || r.fetched > seen.insights.slice(0, 10) || r.date > seen.insights.slice(0, 10))).length);
+  }
+}
+
 // 今日の投稿の数・お知らせの数・合い鍵の有無
 (async () => {
   const day = jstDate();
@@ -168,6 +202,7 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
   box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
   box.classList.add("show");
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
+  updateBadges(day, posted).catch(() => {});
   // GitHub の定期実行は遅れることがあるので、管理画面を開いたときにも「出し損ねた投稿・新しいコメント」を確認させる
   // （出す枠がなければ何もしない。30分に1回まで）
   if (Key.get()) {
@@ -184,6 +219,10 @@ fetch("https://raw.githubusercontent.com/keiyamada-ui/keiyamada-ui.github.io/mai
     const n = issues.filter(i => !i.pull_request && i.user && ["github-actions[bot]", OWNER].includes(i.user.login) &&
       !(i.labels || []).some(l => hide.includes(l.name)) && !/^\[(推し商品|参考投稿|ネタ帳)\]/.test(i.title)).length;
     document.getElementById("count").textContent = n ? String(n) : "";
+    const seen = Seen.get();
+    const newPatterns = issues.filter(i => i.user && i.user.login === OWNER && (i.labels || []).some(l => l.name === "勝ちパターン")
+      && (!seen.patterns || i.created_at > seen.patterns)).length;
+    badge("b-patterns", newPatterns);
   } catch (e) {}
 })();
 </script>

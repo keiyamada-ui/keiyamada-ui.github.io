@@ -133,4 +133,14 @@ function setupTabs(tabs, onChange) {
   pick(tabs.some(([, n]) => n === start) ? start : tabs[0][1]);
 }
 
+// 「前に見た時刻」（ホーム画面の赤いバッジ用。この端末だけ）
+const Seen = {
+  get() { try { return JSON.parse(localStorage.getItem("kotori-seen") || "{}"); } catch (e) { return {}; } },
+  mark(name) {
+    const v = Seen.get();
+    v[name] = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 16) + "+09:00";  // 投稿記録と同じ日本時間の書き方
+    try { localStorage.setItem("kotori-seen", JSON.stringify(v)); } catch (e) {}
+  },
+};
+
 const KIND = { buzz: "📣 集客投稿", casual: "💬 つぶやき", value: "📘 役立つ投稿", pr: "🛒 PR 投稿" };
