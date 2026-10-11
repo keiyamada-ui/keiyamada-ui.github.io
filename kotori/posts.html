@@ -218,7 +218,10 @@ async function showInsights() {
   main.replaceChildren(...nodes);
 }
 
-setupTabs([["t-day", "day"], ["t-insights", "insights"]], name => name === "day" ? showDay() : showInsights());
+setupTabs([["t-day", "day"], ["t-insights", "insights"]], name => {
+  Seen.mark(name === "day" ? "posts" : "insights");
+  return name === "day" ? showDay() : showInsights();
+});
 </script>
 </body>
 </html>

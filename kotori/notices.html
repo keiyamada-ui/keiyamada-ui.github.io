@@ -149,7 +149,7 @@ async function showThemes() {
 }
 
 setupTabs([["t-notices", "notices"], ["t-patterns", "patterns"], ["t-runs", "runs"], ["t-themes", "themes"]],
-  name => ({ notices: showNotices, patterns: showPatterns, runs: showRuns, themes: showThemes })[name]());
+  name => { if (name === "patterns") Seen.mark("patterns"); return ({ notices: showNotices, patterns: showPatterns, runs: showRuns, themes: showThemes })[name](); });
 </script>
 </body>
 </html>
