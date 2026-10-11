@@ -417,19 +417,65 @@ def make_manual_stock(config, today, ordered, used_theme, history, pats, search,
 
 
 ROOM_SOURCES = ("ichiba", "books")  # 楽天トラベルの宿は ROOM に載せられない
-ROOM_KEEP = 60
+ROOM_KEEP = 120
+ROOM_EXTRA_SEARCHES = 3  # ROOM 用に楽天市場を追加で検索する回数の上限
+
+
+def room_per_day(config, today):
+    """ROOM に出す1日の件数。セール（お買い物マラソン・スーパーSALE）の前の週と期間中は多めにする。"""
+    room = config.get("room", {})
+    for sale in room.get("sales") or []:
+        start = datetime.date.fromisoformat(str(sale["start"]))
+        end = datetime.date.fromisoformat(str(sale.get("end") or sale["start"]))
+        if start - datetime.timedelta(days=7) <= today <= end:
+            return room.get("sale_per_day", room.get("per_day", 3)), sale.get("name", "セール")
+    return room.get("per_day", 3), None
+
+
+def room_more_items(config, today, ordered, history, search, used_ids, need):
+    """ROOM 用に、楽天市場の商品を追加で探す（本より投稿の手間が少ないため）。"""
+    found = []
+    for theme in [t for t in ordered if t["source"] == "ichiba"][:ROOM_EXTRA_SEARCHES]:
+        if len(found) >= need:
+            break
+        try:
+            items = search("ichiba", theme["keyword"])
+        except Exception as e:  # noqa: BLE001 - ROOM の追加分は補助なので、失敗しても続ける
+            print(f"⚠️ ROOM 用の追加の検索ができませんでした: {str(e)[:100]}")
+            continue
+        cands = selector.filter_items(items, history, today, config["filters"])
+        cands = [c for c in cands if c["id"] not in used_ids and c["id"] not in {f["id"] for f in found}]
+        if cands:
+            found += selector.score_items(cands, config["scoring"])[:need - len(found)]
+    return found
 
 
 def build_room_list(config, today, picked, extras, generate):
-    """ROOM 用の一覧に今日の分を追加する。picked = すでにコメントがある (商品, コメント)、extras = 追加候補。"""
-    per_day = config.get("room", {}).get("per_day", 3)
+    """ROOM 用の一覧に今日の分を追加する。picked = すでにコメントがある (商品, コメント)、extras = 追加候補。
+    楽天市場の商品を優先し、本（投稿のたびに検索の手間がかかる）は1日 max_books 件までにする。"""
+    per_day, _ = room_per_day(config, today)
+    max_books = config.get("room", {}).get("max_books", 1)
     entries, seen = [], set()
+    books = lambda: sum(1 for i, _ in entries if i["source"] == "books")  # noqa: E731
     for item, comment in picked:
+        if item["source"] == "books" and books() >= max_books:
+            continue
         if item["source"] in ROOM_SOURCES and item["id"] not in seen and not checks.check_room_comment(comment):
             entries.append((item, comment))
             seen.add(item["id"])
-    more = [i for i in extras if i["source"] in ROOM_SOURCES and i["id"] not in seen]
-    more = sorted(more, key=lambda i: i.get("score", 0), reverse=True)[: max(per_day - len(entries), 0)]
+    pool = sorted((i for i in extras if i["source"] in ROOM_SOURCES and i["id"] not in seen),
+                  key=lambda i: (i["source"] != "ichiba", -i.get("score", 0)))
+    more, book_slots = [], max(max_books - books(), 0)
+    for item in pool:
+        if len(more) >= max(per_day - len(entries), 0):
+            break
+        if item["id"] in {m["id"] for m in more}:
+            continue
+        if item["source"] == "books":
+            if book_slots <= 0:
+                continue
+            book_slots -= 1
+        more.append(item)
     if more:
         try:
             system, user = prompts.room_messages(config["account"], today, more)
@@ -599,6 +645,14 @@ def run_daily(config, today, client, generate, args):
             room_picked.append((m_chosen, m_room))
             room_extras += [c for c in m_candidates if c["id"] != m_chosen["id"]]
     used_ids = {e["id"] for e in entries}
+    if not args.keyword:
+        per_day, sale = room_per_day(config, today)
+        if sale:
+            print(f"🛍️ {sale}の時期なので、ROOM の候補を{per_day}件にします")
+        have = sum(1 for i, _ in room_picked if i["source"] == "ichiba") + sum(1 for c in room_extras if c["source"] == "ichiba")
+        if have < per_day:
+            room_extras += room_more_items(config, today, ordered, history + entries, client.search,
+                                           used_ids | {c["id"] for c in room_extras}, per_day - have)
     for item in build_room_list(config, today, room_picked, room_extras, generate):
         if item["id"] not in used_ids:
             entries.append({"date": today.isoformat(), "source": item["source"], "id": item["id"],

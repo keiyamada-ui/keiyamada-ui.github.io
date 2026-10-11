@@ -446,6 +446,25 @@ def test_room_list_has_three_items_without_travel(out_dir):
     assert len({e["key"] for e in room}) == len(room) and room[0]["date"] == "2026-10-11"
 
 
+def test_room_prefers_ichiba_and_limits_books(out_dir, monkeypatch):
+    monkeypatch.setattr(generate_drafts, "MANUAL", Path(out_dir) / "manual")
+    cfg = dict(CONFIG, room={"per_day": 4, "max_books": 1, "sale_per_day": 6,
+                             "sales": [{"name": "スーパーSALE", "start": "2026-10-20", "end": "2026-10-25"}]})
+    books = [dict(item(i, source="books"), id=f"b{i}", score=99) for i in range(3)]
+    ichiba = [dict(item(i), id=f"s:{i}", score=10 + i) for i in range(5)]
+
+    def gen(system, user, schema, tier="standard"):
+        ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
+        return {"comments": [{"id": i, "comment": "レビューで評判の良い一品です。記事作成時点の情報です #PR"} for i in ids]}
+    picked = [(books[0], "本のコメントです。レビューの評判を書いています #PR")]
+    out = generate_drafts.build_room_list(cfg, TODAY, picked, books[1:] + ichiba, gen)
+    assert len(out) == 4 and sum(1 for i in out if i["source"] == "books") == 1
+    assert [i["id"] for i in out[1:]] == ["s:4", "s:3", "s:2"]  # 楽天市場の点数が高い順
+    assert generate_drafts.room_per_day(cfg, TODAY) == (4, None)
+    assert generate_drafts.room_per_day(cfg, datetime.date(2026, 10, 14)) == (6, "スーパーSALE")  # 前の週から
+    assert generate_drafts.room_per_day(cfg, datetime.date(2026, 10, 26)) == (4, None)
+
+
 def test_check_room_comment():
     assert checks.check_room_comment(ROOM) == []
     assert checks.check_room_comment("") and checks.check_room_comment("必ず効く https://x.com")
