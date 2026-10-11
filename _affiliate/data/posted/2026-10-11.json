@@ -32,5 +32,16 @@
     "permalink": "",
     "manual": true,
     "at": "2026-10-11T08:26+09:00"
+  },
+  {
+    "date": "2026-10-11",
+    "slot": 0,
+    "draft": "2026-10-10-casual.json",
+    "post_index": 2,
+    "kind": "casual",
+    "ids": [],
+    "permalink": "",
+    "manual": true,
+    "at": "2026-10-11T09:51+09:00"
   }
 ]
