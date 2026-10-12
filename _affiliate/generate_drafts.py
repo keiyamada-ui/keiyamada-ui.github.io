@@ -628,6 +628,7 @@ def make_extras(config, today, generate, pats, args):
 def run_daily(config, today, client, generate, args):
     history = selector.load_history(DATA / "history")
     pats = patterns_mod.fetch_patterns(os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN"))
+    prompts.TIPS_NOTE = prompts.tips_note(pats)
     bank_created = ensure_theme_bank(config, today, generate)
     drafts_dir = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts"))
     store, insight_note = update_insights(today, args.dry_run)
@@ -747,6 +748,7 @@ def run_item(config, today, client, generate, args):
              "persona": "この商品が気になっている、子育て中の親", "scene": ""}
     analysis, chosen, warn1 = analyze(config, theme, [item], today, generate, owner_note or None)
     pats = patterns_mod.fetch_patterns(os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN"))
+    prompts.TIPS_NOTE = prompts.tips_note(pats)
     result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate, owner_note or None)
     title = f"{'⚠️要修正 ' if errors else ''}🛒 推し商品の下書き（{item['name'][:30]}）"
     body = render(today, title, theme, analysis, chosen, [item], result, errors, warn1 + warnings, [],
@@ -809,10 +811,20 @@ def run_reference(config, generate, body_text):
     images = load_shots(body_text)
     if not post_text and not images:
         raise RuntimeError("「投稿の本文」が空です。参考にしたい投稿の文章を貼り付けるか、スクショを送ってください")
-    system, user = prompts.reference_messages(config["account"], post_text, form.get("いいねの数", ""),
-                                              form.get("ひとことメモ", ""), has_images=bool(images))
-    analysis = (generate(system, user, prompts.REFERENCE_SCHEMA, images=images) if images
-                else generate(system, user, prompts.REFERENCE_SCHEMA))
+    extra = {"images": images} if images else {}
+    if "考え方" in form.get("種類", ""):
+        # 考え方・コツ → このアカウント用の具体的なルールにして、勝ちパターンとして保存する
+        system, user = prompts.tips_messages(config["account"], post_text, form.get("ひとことメモ", ""), has_images=bool(images))
+        tips = generate(system, user, prompts.TIPS_SCHEMA, tier="important", **extra)
+        analysis = {"kind": "tips", "summary": tips["summary"], "hook_type": "考え方・コツ",
+                    "structure": [f"{x['title']}: {x['explain']}" for x in tips["principles"]],
+                    "why_it_worked": [x["explain"] for x in tips["principles"]],
+                    "reusable_pattern": " / ".join(tips["rules_for_us"]), "rules_for_us": tips["rules_for_us"],
+                    "example": tips["example"], "avoid": tips["avoid"], "theme": {}}
+    else:
+        system, user = prompts.reference_messages(config["account"], post_text, form.get("いいねの数", ""),
+                                                  form.get("ひとことメモ", ""), has_images=bool(images))
+        analysis = generate(system, user, prompts.REFERENCE_SCHEMA, **extra)
     comment = patterns_mod.format_comment(analysis)
     path = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")) / "reference_comment.md"
     path.parent.mkdir(parents=True, exist_ok=True)

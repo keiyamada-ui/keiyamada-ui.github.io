@@ -510,3 +510,20 @@ def test_room_mixes_themes_and_skips_similar(out_dir, monkeypatch):
 def test_similar_names():
     assert generate_drafts.similar("【送料無料】ハンガーラック 玄関 スリム", "ハンガーラック 玄関 スリム 木製")
     assert not generate_drafts.similar("なわとび 子供", "水筒 子供 ワンタッチ")
+
+
+def test_reference_tips_become_rules(monkeypatch, tmp_path):
+    monkeypatch.setenv("KOTORI_DRAFTS_DIR", str(tmp_path))
+    body = "### 種類\n\n考え方・コツ\n\n### 投稿の本文\n\n1行目で手を止めさせる。数字か問いかけで始める。\n\n### ひとことメモ\n\n_No response_"
+    seen = {}
+
+    def gen(system, user, schema, tier="standard", **kw):
+        seen.update(schema=schema, tier=tier)
+        return {"summary": "書き出しの作り方", "principles": [{"title": "1行目", "explain": "手を止めさせる"}],
+                "rules_for_us": ["1行目は子どもの一言から始める"], "example": "「ママ、体操服ない」朝7時。", "avoid": ["煽り"]}
+    path = generate_drafts.run_reference(CONFIG, gen, body)
+    text = Path(path).read_text(encoding="utf-8")
+    assert seen["schema"] is prompts.TIPS_SCHEMA and seen["tier"] == "important"
+    assert "考え方・コツの分析" in text and "1行目は子どもの一言から始める" in text
+    data = patterns.parse_comment(text)
+    assert data["kind"] == "tips" and "1行目は子どもの一言から始める" in prompts.tips_note([data])
