@@ -32,6 +32,7 @@ import llm  # noqa: E402
 import patterns as patterns_mod  # noqa: E402
 import pins as pins_mod  # noqa: E402
 import season  # noqa: E402
+import learn  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -586,6 +587,12 @@ def run_daily(config, today, client, generate, args):
     bank_created = ensure_theme_bank(config, today, generate)
     drafts_dir = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts"))
     store, insight_note = update_insights(today, args.dry_run)
+    try:  # 週1回、自分の投稿の伸びた・伸びなかったを比べて、書き方を学ぶ
+        times = {p["ids"][0]: p.get("at", "")[11:16] for p in autopost.load_posted(DATA / "posted") if p.get("ids")}
+        if learn.learn(config, today, store, generate, drafts_dir, times, path=DATA / "learned.json"):
+            prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
+    except Exception as e:  # noqa: BLE001 - 学びは補助なので、失敗しても下書きは作る
+        print(f"⚠️ 自分の投稿から学べませんでした: {str(e)[:150]}")
 
     if args.keyword:
         pool = [themes_mod._make("手動", args.source or "ichiba", args.keyword, "", category="手動指定")]
@@ -818,6 +825,7 @@ def main(argv=None):
     info = season.get(today, store=DATA / "season", fetcher=(lambda d: None) if args.dry_run else season.fetch)
     prompts.SEASON_NOTE = info["note"]
     checks.SEASON.update(avoid=info["avoid"], avg_max=info["avg_max"])
+    prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
     generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
     if args.analyze_reference:

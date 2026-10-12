@@ -81,7 +81,9 @@ def build(today, days=None):
     avoid = avoid_words(avg_max)
     note = (f"今の季節感（{source}・{today.month}月{today.day}日）: これから1週間の最高気温は平均{avg_max}℃、最低気温は平均{avg_min}℃。"
             f"{_phase(avg_max)}。この時期の行事・話題: {EVENTS[today.month]}。\n"
-            "季節は今の気温に合わせる。先の季節を先取りするときも「朝晩が冷えてきたら」「そろそろ」のように、今の体感から自然につなげる。")
+            "これは「季節外れの言葉を使わない」ための情報で、季節の話題を書けという意味ではない。"
+            "季節や天気の話は毎回入れず、たまに（数回に1回くらい）でよい。ほとんどの投稿は季節と関係ない日常・悩み・商品の話でよい。"
+            "季節に触れるときだけ今の気温に合わせ、先取りするなら「朝晩が冷えてきたら」「そろそろ」のように今の体感から自然につなげる。")
     if avoid:
         note += f"\nまだ（もう）季節に合わない言葉は使わない: {'・'.join(avoid)}。"
     return {"date": today.isoformat(), "avg_max": avg_max, "avg_min": avg_min, "source": source,

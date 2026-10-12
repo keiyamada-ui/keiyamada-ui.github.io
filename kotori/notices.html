@@ -76,6 +76,22 @@ async function showPatterns() {
   catch (e) { return fail(e); }
   const nodes = [el("p", { class: "note" }, ["参考投稿から学んだ「型」です。毎朝の下書きで参考にされます。合わない型は「外す」で使われなくなります。",
                                               el("br"), el("a", { href: "input.html#reference", text: "⭐ 参考投稿を登録する →" })])];
+  // 自分の投稿から学んだこと（毎週、自動で更新）
+  const learned = await fresh("_affiliate/data/learned.json");
+  nodes.push(el("section", { class: "card" }, learned && learned.lessons && learned.lessons.length ? [
+    el("div", { class: "row between" }, [el("div", { class: "title", text: "🐤 自分の投稿から学んだこと" }),
+      el("span", { class: "badge ok", text: `${learned.updated.slice(5).replace("-", "/")} 更新・${learned.posts}件から` })]),
+    el("div", { class: "text", text: learned.summary }),
+    ...learned.lessons.map(x => el("details", {}, [el("summary", { text: `${x.title}（${x.applies_to}）` }),
+      el("div", { class: "muted", style: "margin-top:6px", text: `✅ こう書く: ${x.do}` }),
+      el("div", { class: "muted", text: `🙅 避ける: ${x.avoid}` }),
+      el("div", { class: "muted", text: `🔎 根拠: ${x.why}` })])),
+    el("div", { class: "muted", style: "margin-top:8px", text: "毎週月曜ごろ、伸びた投稿と伸びなかった投稿を比べて自動で学び直します。毎朝の下書きで参考にされます。" }),
+  ] : [
+    el("div", { class: "title", text: "🐤 自分の投稿から学んだこと" }),
+    el("div", { class: "muted", style: "margin-top:6px", text: "反響のわかる投稿が10件たまったら、週1回、伸びた投稿と伸びなかった投稿を比べて自動で学びます（2〜3日後から）。" }),
+  ]));
+  nodes.push(el("h2", { text: "参考投稿から学んだ型" }));
   const own = issues.filter(i => i.user && i.user.login === OWNER);
   if (!own.length) nodes.push(el("p", { class: "empty", text: "まだ勝ちパターンはありません" }));
   for (const i of own) {
