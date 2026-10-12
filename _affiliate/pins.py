@@ -154,8 +154,8 @@ def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None):
     boards = conf.get("boards") or DEFAULT_BOARDS
     system, user = prompts.pin_messages(config["account"], today, items, boards)
     result = {p["id"]: p for p in generate(system, user, prompts.PIN_SCHEMA, tier="standard")["pins"]}
-    made = []
-    for n, item in enumerate(items, 1):
+    made, n = [], 0
+    for item in items:
         pin = result.get(item["id"])
         if not pin:
             continue
@@ -163,6 +163,9 @@ def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None):
         if problems:
             print("⚠️ ピンを1枚見送りました: " + " / ".join(problems[:3]))
             continue
+        n += 1
+        while (Path(pin_dir) / f"{today.isoformat()}-{n}.png").exists():  # 同じ日に2回作っても上書きしない
+            n += 1
         name = f"{today.isoformat()}-{n}.png"
         render({"headline": pin["headline"], "points": pin["points"], "facts": _facts(item)}, Path(pin_dir) / name)
         made.append({

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / check-api = 楽天APIの接続確認'
+        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / pins = Pinterest のピンだけ作る / check-api = 楽天APIの接続確認'
         type: choice
-        options: [drafts, themes, check-api]
+        options: [drafts, themes, pins, check-api]
         default: drafts
       keyword:
         description: '（任意）テーマを使わず、このキーワードで探す 例: なわとび 子供'
@@ -75,7 +75,7 @@ jobs:
 
       - name: 5. 下書きを作る
         id: generate
-        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes'
+        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes' || inputs.mode == 'pins'
         env:
           MODE: ${{ inputs.mode }}
           KEYWORD: ${{ inputs.keyword }}
@@ -86,13 +86,24 @@ jobs:
           if [ "$EVENT" = "schedule" ] && [ -f "_affiliate/drafts/$(TZ=Asia/Tokyo date +%F).json" ]; then
             echo "今日の下書きはもうあるので、作り直しません"; exit 0
           fi
-          if [ "$MODE" = "themes" ]; then
+          if [ "$MODE" = "pins" ]; then
+            python _affiliate/generate_drafts.py --pins-only
+          elif [ "$MODE" = "themes" ]; then
             python _affiliate/generate_drafts.py --generate-themes
           elif [ -n "$KEYWORD" ]; then
             python _affiliate/generate_drafts.py --keyword "$KEYWORD" --source "$SOURCE"
           else
             python _affiliate/generate_drafts.py
           fi
+
+      - name: ピンを保存する（pins のとき）
+        if: steps.generate.outcome == 'success' && inputs.mode == 'pins'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/manual kotori/pins
+          git commit -m "Pinterest のピンを追加" || echo "保存する変更なし"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 
       - name: 6. ラベルを用意する
         if: steps.generate.outcome == 'success' && steps.generate.outputs.title != ''

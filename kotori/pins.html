@@ -28,6 +28,13 @@
   </div>
   <div class="muted" id="csv-note" style="margin-top:6px"></div>
 </section>
+<section class="card">
+  <div class="row between">
+    <div class="muted" style="flex:1 1 180px">ピンは毎朝の下書き作りで2枚できます。足りないときは、今日の楽天ROOM の商品から今すぐ作れます。</div>
+    <button class="btn" id="make" style="flex:0 0 auto">✨ 今すぐ2枚作る</button>
+  </div>
+  <div class="muted" id="make-note" style="margin-top:6px"></div>
+</section>
 <div class="row" style="margin:0 0 12px">
   <button class="btn" id="filter" style="flex:0 0 auto" aria-pressed="true">まだのものだけ</button>
 </div>
@@ -124,6 +131,35 @@ function downloadCsv(count, withDates) {
 }
 document.getElementById("csv-week").addEventListener("click", () => downloadCsv(14, true));
 document.getElementById("csv-try").addEventListener("click", () => downloadCsv(2, false));
+
+// 「今すぐ作る」: ピンだけ作るワークフローを動かし、終わったら読み直す
+document.getElementById("make").addEventListener("click", async ev => {
+  const btn = ev.currentTarget, note = document.getElementById("make-note");
+  if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
+  btn.disabled = true;
+  const started = new Date(Date.now() - 5000).toISOString();
+  try { await dispatch("affiliate_drafts.yml", { mode: "pins" }); }
+  catch (e) { note.textContent = "⚠️ " + e.message; btn.disabled = false; return; }
+  note.textContent = "ピンを作っています…（2〜4分）";
+  for (let i = 0; i < 50; i++) {
+    await new Promise(r => setTimeout(r, 8000));
+    try {
+      const runs = await gh(`/repos/${REPO}/actions/workflows/affiliate_drafts.yml/runs?event=workflow_dispatch&per_page=3`);
+      const run = runs.workflow_runs.find(r => r.created_at >= started.slice(0, 19));
+      if (run && run.status === "completed") {
+        pins = (await fresh("_affiliate/manual/pins.json")) || [];
+        render();
+        note.textContent = run.conclusion === "success"
+          ? "✅ できました。画像が出るまで1〜2分かかることがあります（出ないときは開き直してください）"
+          : "⚠️ うまく作れませんでした。「🔔 お知らせ」の動作状況を見るか、少しおいてもう一度試してください";
+        btn.disabled = false;
+        return;
+      }
+    } catch (e) { /* 次の回でもう一度見る */ }
+  }
+  note.textContent = "時間がかかっています。あとでページを開き直してください";
+  btn.disabled = false;
+});
 
 document.getElementById("filter").addEventListener("click", ev => {
   onlyOpen = !onlyOpen; ev.target.setAttribute("aria-pressed", String(onlyOpen)); render();
