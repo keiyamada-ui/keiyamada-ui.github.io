@@ -760,6 +760,23 @@ class FakeGenerator:
 
 # ----------------------------------------------------------------
 
+def run_pins_only(config, today, generate, dry_run=False):
+    """下書きを作り直さずに、ピンだけ作る（今日の ROOM の候補のうち、まだピンにしていない商品から）。"""
+    room = MANUAL / "room.json"
+    items = json.loads(room.read_text(encoding="utf-8")) if room.exists() else []
+    pins_path = MANUAL / "pins.json"
+    done = {p["key"].split(":", 1)[1] for p in json.loads(pins_path.read_text(encoding="utf-8"))} if pins_path.exists() else set()
+    latest = max((i["date"] for i in items), default="")
+    items = [i for i in items if i["date"] == latest and i.get("url") and i["id"] not in done]
+    if not items:
+        print("ピンにできる商品がありませんでした（ROOM の候補がまだないか、全部ピンにしました）")
+        return 0
+    made = pins_mod.make_pins(config, today, items, generate,
+                              pin_dir=(DATA / "pins") if dry_run else pins_mod.PIN_DIR, manual_dir=MANUAL)
+    write_output(pins=str(len(made)), notice=getattr(generate, "notice", ""))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ことり｜投稿の下書きを作る")
     parser.add_argument("--date", help="日付を指定（例: 2026-10-10）。省略すると今日（日本時間）")
@@ -774,6 +791,7 @@ def main(argv=None):
     parser.add_argument("--generate-themes", action="store_true", help="今月のテーマを作り直す")
     parser.add_argument("--dry-run", action="store_true", help="サンプルデータで動作確認（APIを使わない）")
     parser.add_argument("--check-api", action="store_true", help="楽天APIの接続確認だけ行う")
+    parser.add_argument("--pins-only", action="store_true", help="Pinterest のピンだけ、今日の ROOM の商品から作る")
     args = parser.parse_args(argv)
 
     global DATA, MANUAL
@@ -793,6 +811,8 @@ def main(argv=None):
         path = run_reference(config, generate, os.environ.get("ISSUE_BODY", ""))
         write_output(comment_path=path, notice=generate.notice)
         return 0
+    if args.pins_only:
+        return run_pins_only(config, today, generate, args.dry_run)
     if args.generate_themes:
         bank = ensure_theme_bank(config, today, generate, force=True)
         path = save_draft(render_themes(today, json.loads(bank.read_text(encoding="utf-8"))),

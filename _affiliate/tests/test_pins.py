@@ -50,3 +50,27 @@ def test_make_pins_writes_images_and_list(tmp_path, monkeypatch):
 
 def test_make_pins_disabled():
     assert pins.make_pins({**CONFIG, "pinterest": {"enabled": False}}, TODAY, ITEMS, gen) == []
+
+
+def test_make_pins_twice_same_day_keeps_images(tmp_path, monkeypatch):
+    monkeypatch.setattr(pins, "ROOT", tmp_path)
+    kw = dict(pin_dir=tmp_path / "kotori" / "pins", manual_dir=tmp_path / "manual")
+    first = pins.make_pins(CONFIG, TODAY, ITEMS[:1], gen, **kw)
+    second = pins.make_pins(CONFIG, TODAY, ITEMS[1:2], gen, **kw)
+    assert first[0]["image"] != second[0]["image"]
+    assert len(json.loads((tmp_path / "manual" / "pins.json").read_text(encoding="utf-8"))) == 2
+
+
+def test_pins_only_uses_latest_room_items(tmp_path, monkeypatch):
+    import generate_drafts
+    monkeypatch.setattr(generate_drafts, "MANUAL", tmp_path / "manual")
+    monkeypatch.setattr(generate_drafts, "DATA", tmp_path)
+    monkeypatch.setattr(pins, "ROOT", tmp_path)
+    (tmp_path / "manual").mkdir()
+    room = [dict(ITEMS[0], date="2026-10-24", key="a"), dict(ITEMS[1], date="2026-10-25", key="b")]
+    (tmp_path / "manual" / "room.json").write_text(json.dumps(room), encoding="utf-8")
+    assert generate_drafts.run_pins_only(CONFIG, TODAY, gen, dry_run=True) == 0
+    saved = json.loads((tmp_path / "manual" / "pins.json").read_text(encoding="utf-8"))
+    assert [p["key"] for p in saved] == [f"{TODAY}:{ITEMS[1]['id']}"]
+    generate_drafts.run_pins_only(CONFIG, TODAY, gen, dry_run=True)  # 2回目は作らない
+    assert len(json.loads((tmp_path / "manual" / "pins.json").read_text(encoding="utf-8"))) == 1
