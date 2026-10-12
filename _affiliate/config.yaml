@@ -97,6 +97,9 @@ pinterest:
   # Pinterest API の窓口。審査の最初の段階（Trial）のあいだは https://api-sandbox.pinterest.com/v5、
   # 本番の許可（Standard）が出たら https://api.pinterest.com/v5 にする
   api_base: https://api-sandbox.pinterest.com/v5
+  # 自動投稿。Trial のあいだに出したピンは自分にしか見えないので、Standard の許可が出てから true にする
+  # （それまでは「週1回のまとめて予約」を使う）
+  auto_post: false
 
 # 商品を候補に残す条件
 filters:
