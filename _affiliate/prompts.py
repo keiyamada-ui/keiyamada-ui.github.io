@@ -377,7 +377,7 @@ JSON だけを返す。replies の id は渡されたコメントの id をそ�
 # ---------------------------------------------------------------- Pinterest のピン
 
 PIN_SCHEMA = obj(pins={"type": "array", "items": obj(
-    id=STR, title=STR, description=STR, headline=STR, points=STRS, board=STR,
+    id=STR, title=STR, description=STR, headline=STR, points=STRS, board=STR, keywords=STRS,
 )})
 
 
@@ -392,6 +392,7 @@ Pinterest は「検索して保存する」場所です。探している人が�
   最後に「#PR」と、関係するハッシュタグを2つまで（例: #小学生ママ #知育）。URL は書かない。
 - headline: 画像に大きく入れる言葉（全角24文字以内）。思わず保存したくなる一言。改行したい所に「/」を入れてよい。
 - points: 画像に入れる短い特徴を3つ（それぞれ全角16文字以内）。レビューや商品情報から分かることだけ。
+- keywords: Pinterest で検索されそうな言葉を3〜5個（例: 小学生 なわとび、冬休み 室内遊び）。
 - board: 次のボードから1つ選ぶ: {"、".join(boards)}
 - 体験していないことを体験したように書かない。価格や件数は渡された数字だけを使う。
 {SHARED_RULES}
