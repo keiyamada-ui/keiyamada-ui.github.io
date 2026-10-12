@@ -189,3 +189,29 @@ async function enablePush(onProgress) {
   await dispatch("affiliate_push.yml", { mode: "subscribe", subscription: JSON.stringify(sub) });
   try { localStorage.setItem("kotori-push", "on"); } catch (e) {}
 }
+
+// ワークフローを動かして、終わるまで待つ。返り値: 成功したら true
+async function runAndWait(file, inputs, onProgress, maxMinutes = 6) {
+  const started = new Date(Date.now() - 5000).toISOString().slice(0, 19);
+  await dispatch(file, inputs);
+  for (let i = 0; i < maxMinutes * 60 / 8; i++) {
+    await new Promise(r => setTimeout(r, 8000));
+    if (onProgress) onProgress(i);
+    try {
+      const runs = await gh(`/repos/${REPO}/actions/workflows/${file}/runs?event=workflow_dispatch&per_page=3`);
+      const run = runs.workflow_runs.find(r => r.created_at >= started);
+      if (run && run.status === "completed") return run.conclusion === "success";
+    } catch (e) { /* 次の回でもう一度見る */ }
+  }
+  throw new Error("時間がかかっています。少ししてからページを開き直してください");
+}
+
+// 最新のファイルを文字のまま読む（合い鍵があれば GitHub API から）
+async function freshText(path) {
+  if (!Key.get()) return rawText(path);
+  try {
+    const r = await fetch(`${API}/repos/${REPO}/contents/${path}?ref=main&t=${Date.now()}`,
+      { headers: { Accept: "application/vnd.github.raw+json", Authorization: "Bearer " + Key.get() } });
+    return r.ok ? await r.text() : "";
+  } catch (e) { return ""; }
+}

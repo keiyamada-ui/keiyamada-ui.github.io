@@ -74,3 +74,20 @@ def test_pins_only_uses_latest_room_items(tmp_path, monkeypatch):
     assert [p["key"] for p in saved] == [f"{TODAY}:{ITEMS[1]['id']}"]
     generate_drafts.run_pins_only(CONFIG, TODAY, gen, dry_run=True)  # 2回目は作らない
     assert len(json.loads((tmp_path / "manual" / "pins.json").read_text(encoding="utf-8"))) == 1
+
+
+def test_export_csv_schedules_two_a_day(tmp_path):
+    pins_list = [dict(key=f"2026-10-2{i}:a{i}", date=f"2026-10-2{i}", title=f"t{i}", description="d #PR", board="b",
+                      link="https://hb.afl/x", image_url=f"https://x/{i}.png", keywords=["k1", "k2"]) for i in range(5)]
+    (tmp_path / "pins.json").write_text(json.dumps(pins_list), encoding="utf-8")
+    now = datetime.datetime(2026, 10, 25, 9, 0, tzinfo=pins.JST)
+    made = pins.export_csv(now, limit=3, exclude={"2026-10-20:a0"}, manual_dir=tmp_path, csv_path=tmp_path / "u.csv")
+    assert [p["scheduled_at"] for p in made] == ["2026-10-26T08:00+09:00", "2026-10-26T20:30+09:00", "2026-10-27T08:00+09:00"]
+    lines = (tmp_path / "u.csv").read_text(encoding="utf-8").splitlines()
+    assert lines[0].startswith("Title,Media URL,Pinterest board,Thumbnail,Description,Link,Publish date,Keywords")
+    assert '"2026-10-25T23:00:00"' in lines[1] and '"k1, k2"' in lines[1]
+    # 2回目は、前の予約の続きから
+    again = pins.export_csv(now, limit=5, manual_dir=tmp_path, csv_path=tmp_path / "u.csv")
+    assert [p["scheduled_at"] for p in again] == ["2026-10-27T20:30+09:00"]
+    saved = json.loads((tmp_path / "pins.json").read_text(encoding="utf-8"))
+    assert saved[0]["posted_by_hand"] and pins.waiting_count(tmp_path) == 0
