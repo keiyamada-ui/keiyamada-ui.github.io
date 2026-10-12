@@ -178,8 +178,8 @@ def main(argv=None):
                 return 1
             print("✅ つながっています: @" + _api("GET", "/user_account", tok).get("username", ""))
         else:
-            if not push._fernet() or not (push.STORE / TOKEN_FILE).exists():
-                return 0  # まだつながっていない
+            if not push._fernet() or not (push.STORE / TOKEN_FILE).exists() or not _conf().get("auto_post"):
+                return 0  # まだつながっていない・本番の許可がまだ
             post_due()
     except PinterestError as e:
         print(f"⚠️ {e}")
