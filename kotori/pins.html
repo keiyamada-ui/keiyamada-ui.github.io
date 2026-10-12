@@ -45,14 +45,11 @@
   <div class="muted" id="export-note" style="margin-top:6px"></div>
   <div class="info" id="mobile-tip" style="display:none;margin:10px 0 0">
     <b>📱 スマホのときは</b><br>
-    スマホの Pinterest（アプリ・スマホ版のページ）には「コンテンツのインポート」がないので、<b>Safari でパソコン版の画面</b>を開いて読み込みます。
-    <ol class="steps" style="font-size:13px">
-      <li>「① ファイルを作る」で保存（「ファイルに保存」→「ダウンロード」を選ぶ）</li>
-      <li>下の「アドレスをコピー」を押す</li>
-      <li>ホーム画面から <b>Safari</b> を開き、上のアドレス欄に<b>貼り付けて開く</b>（ここで開くと Pinterest アプリに飛びません）</li>
-      <li>アドレス欄の「<b>ぁあ</b>」→「<b>デスクトップ用Webサイトを表示</b>」</li>
-      <li>左の「<b>コンテンツのインポート</b>」→「アップロード」→「ダウンロード」フォルダのファイルを選ぶ</li>
-    </ol>
+    スマホの Pinterest（アプリ・スマホ版のページ）には「コンテンツのインポート」がないので、<b>ブラウザでパソコン版の画面</b>を開いて読み込みます。
+    <div class="row" style="margin-top:8px">使っているブラウザ:
+      <button class="btn" id="b-chrome" style="flex:0 0 auto;min-height:34px">Chrome</button>
+      <button class="btn" id="b-safari" style="flex:0 0 auto;min-height:34px">Safari</button></div>
+    <ol class="steps" style="font-size:13px" id="mobile-steps"></ol>
     <div class="actions" style="margin-top:6px"><button class="btn primary" id="copy-import">📋 アドレスをコピー</button></div>
     <div class="muted" style="margin-top:6px">パソコンがあるときは、パソコンでこの画面を開いて ①② を押すのがいちばん簡単です。</div>
   </div>
@@ -217,6 +214,33 @@ document.getElementById("make").addEventListener("click", async ev => {
 
 // スマホでは、読み込みはパソコン版の画面でしかできないので、やり方を出しておく
 if (matchMedia("(pointer: coarse)").matches) document.getElementById("mobile-tip").style.display = "block";
+// 使っているスマホとブラウザに合わせた手順（Chrome・Safari、iPhone・Android）
+function mobileSteps(pickBrowser) {
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod|Macintosh/.test(ua) && !/Android/.test(ua);
+  let saved = "";
+  try { if (pickBrowser) localStorage.setItem("kotori-browser", pickBrowser); saved = localStorage.getItem("kotori-browser") || ""; } catch (e) {}
+  const chrome = saved ? saved === "chrome" : (/CriOS|Chrome/.test(ua) && !/EdgiOS|Edg\//.test(ua));
+  document.getElementById("b-chrome").classList.toggle("primary", chrome);
+  document.getElementById("b-safari").classList.toggle("primary", !chrome);
+  const name = chrome ? "Chrome" : ios ? "Safari" : "ブラウザ";
+  const save = ios ? (chrome ? "保存の画面で「“ファイル”に保存」→ 場所はそのまま「保存」" : "「ファイルに保存」→「ダウンロード」を選んで保存")
+                   : "「ダウンロード」に保存されます";
+  const desktop = chrome
+    ? (ios ? "右下の「…」→「<b>PC版サイトをリクエスト</b>」" : "右上の「︙」→「<b>PC版サイト</b>」にチェック")
+    : "アドレス欄の「<b>ぁあ</b>」→「<b>デスクトップ用Webサイトを表示</b>」";
+  const pick = ios ? (chrome ? "「ブラウズ」→「このiPhone内」→「Chrome」の中のファイル" : "「ダウンロード」フォルダのファイル") : "「ダウンロード」のファイル";
+  const steps = [
+    `「① ファイルを作る」で保存（${save}）`,
+    "下の「📋 アドレスをコピー」を押す",
+    `ホーム画面から <b>${name}</b> を開き、新しいタブを開いて、上のアドレス欄に<b>貼り付けて開く</b>（ここで開くと Pinterest アプリに飛びません）`,
+    `${desktop}`,
+    `左の「<b>コンテンツのインポート</b>」→「アップロード」→ ${pick}を選ぶ`,
+  ];
+  document.getElementById("mobile-steps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
+}
+mobileSteps();
+document.getElementById("b-chrome").addEventListener("click", () => mobileSteps("chrome"));
+document.getElementById("b-safari").addEventListener("click", () => mobileSteps("safari"));
 document.getElementById("copy-import").addEventListener("click", () => copy("https://www.pinterest.jp/settings/import"));
 
 setupTabs([["t-wait", "wait"], ["t-done", "done"], ["t-all", "all"]], name => { tab = name; if (pins.length) render(); });
