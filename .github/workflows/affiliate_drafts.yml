@@ -67,9 +67,11 @@ jobs:
       - name: Pinterest の画像用のフォントを用意する（取れなくても、入っている日本語フォントで作る）
         run: |
           mkdir -p _affiliate/fonts
-          curl -sSL --retry 2 -o _affiliate/fonts/ZenMaruGothic-Bold.ttf \
-            https://raw.githubusercontent.com/google/fonts/main/ofl/zenmarugothic/ZenMaruGothic-Bold.ttf \
-            || rm -f _affiliate/fonts/ZenMaruGothic-Bold.ttf
+          for w in Bold Black Medium; do
+            curl -sSfL --retry 2 -o "_affiliate/fonts/ZenMaruGothic-$w.ttf" \
+              "https://raw.githubusercontent.com/google/fonts/main/ofl/zenmarugothic/ZenMaruGothic-$w.ttf" \
+              || rm -f "_affiliate/fonts/ZenMaruGothic-$w.ttf"
+          done
 
       - name: 4. 仕組みの自己テスト
         run: python -m pytest -q _affiliate/tests

@@ -23,24 +23,29 @@ ILLUST = ROOT / "kotori" / "header.jpg"
 SITE = "https://keiyamada-ui.github.io/kotori/pins/"
 KEEP = 90
 W, H = 1000, 1500
-COLORS = {"bg": (255, 248, 230), "card": (255, 255, 255), "text": (58, 46, 31), "sub": (122, 106, 85),
-          "accent": (245, 166, 35), "line": (240, 226, 192)}
+# ボードごとの色（並んだときに見分けやすく、どれも ことり らしい柔らかい色）
+THEMES = {
+    "小学生の習い事・知育": {"bg": (232, 244, 236), "accent": (76, 160, 112), "mark": (198, 236, 210)},
+    "子どもの本・図鑑": {"bg": (231, 239, 250), "accent": (74, 126, 196), "mark": (200, 220, 248)},
+    "子連れ旅行・おでかけ": {"bg": (253, 236, 228), "accent": (226, 112, 84), "mark": (252, 210, 196)},
+    "季節の準備・暮らし": {"bg": (255, 245, 222), "accent": (232, 150, 30), "mark": (255, 224, 150)},
+}
+INK, SUB, WHITE, LINE = (52, 42, 30), (120, 104, 84), (255, 255, 255), (234, 224, 204)
+DEFAULT_BOARDS = list(THEMES)
 # 丸みのある日本語フォント（ワークフローで用意する）→ なければ入っている日本語フォント
-FONT_CANDIDATES = [
-    os.environ.get("KOTORI_FONT", ""),
-    str(HERE / "fonts" / "ZenMaruGothic-Bold.ttf"),
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-]
-DEFAULT_BOARDS = ["小学生の習い事・知育", "子どもの本・図鑑", "子連れ旅行・おでかけ", "季節の準備・暮らし"]
+FONT_DIR = HERE / "fonts"
+FONT_FALLBACK = ["/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"]
 
 
-def _font_path():
-    return next((p for p in FONT_CANDIDATES if p and Path(p).exists()), None)
+def _font_path(weight="Bold"):
+    names = [os.environ.get("KOTORI_FONT_DIR", "") and str(Path(os.environ["KOTORI_FONT_DIR"]) / f"ZenMaruGothic-{weight}.ttf"),
+             str(FONT_DIR / f"ZenMaruGothic-{weight}.ttf"), str(FONT_DIR / "ZenMaruGothic-Bold.ttf"),
+             os.environ.get("KOTORI_FONT", "")] + FONT_FALLBACK
+    return next((p for p in names if p and Path(p).exists()), None)
 
 
-def _font(size):
-    path = _font_path()
+def _font(size, weight="Bold"):
+    path = _font_path(weight)
     return ImageFont.truetype(path, size) if path else ImageFont.load_default()
 
 
@@ -60,72 +65,172 @@ def _wrap(draw, text, font, width):
     return lines
 
 
+NO_LINE_START = "、。，．,.!！?？)）」』】ーっゃゅょぁぃぅぇぉッャュョァィゥェォ〜"
+
+
+def _fit_headline(draw, text, width, max_lines=3):
+    """見出しが3行以内に収まる、いちばん大きい文字の大きさを選ぶ。
+    「/」で区切ってあれば、区切りごとに1行で収まる大きさにする（言葉の途中で折り返さない）。"""
+    parts = [x.strip() for x in text.replace("／", "/").split("/") if x.strip()]
+    for size in (104, 96, 88, 80, 72, 66, 60):
+        f = _font(size, "Black")
+        if len(parts) > 1:
+            if len(parts) <= max_lines and all(draw.textlength(x, font=f) <= width for x in parts):
+                return f, size, parts
+            continue
+        lines = _wrap(draw, text, f, width)
+        for i in range(1, len(lines)):  # 行の頭に「、」や小さい「っ」が来ないように
+            while lines[i] and lines[i][0] in NO_LINE_START and len(lines[i - 1]) > 1:
+                lines[i] = lines[i - 1][-1] + lines[i]
+                lines[i - 1] = lines[i - 1][:-1]
+        if len(lines) <= max_lines:
+            return f, size, lines
+    f = _font(60, "Black")
+    return f, 60, _wrap(draw, " ".join(parts), f, width)[:max_lines]
+
+
+def _star(draw, cx, cy, r, fill):
+    import math
+    pts = []
+    for i in range(10):
+        a = math.pi / 2 + i * math.pi / 5
+        rr = r if i % 2 == 0 else r * 0.45
+        pts.append((cx + rr * math.cos(a), cy - rr * math.sin(a)))
+    draw.polygon(pts, fill=fill)
+
+
+def _check(draw, x, y, size, color):
+    draw.ellipse((x, y, x + size, y + size), fill=color)
+    w = max(4, size // 7)
+    draw.line([(x + size * 0.27, y + size * 0.52), (x + size * 0.44, y + size * 0.68), (x + size * 0.74, y + size * 0.34)],
+              fill=WHITE, width=w, joint="curve")
+
+
+def _rounded(img, radius):
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, img.width - 1, img.height - 1), radius=radius, fill=255)
+    return mask
+
+
 def render(spec, out_path):
-    """縦長（2:3）のピン画像を作る。"""
-    img = Image.new("RGB", (W, H), COLORS["bg"])
+    """縦長（2:3）のピン画像を作る。
+
+    spec: headline（「/」で改行）・points（3つ）・board・rating・reviews・price・photo（商品写真。PIL の画像か None）
+    商品写真は楽天のルールに合わせて、切り取らず・上に文字を重ねず、大きさだけ変えて白い台紙に置く。
+    """
+    theme = THEMES.get(spec.get("board"), THEMES["季節の準備・暮らし"])
+    img = Image.new("RGB", (W, H), theme["bg"])
     d = ImageDraw.Draw(img)
-    pad = 80
-    d.text((pad, 80), "子育て家族の“買ってよかった”", font=_font(40), fill=COLORS["sub"])
-    d.rounded_rectangle((pad, 140, pad + 140, 150), radius=5, fill=COLORS["accent"])
+    pad = 64
 
-    # 大きな見出し
-    big = _font(92)
-    y = 200
-    for line in _wrap(d, spec["headline"], big, W - pad * 2)[:4]:
-        d.text((pad, y), line, font=big, fill=COLORS["text"])
-        y += 122
+    # 上: 小さなラベル
+    label = spec.get("label") or "子育て家族の“買ってよかった”"
+    lf = _font(34, "Bold")
+    lw = d.textlength(label, font=lf)
+    d.rounded_rectangle((pad, 56, pad + lw + 48, 112), radius=28, fill=WHITE)
+    d.text((pad + 24, 64), label, font=lf, fill=theme["accent"])
 
-    # 特徴（白いカード）
-    y += 30
-    small = _font(52)
-    rows = [(i == 0, line) for p in spec["points"][:3] for i, line in enumerate(_wrap(d, p, small, W - pad * 2 - 120)[:2])]
-    card_h = 60 + len(rows) * 78
-    d.rounded_rectangle((pad, y, W - pad, y + card_h), radius=36, fill=COLORS["card"], outline=COLORS["line"], width=3)
-    ty = y + 34
-    for first, line in rows:
-        if first:  # 箇条書きの丸
-            d.ellipse((pad + 40, ty + 20, pad + 64, ty + 44), fill=COLORS["accent"])
-        d.text((pad + 88, ty), line, font=small, fill=COLORS["text"])
-        ty += 78
-    y += card_h + 36
+    # 見出し（いちばん目立つ所）。最後の行に蛍光ペンの線
+    hf, hs, lines = _fit_headline(d, spec["headline"], W - pad * 2)
+    y = 146
+    for i, line in enumerate(lines):
+        if i == len(lines) - 1:
+            lw = d.textlength(line, font=hf)
+            d.rounded_rectangle((pad - 6, y + hs * 0.58, pad + lw + 6, y + hs * 1.08), radius=10, fill=theme["mark"])
+        d.text((pad, y), line, font=hf, fill=INK)
+        y += int(hs * 1.24)
 
-    # 評価・価格（商品情報から分かる事実だけ）
-    if spec.get("facts"):
-        d.text((pad, y), spec["facts"], font=_font(42), fill=COLORS["sub"])
-        y += 70
-
-    # あいた所に、ことりのイラスト（ヘッダー画像）を入れる
-    room = (H - 290) - (y + 20)
-    if ILLUST.exists() and room > 160:
+    # 商品写真（白い台紙の中に、切り取らずに収める）
+    footer_top = H - 150
+    points = spec.get("points", [])[:3]
+    pts_h = 56 * len(points) + 24
+    info_h = 64 if (spec.get("rating") or spec.get("price")) else 0
+    card_top = y + 48  # 台紙の角の ことり が見出しに重ならないように
+    card_bottom = footer_top - pts_h - info_h - 40
+    card = (pad, card_top, W - pad, card_bottom)
+    d.rounded_rectangle((card[0] + 6, card[1] + 10, card[2] + 6, card[3] + 10), radius=40, fill=tuple(max(0, c - 18) for c in theme["bg"]))
+    d.rounded_rectangle(card, radius=40, fill=WHITE)
+    inner_w, inner_h = card[2] - card[0] - 80, card[3] - card[1] - 80
+    photo = spec.get("photo")
+    if photo is not None and inner_h > 120:
+        ph = photo.convert("RGB")
+        scale = min(inner_w / ph.width, inner_h / ph.height)
+        ph = ph.resize((max(1, int(ph.width * scale)), max(1, int(ph.height * scale))), Image.LANCZOS)
+        img.paste(ph, (card[0] + 40 + (inner_w - ph.width) // 2, card[1] + 40 + (inner_h - ph.height) // 2))
+    elif ILLUST.exists() and inner_h > 120:  # 写真がないときは、ことりのイラスト
         art = Image.open(ILLUST).convert("RGB")
-        width = W - pad * 2
-        art = art.resize((width, round(width * art.height / art.width)))
-        if art.height > room:  # 高さが足りなければ、真ん中のことりを中心に切り取る
-            top = (art.height - room) // 2
-            art = art.crop((0, top, width, top + room))
-        mask = Image.new("L", art.size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle((0, 0, art.width - 1, art.height - 1), radius=36, fill=255)
-        img.paste(art, (pad, y + 20 + (room - art.height) // 2), mask)
+        scale = min(inner_w / art.width, inner_h / art.height)
+        art = art.resize((int(art.width * scale), int(art.height * scale)), Image.LANCZOS)
+        img.paste(art, (card[0] + 40 + (inner_w - art.width) // 2, card[1] + 40 + (inner_h - art.height) // 2),
+                  _rounded(art, 24))
+    if AVATAR.exists():  # 台紙の角から ことり がのぞく（写真には重ねない）
+        av = Image.open(AVATAR).convert("RGBA").resize((128, 128), Image.LANCZOS)
+        ring = Image.new("RGBA", (140, 140), (0, 0, 0, 0))
+        ImageDraw.Draw(ring).ellipse((0, 0, 139, 139), fill=WHITE)
+        ring.paste(av, (6, 6), av)
+        img.paste(ring, (card[2] - 120, card[1] - 56), ring)
+    sf = _font(26, "Medium")
+    if photo is not None:
+        d.text((card[2] - 24 - d.textlength("画像：楽天市場", font=sf), card[3] - 40), "画像：楽天市場", font=sf, fill=(170, 160, 150))
 
-    # 下: ことりのアイコンと名前
-    if AVATAR.exists():
-        av = Image.open(AVATAR).convert("RGBA").resize((170, 170))
-        img.paste(av, (pad, H - 250), av)
-    d.text((pad + 200, H - 225), "ことり", font=_font(56), fill=COLORS["text"])
-    d.text((pad + 200, H - 152), "@kotori.family", font=_font(38), fill=COLORS["sub"])
-    d.text((W - pad - 90, H - 140), "PR", font=_font(44), fill=COLORS["sub"])
+    # 評価と価格（商品情報から分かる事実だけ）
+    y = card_bottom + 30
+    if info_h:
+        x = pad
+        if spec.get("rating"):
+            r = float(spec["rating"])
+            for i in range(5):
+                _star(d, x + 22 + i * 46, y + 24, 20, theme["accent"] if i < int(r + 0.5) else LINE)
+            x += 5 * 46 + 14
+            t = f"{r:.2f}".rstrip("0").rstrip(".") + (f"（{spec['reviews']:,}件）" if spec.get("reviews") else "")
+            d.text((x, y), t, font=_font(38, "Bold"), fill=INK)
+        if spec.get("price"):
+            pt = f"{spec['price']:,}円〜"
+            pf = _font(38, "Black")
+            pw = d.textlength(pt, font=pf)
+            d.rounded_rectangle((W - pad - pw - 40, y - 6, W - pad, y + 52), radius=29, fill=theme["accent"])
+            d.text((W - pad - pw - 20, y), pt, font=pf, fill=WHITE)
+        y += info_h
+
+    # 良いところ（チェックつき）
+    pf = _font(42, "Bold")
+    for p in points:
+        _check(d, pad, y + 6, 40, theme["accent"])
+        d.text((pad + 58, y), _wrap(d, p, pf, W - pad * 2 - 60)[0] if p else "", font=pf, fill=INK)
+        y += 56
+
+    # 下: ことり と PR
+    d.line((pad, footer_top, W - pad, footer_top), fill=tuple(max(0, c - 24) for c in theme["bg"]), width=2)
+    d.text((pad, footer_top + 30), "ことり", font=_font(40, "Black"), fill=INK)
+    d.text((pad, footer_top + 80), "@kotori.family", font=_font(30, "Medium"), fill=SUB)
+    cta = "楽天でチェック ›"
+    cf = _font(36, "Black")
+    cw = d.textlength(cta, font=cf)
+    d.rounded_rectangle((W - pad - cw - 56, footer_top + 38, W - pad, footer_top + 108), radius=35, fill=INK)
+    d.text((W - pad - cw - 28, footer_top + 52), cta, font=cf, fill=WHITE)
+    d.text((W - pad - cw - 56 - 70, footer_top + 56), "PR", font=_font(32, "Bold"), fill=SUB)
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path, optimize=True)
     return out_path
 
 
-def _facts(item):
-    out = []
-    if item.get("review_average") and item.get("review_count"):
-        out.append(f"★{item['review_average']}（レビュー{item['review_count']:,}件）")
-    if item.get("price"):
-        out.append(f"{item['price']:,}円〜")
-    return "　".join(out)
+def fetch_photo(item, timeout=15):
+    """楽天の商品写真を大きめのサイズで取る。取れなければ None。"""
+    url = item.get("image") or ""
+    if not url.startswith("https://"):
+        return None
+    if "thumbnail.image.rakuten.co.jp" in url:
+        url = url.split("?")[0] + "?_ex=600x600"
+    try:
+        import io
+        import requests
+        r = requests.get(url, timeout=timeout)
+        r.raise_for_status()
+        return Image.open(io.BytesIO(r.content))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 商品写真を取れませんでした（イラストにします）: {str(e)[:80]}")
+        return None
 
 
 def check_pin(pin):
@@ -145,7 +250,7 @@ def check_pin(pin):
     return errors
 
 
-def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None):
+def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None, fetch=True):
     """商品ごとにピンを作り、manual/pins.json に追加する。返り値: 作ったピンの一覧。"""
     conf = config.get("pinterest", {})
     if not conf.get("enabled", True) or not items:
@@ -167,11 +272,15 @@ def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None):
         while (Path(pin_dir) / f"{today.isoformat()}-{n}.png").exists():  # 同じ日に2回作っても上書きしない
             n += 1
         name = f"{today.isoformat()}-{n}.png"
-        render({"headline": pin["headline"], "points": pin["points"], "facts": _facts(item)}, Path(pin_dir) / name)
+        board = pin["board"] if pin["board"] in boards else boards[0]
+        render({"headline": pin["headline"], "points": pin["points"], "board": board,
+                "rating": item.get("review_average") if item.get("review_count") else None,
+                "reviews": item.get("review_count"), "price": item.get("price"),
+                "photo": fetch_photo(item) if fetch else None}, Path(pin_dir) / name)
         made.append({
             "key": f"{today.isoformat()}:{item['id']}", "date": today.isoformat(),
             "title": pin["title"], "description": pin["description"],
-            "board": pin["board"] if pin["board"] in boards else boards[0],
+            "board": board,
             "link": item["url"], "image": f"kotori/pins/{name}", "image_url": SITE + name,
             "product": item.get("name", ""), "source": item.get("source", ""),
             "keywords": [k.strip() for k in pin.get("keywords", []) if k.strip()][:5],
@@ -271,6 +380,6 @@ if __name__ == "__main__" and len(__import__("sys").argv) > 1:
     raise SystemExit(main())
 
 if __name__ == "__main__":  # 見た目の確認用
-    render({"headline": "なわとびが続かない子に/軽いビーズロープ", "points": ["軽くて回しやすい", "長さを調整できる", "練習が楽しくなる"],
-            "facts": "★4.6（レビュー250件）　1,280円〜"}, Path("/tmp/pin-sample.png"))
+    render({"headline": "なわとびが続かない/軽いロープで再挑戦", "points": ["軽くて回しやすい", "長さを調整できる", "練習が楽しくなる"],
+            "board": "小学生の習い事・知育", "rating": 4.6, "reviews": 250, "price": 1280}, Path("/tmp/pin-sample.png"))
     print(_font_path(), datetime.date.today())
