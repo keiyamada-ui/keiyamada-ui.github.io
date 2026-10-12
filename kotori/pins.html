@@ -18,6 +18,16 @@
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📌 Pinterest</h1></header>
 <p class="note">毎朝、ピン用の画像・タイトル・説明文・楽天のリンクを作っています。「📌 Pinterest で作成」を押すと、画像とリンクが入った状態でピンの作成画面が開きます。ボードを選んで保存してください。出したら「投稿した」を押すと、この端末に記録されます。</p>
+<section class="card">
+  <div class="title">📥 まとめて予約（週1回）</div>
+  <div class="muted" style="margin-top:4px">まだ出していないピンを、1日2枚（朝8:00・夜20:30）の予約つきで1つのファイルにします。
+    Pinterest の「設定 → コンテンツのインポート → .csv または .txt ファイルをアップロードする」で、このファイルを選ぶだけです。</div>
+  <div class="actions">
+    <button class="btn primary" id="csv-week">📥 1週間分をダウンロード</button>
+    <button class="btn" id="csv-try">🧪 お試し2枚（すぐ公開）</button>
+  </div>
+  <div class="muted" id="csv-note" style="margin-top:6px"></div>
+</section>
 <div class="row" style="margin:0 0 12px">
   <button class="btn" id="filter" style="flex:0 0 auto" aria-pressed="true">まだのものだけ</button>
 </div>
@@ -78,6 +88,42 @@ function render() {
   }
   if (!items.length) list.append(el("p", { class: "empty", text: pins.length ? "全部出しました 🎉" : "まだピンはありません（毎朝の下書き作りで作られます）" }));
 }
+
+// ── まとめて予約（Pinterest の一括アップロード用の .csv。見出しは Pinterest のサンプルと同じ） ──
+const CSV_HEAD = ["Title", "Media URL", "Pinterest board", "Thumbnail", "Description", "Link", "Publish date", "Keywords"];
+const SLOTS_UTC = [[-1, 23, 0], [0, 11, 30]];  // 日本時間 8:00（前日 23:00 UTC）・20:30（11:30 UTC）
+const cell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+
+function schedule(n) {
+  // 明日から、1日2枠ずつ
+  const out = [], tomorrow = addDays(jstDate(), 1);
+  for (let d = 0; out.length < n; d++) {
+    const day = addDays(tomorrow, d);
+    for (const [shift, h, m] of SLOTS_UTC) {
+      if (out.length >= n) break;
+      out.push(`${addDays(day, shift)}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+    }
+  }
+  return out;
+}
+
+function downloadCsv(count, withDates) {
+  const open = pins.filter(p => !used["pin:" + p.key]).sort((a, b) => a.date < b.date ? -1 : 1).slice(0, count);
+  if (!open.length) return toast("まだ出していないピンはありません");
+  const dates = withDates ? schedule(open.length) : [];
+  const rows = [CSV_HEAD.join(",")].concat(open.map((p, i) => [p.title, p.image_url, p.board, "", p.description, p.link,
+    dates[i] || "", (p.keywords || []).join(", ")].map(cell).join(",")));
+  const blob = new Blob([rows.join("\r\n") + "\r\n"], { type: "text/csv" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: `kotori-pins-${jstDate()}.csv` });
+  document.body.append(a); a.click(); a.remove();
+  for (const p of open) used["pin:" + p.key] = new Date().toISOString();
+  store.set(used); render();
+  document.getElementById("csv-note").textContent = withDates
+    ? `${open.length}枚を、明日（${addDays(jstDate(), 1).slice(5).replace("-", "/")}）の朝8:00から予約するファイルを作りました。アップロード後、Pinterest の「予約済み」で日時がずれていないか確認してください。`
+    : `${open.length}枚のファイルを作りました（アップロードするとすぐ公開されます）。全部できたか Pinterest で確認してください。`;
+}
+document.getElementById("csv-week").addEventListener("click", () => downloadCsv(14, true));
+document.getElementById("csv-try").addEventListener("click", () => downloadCsv(2, false));
 
 document.getElementById("filter").addEventListener("click", ev => {
   onlyOpen = !onlyOpen; ev.target.setAttribute("aria-pressed", String(onlyOpen)); render();

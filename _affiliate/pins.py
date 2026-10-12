@@ -171,6 +171,7 @@ def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None):
             "board": pin["board"] if pin["board"] in boards else boards[0],
             "link": item["url"], "image": f"kotori/pins/{name}", "image_url": SITE + name,
             "product": item.get("name", ""), "source": item.get("source", ""),
+            "keywords": [k.strip() for k in pin.get("keywords", []) if k.strip()][:5],
         })
     if made and manual_dir:
         path = Path(manual_dir) / "pins.json"
