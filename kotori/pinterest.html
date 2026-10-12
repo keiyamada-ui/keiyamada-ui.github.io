@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Pinterest とつなぐ</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top"><a class="back" href="pins.html" aria-label="戻る">‹</a><h1>🔗 Pinterest とつなぐ</h1></header>
+<p class="note">Pinterest の自動投稿の審査に通ったら、ここで1回だけつなぎます。つなぐと、毎日 8:00 と 20:30 ごろに予約待ちのピンが自動で投稿され、結果が「📌 Pinterest」に表示されます。</p>
+<main id="main"></main>
+
+<script src="app.js"></script>
+<script>
+const main = document.getElementById("main");
+const REDIRECT = "https://keiyamada-ui.github.io/kotori/pinterest.html";
+const SCOPES = "boards:read,boards:write,pins:read,pins:write,user_accounts:read";
+const params = new URLSearchParams(location.search);
+
+function startView() {
+  let appId = "";
+  try { appId = localStorage.getItem("kotori-pinterest-app") || ""; } catch (e) {}
+  const input = el("input", { type: "text", inputmode: "numeric", placeholder: "例: 1234567", value: appId,
+    style: "width:100%;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--line);margin-top:8px" });
+  const btn = el("button", { class: "btn primary", text: "Pinterest でつなぐ →" });
+  btn.addEventListener("click", () => {
+    const id = input.value.trim();
+    if (!/^\d+$/.test(id)) return toast("アプリ ID（数字）を入れてください");
+    if (!Key.get()) { main.append(needKeyBox()); return; }
+    const state = Math.random().toString(36).slice(2);
+    try { localStorage.setItem("kotori-pinterest-app", id); sessionStorage.setItem("kotori-pinterest-state", state); } catch (e) {}
+    location.href = "https://www.pinterest.com/oauth/?" + new URLSearchParams({
+      client_id: id, redirect_uri: REDIRECT, response_type: "code", scope: SCOPES, state }).toString();
+  });
+  main.replaceChildren(el("section", { class: "card" }, [
+    el("div", { class: "title", text: "Pinterest のアプリ ID" }),
+    el("div", { class: "muted", text: "Pinterest Developers の「My apps」に出ている App ID（数字）です。秘密の鍵（App secret key）はここではなく GitHub Secrets に登録してください。" }),
+    input, el("div", { class: "actions" }, [btn]),
+  ]));
+}
+
+async function finishView(code) {
+  let state = "";
+  try { state = sessionStorage.getItem("kotori-pinterest-state") || ""; } catch (e) {}
+  history.replaceState(null, "", location.pathname);  // URL から code を消す
+  if (!state || params.get("state") !== state) {
+    main.replaceChildren(el("div", { class: "warn", text: "⚠️ 確認できない呼び出しでした。もう一度「Pinterest でつなぐ」から始めてください" }));
+    return;
+  }
+  const note = el("div", { class: "muted", text: "つないでいます…（1〜2分）" });
+  main.replaceChildren(el("section", { class: "card" }, [el("div", { class: "title", text: "🔗 つないでいます" }), note]));
+  try {
+    const ok = await runAndWait("affiliate_pinterest.yml", { mode: "connect", code });
+    note.textContent = ok ? "✅ つながりました！次の 8:00 か 20:30 から自動で投稿します。"
+      : "⚠️ つなげませんでした。GitHub Secrets の PINTEREST_APP_ID・PINTEREST_APP_SECRET・KOTORI_STORE_KEY を確認して、もう一度試してください";
+  } catch (e) { note.textContent = "⚠️ " + e.message; }
+  main.querySelector("section").append(el("div", { class: "actions" }, [el("a", { class: "btn", href: "pins.html", text: "📌 Pinterest の画面へ" })]));
+}
+
+const code = params.get("code");
+if (code) finishView(code);
+else if (params.get("error")) main.replaceChildren(el("div", { class: "warn", text: "⚠️ Pinterest で許可されませんでした（" + params.get("error") + "）" }));
+else startView();
+</script>
+</body>
+</html>

@@ -123,6 +123,17 @@ GitHub の画面に移らずに、今日の投稿・反響・お知らせ・勝�
 - 🛒 **推し商品を紹介** — 楽天のURLを貼るだけで、その商品の下書き PR が届く（使った感想を書けば体験談として使われる）
 - ⭐ **参考投稿を登録** — 伸びている投稿を貼ると、AI が「型」を分析して勝ちパターンに追加（外したいときは Issue を Close）
 
+## Pinterest の自動投稿（審査に通ったら）
+
+`pinterest_api.py`。Pinterest Developers でアプリを作り、審査に通ったら:
+1. GitHub Secrets に `PINTEREST_APP_ID`・`PINTEREST_APP_SECRET`（と `KOTORI_STORE_KEY`）を登録
+2. Pinterest のアプリ設定の Redirect URI に `https://keiyamada-ui.github.io/kotori/pinterest.html` を登録
+3. 管理画面の「📌 Pinterest」→「🔗 Pinterest とつなぐ」で1回つなぐ
+
+つながると、自動投稿の見回り（20分おき）のたびに、時刻（8:00・20:30）を過ぎた枠があれば予約待ちのピンを1枚出し、
+結果（ピンの URL・失敗）を `manual/pins.json` に記録して管理画面に表示します。
+審査の最初の段階（Trial）のあいだは `config.yaml` の `pinterest.api_base` をお試し用の窓口（api-sandbox）にしておき、本番の許可が出たら切り替えます。
+
 ## スマホ通知とアイコンの数字
 
 ホーム画面に追加した管理画面で「🔔 通知をオンにする」を押すと、新しいコメント・自動投稿や下書き作りの失敗をスマホに通知し、
@@ -143,6 +154,7 @@ Settings → Secrets and variables → Actions → New repository secret
 | `GEMINI_API_KEY` | Google AI Studio の API キー | ✅（Claude が使えないときの予備にもなる） |
 | `ANTHROPIC_API_KEY` | Claude Console の API キー | Claude を使うとき |
 | `KOTORI_STORE_KEY` | 自分で決めた長いランダムな文字列（40文字以上）。スマホ通知の鍵などを暗号化して保存するのに使う。一度決めたら変えない | 通知を使うとき |
+| `PINTEREST_APP_ID`・`PINTEREST_APP_SECRET` | Pinterest Developers のアプリの App ID と App secret key | Pinterest の自動投稿（審査のあと） |
 | `KOTORI_THREADS_TOKEN` | kotori.family の Threads アクセストークン（長期）。権限 `threads_basic`・`threads_content_publish`・`threads_manage_insights`・`threads_read_replies` | 自動投稿するとき |
 
 ### 2. GitHub Actions が PR を作れるようにする
