@@ -9,166 +9,192 @@
 <meta name="theme-color" content="#FFC83C">
 <link rel="stylesheet" href="app.css">
 <style>
-  .pin { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
-  .pin img { width: 120px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--box); }
-  .pin .noimg { width: 120px; aspect-ratio: 2 / 3; border-radius: 12px; background: var(--box); color: var(--sub);
+  .pin { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; }
+  .pin img { width: 112px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--box); }
+  .pin .noimg { width: 112px; aspect-ratio: 2 / 3; border-radius: 12px; background: var(--box); color: var(--sub);
                 font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; }
+  .big { font-size: 28px; font-weight: 800; line-height: 1.1; }
+  .stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .stat3 div { background: var(--box); border-radius: 10px; padding: 8px; text-align: center; }
+  .stat3 span { display: block; font-size: 11px; color: var(--sub); margin-top: 2px; }
+  ol.steps { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
 </style>
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📌 Pinterest</h1></header>
-<p class="note">毎朝、ピン用の画像・タイトル・説明文・楽天のリンクを作っています。「📌 Pinterest で作成」を押すと、画像とリンクが入った状態でピンの作成画面が開きます。ボードを選んで保存してください。出したら「投稿した」を押すと、この端末に記録されます。</p>
+
+<section class="card" id="summary"><div class="muted">読み込み中…</div></section>
+
 <section class="card">
-  <div class="title">📥 まとめて予約（週1回）</div>
-  <div class="muted" style="margin-top:4px">まだ出していないピンを、1日2枚（朝8:00・夜20:30）の予約つきで1つのファイルにします。
-    Pinterest の「設定 → コンテンツのインポート → .csv または .txt ファイルをアップロードする」で、このファイルを選ぶだけです。</div>
+  <div class="title">📥 週1回のまとめて予約</div>
+  <div class="muted" style="margin-top:4px">予約待ちのピン（最大14枚）を、1日2枚（朝8:00・夜20:30）の予約つきファイルにします。</div>
+  <ol class="steps">
+    <li>下のボタンでファイルを作って保存（1〜3分）</li>
+    <li>Pinterest アプリ → 右上の設定 →「コンテンツのインポート」→「アップロード」で、そのファイルを選ぶ</li>
+    <li>おわり。あとは予約どおりに毎日公開されます</li>
+  </ol>
   <div class="actions">
-    <button class="btn primary" id="csv-week">📥 1週間分をダウンロード</button>
-    <button class="btn" id="csv-try">🧪 お試し2枚（すぐ公開）</button>
+    <button class="btn primary" id="export">📥 1週間分のファイルを作る</button>
+    <button class="btn" id="again" style="flex:0 0 auto">前回の分</button>
   </div>
-  <div class="muted" id="csv-note" style="margin-top:6px"></div>
+  <div class="muted" id="export-note" style="margin-top:6px"></div>
 </section>
+
 <section class="card">
   <div class="row between">
-    <div class="muted" style="flex:1 1 180px">ピンは毎朝の下書き作りで2枚できます。足りないときは、今日の楽天ROOM の商品から今すぐ作れます。</div>
+    <div class="muted" style="flex:1 1 180px">ピンは毎朝2枚できます。足りないときは、今日の楽天ROOM の商品から今すぐ作れます。</div>
     <button class="btn" id="make" style="flex:0 0 auto">✨ 今すぐ2枚作る</button>
   </div>
   <div class="muted" id="make-note" style="margin-top:6px"></div>
 </section>
-<div class="row" style="margin:0 0 12px">
-  <button class="btn" id="filter" style="flex:0 0 auto" aria-pressed="true">まだのものだけ</button>
+
+<div class="tabs" role="tablist">
+  <button class="tab" id="t-wait" role="tab">予約待ち</button>
+  <button class="tab" id="t-done" role="tab">予約済み・公開</button>
+  <button class="tab" id="t-all" role="tab">すべて</button>
 </div>
 <main id="list"><p class="empty">読み込み中…</p></main>
 
 <script src="app.js"></script>
 <script>
-const KEY = "kotori-used-v1";  // 手動投稿ストック・ROOM と同じ記録場所
+const KEY = "kotori-used-v1";  // 手動投稿ストック・ROOM と同じ記録場所（この端末で「手で出した」印）
 const store = {
   get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } },
   set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} },
 };
-let used = store.get(), onlyOpen = true, pins = [];
+let used = store.get(), pins = [], tab = "wait";
 const list = document.getElementById("list");
+
+// ピンの状態: 公開（API で出した）・予約済み・公開済み（予約時刻を過ぎた）・手で出した・予約待ち
+function status(p) {
+  if (p.pin_url) return { k: "done", label: "✅ 公開済み", cls: "ok" };
+  if (p.error) return { k: "wait", label: "⚠️ 投稿できませんでした", cls: "ng" };
+  if (p.scheduled_at) {
+    const t = new Date(p.scheduled_at), when = `${t.getMonth() + 1}/${t.getDate()}（${"日月火水木金土"[t.getDay()]}）${p.scheduled_at.slice(11, 16)}`;
+    return t > new Date() ? { k: "done", label: "⏰ 予約 " + when, cls: "" } : { k: "done", label: "✅ 公開 " + when, cls: "ok" };
+  }
+  if (p.posted_by_hand || used["pin:" + p.key]) return { k: "done", label: "✋ 手で投稿済み", cls: "gray" };
+  return { k: "wait", label: "⏳ 予約待ち", cls: "gray" };
+}
 
 function pinUrl(p) {
   return "https://www.pinterest.com/pin/create/button/?url=" + encodeURIComponent(p.link) +
          "&media=" + encodeURIComponent(p.image_url) + "&description=" + encodeURIComponent(p.title);
 }
 
+function summary() {
+  const st = pins.map(status), now = new Date();
+  const waiting = st.filter(s => s.k === "wait").length;
+  const future = pins.filter(p => p.scheduled_at && new Date(p.scheduled_at) > now).map(p => p.scheduled_at).sort();
+  const published = st.filter(s => s.cls === "ok").length;
+  const fmt = iso => iso ? `${+iso.slice(5, 7)}/${+iso.slice(8, 10)} ${iso.slice(11, 16)}` : "—";
+  const box = document.getElementById("summary");
+  box.replaceChildren(
+    el("div", { class: "row between" }, [el("div", { class: "title", text: "いまの状況" }),
+      el("a", { class: "muted", href: "https://www.pinterest.jp/", target: "_blank", rel: "noopener", text: "Pinterest を開く →" })]),
+    el("div", { class: "stat3" }, [
+      el("div", {}, [el("b", { class: "big", text: String(waiting) }), el("span", { text: "予約待ち" })]),
+      el("div", {}, [el("b", { class: "big", text: String(future.length) }), el("span", { text: "予約済み" })]),
+      el("div", {}, [el("b", { class: "big", text: String(published) }), el("span", { text: "公開済み" })]),
+    ]),
+    el("div", { class: "muted", style: "margin-top:8px", text: future.length
+      ? `次の公開: ${fmt(future[0])}　予約は ${fmt(future[future.length - 1])} まで`
+      : waiting ? "予約がありません。「📥 1週間分のファイルを作る」で予約しましょう" : "予約待ちのピンはありません" }),
+    el("div", { class: "muted", style: "margin-top:4px", text: "※ 予約・公開は、ファイルを Pinterest に読み込んだ前提の表示です（自動投稿の審査に通ると、実際の状態を表示します）" }),
+  );
+}
+
 function render() {
+  summary();
   list.replaceChildren();
-  const items = pins.filter(p => !onlyOpen || !used["pin:" + p.key]);
-  const left = pins.filter(p => !used["pin:" + p.key]).length;
-  list.append(el("p", { class: "note", text: `まだ出していないピン ${left} 枚。1日1〜2枚、無理のないペースで大丈夫です。` }));
+  const items = pins.filter(p => tab === "all" || status(p).k === tab);
   let day = "";
   for (const p of items) {
-    if (p.date !== day) { day = p.date; list.append(el("h2", { text: `${day.slice(5).replace("-", "/")}（${weekday(day)}）` })); }
-    const key = "pin:" + p.key, done = !!used[key];
+    if (p.date !== day) { day = p.date; list.append(el("h2", { text: `${day.slice(5).replace("-", "/")}（${weekday(day)}）に作成` })); }
+    const s = status(p), key = "pin:" + p.key;
     const img = el("img", { src: p.image_url + "?v=" + p.date, alt: p.title, loading: "lazy" });
-    img.addEventListener("error", () => img.replaceWith(el("div", { class: "noimg", text: "画像の公開まで1〜2分かかります。少し待って開き直してください" })));
-    const doneBtn = el("button", { class: "btn", text: done ? "✓ 投稿した（戻す）" : "投稿した" });
-    doneBtn.addEventListener("click", () => {
+    img.addEventListener("error", () => img.replaceWith(el("div", { class: "noimg", text: "画像の公開まで1〜2分かかります" })));
+    const handBtn = !p.scheduled_at && !p.pin_url ? el("button", { class: "btn", text: used[key] ? "✋ 手で出した（戻す）" : "✋ 手で出した" , onclick: () => {
       if (used[key]) delete used[key]; else used[key] = new Date().toISOString();
-      store.set(used); render();
-    });
-    list.append(el("section", { class: "card", style: done ? "opacity:.5" : "" }, [
+      store.set(used); render(); } }) : null;
+    list.append(el("section", { class: "card" }, [
       el("div", { class: "pin" }, [
-        el("a", { href: p.image_url, target: "_blank", rel: "noopener" }, [img]),
+        el("a", { href: p.pin_url || p.image_url, target: "_blank", rel: "noopener" }, [img]),
         el("div", {}, [
-          el("span", { class: "badge", text: "ボード: " + p.board }),
+          el("span", { class: "badge " + s.cls, text: s.label }),
           el("div", { class: "title", style: "margin-top:6px", text: p.title }),
-          el("div", { class: "muted", style: "margin-top:4px", text: p.product }),
+          el("div", { class: "muted", style: "margin-top:4px", text: "ボード: " + p.board }),
+          p.pin_url ? el("a", { class: "muted", href: p.pin_url, target: "_blank", rel: "noopener", text: "ピンを開く →" }) : null,
         ]),
       ]),
-      el("details", {}, [el("summary", { text: "説明文" }), el("div", { class: "text", text: p.description })]),
-      el("div", { class: "actions" }, [
-        el("a", { class: "btn primary", text: "📌 Pinterest で作成", href: pinUrl(p), target: "_blank", rel: "noopener" }),
+      el("details", {}, [el("summary", { text: "説明文・手で出すとき" }),
+        el("div", { class: "text", text: p.description }),
+        el("div", { class: "actions" }, [
+          el("a", { class: "btn", text: "📌 Pinterest で作成", href: pinUrl(p), target: "_blank", rel: "noopener" }),
+          el("button", { class: "btn", text: "説明文", onclick: () => copy(p.description) }),
+          el("button", { class: "btn", text: "リンク", onclick: () => copy(p.link) }),
+        ]),
+        el("div", { class: "actions" }, [handBtn]),
       ]),
-      el("div", { class: "actions" }, [
-        el("button", { class: "btn", text: "タイトル", onclick: () => copy(p.title) }),
-        el("button", { class: "btn", text: "説明文", onclick: () => copy(p.description) }),
-        el("button", { class: "btn", text: "リンク", onclick: () => copy(p.link) }),
-      ]),
-      el("div", { class: "muted", style: "margin-top:6px", text: "↑ 作成画面に入らなかったときは、コピーして貼り付けてください" }),
-      el("div", { class: "actions" }, [doneBtn]),
     ]));
   }
-  if (!items.length) list.append(el("p", { class: "empty", text: pins.length ? "全部出しました 🎉" : "まだピンはありません（毎朝の下書き作りで作られます）" }));
+  if (!items.length) list.append(el("p", { class: "empty", text: tab === "wait" ? "予約待ちのピンはありません 🎉" : "まだありません" }));
 }
 
-// ── まとめて予約（Pinterest の一括アップロード用の .csv。見出しは Pinterest のサンプルと同じ） ──
-const CSV_HEAD = ["Title", "Media URL", "Pinterest board", "Thumbnail", "Description", "Link", "Publish date", "Keywords"];
-const SLOTS_UTC = [[-1, 23, 0], [0, 11, 30]];  // 日本時間 8:00（前日 23:00 UTC）・20:30（11:30 UTC）
-const cell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-
-function schedule(n) {
-  // 明日から、1日2枠ずつ
-  const out = [], tomorrow = addDays(jstDate(), 1);
-  for (let d = 0; out.length < n; d++) {
-    const day = addDays(tomorrow, d);
-    for (const [shift, h, m] of SLOTS_UTC) {
-      if (out.length >= n) break;
-      out.push(`${addDays(day, shift)}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
-    }
-  }
-  return out;
+async function load() {
+  pins = (await fresh("_affiliate/manual/pins.json")) || [];
+  render();
 }
 
-function downloadCsv(count, withDates) {
-  const open = pins.filter(p => !used["pin:" + p.key]).sort((a, b) => a.date < b.date ? -1 : 1).slice(0, count);
-  if (!open.length) return toast("まだ出していないピンはありません");
-  const dates = withDates ? schedule(open.length) : [];
-  const rows = [CSV_HEAD.join(",")].concat(open.map((p, i) => [p.title, p.image_url, p.board, "", p.description, p.link,
-    dates[i] || "", (p.keywords || []).join(", ")].map(cell).join(",")));
-  const blob = new Blob([rows.join("\r\n") + "\r\n"], { type: "text/csv" });
+function saveFile(text) {
+  const blob = new Blob([text], { type: "text/csv" });
   const a = el("a", { href: URL.createObjectURL(blob), download: `kotori-pins-${jstDate()}.csv` });
   document.body.append(a); a.click(); a.remove();
-  for (const p of open) used["pin:" + p.key] = new Date().toISOString();
-  store.set(used); render();
-  document.getElementById("csv-note").textContent = withDates
-    ? `${open.length}枚を、明日（${addDays(jstDate(), 1).slice(5).replace("-", "/")}）の朝8:00から予約するファイルを作りました。アップロード後、Pinterest の「予約済み」で日時がずれていないか確認してください。`
-    : `${open.length}枚のファイルを作りました（アップロードするとすぐ公開されます）。全部できたか Pinterest で確認してください。`;
 }
-document.getElementById("csv-week").addEventListener("click", () => downloadCsv(14, true));
-document.getElementById("csv-try").addEventListener("click", () => downloadCsv(2, false));
 
-// 「今すぐ作る」: ピンだけ作るワークフローを動かし、終わったら読み直す
+// 📥 予約ファイルを作る: 予約の日時はサーバー側で決めて記録する（どの端末から見ても同じ状況になるように）
+document.getElementById("export").addEventListener("click", async ev => {
+  const btn = ev.currentTarget, note = document.getElementById("export-note");
+  if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
+  if (!pins.some(p => status(p).k === "wait")) { note.textContent = "予約待ちのピンはありません"; return; }
+  btn.disabled = true;
+  const exclude = pins.filter(p => used["pin:" + p.key] && !p.scheduled_at).map(p => p.key).join(",");
+  try {
+    note.textContent = "ファイルを作っています…（1〜3分）";
+    const ok = await runAndWait("affiliate_drafts.yml", { mode: "pins-export", exclude });
+    if (!ok) throw new Error("うまく作れませんでした。少しおいてもう一度試してください");
+    await load();
+    const text = await freshText("kotori/pins/upload.csv");
+    const n = Math.max(0, text.trim().split(/\r?\n/).length - 1);
+    saveFile(text);
+    note.textContent = `✅ ${n}枚分のファイルを保存しました。Pinterest の「コンテンツのインポート」で読み込んでください。` +
+      "（保存されないときは「前回の分」を押してください）";
+  } catch (e) { note.textContent = "⚠️ " + e.message; }
+  btn.disabled = false;
+});
+document.getElementById("again").addEventListener("click", async () => {
+  const text = await freshText("kotori/pins/upload.csv");
+  if (!text) return toast("まだファイルがありません");
+  saveFile(text);
+});
+
+// ✨ 今すぐ作る: ピンだけ作るワークフローを動かし、終わったら読み直す
 document.getElementById("make").addEventListener("click", async ev => {
   const btn = ev.currentTarget, note = document.getElementById("make-note");
   if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
   btn.disabled = true;
-  const started = new Date(Date.now() - 5000).toISOString();
-  try { await dispatch("affiliate_drafts.yml", { mode: "pins" }); }
-  catch (e) { note.textContent = "⚠️ " + e.message; btn.disabled = false; return; }
-  note.textContent = "ピンを作っています…（2〜4分）";
-  for (let i = 0; i < 50; i++) {
-    await new Promise(r => setTimeout(r, 8000));
-    try {
-      const runs = await gh(`/repos/${REPO}/actions/workflows/affiliate_drafts.yml/runs?event=workflow_dispatch&per_page=3`);
-      const run = runs.workflow_runs.find(r => r.created_at >= started.slice(0, 19));
-      if (run && run.status === "completed") {
-        pins = (await fresh("_affiliate/manual/pins.json")) || [];
-        render();
-        note.textContent = run.conclusion === "success"
-          ? "✅ できました。画像が出るまで1〜2分かかることがあります（出ないときは開き直してください）"
-          : "⚠️ うまく作れませんでした。「🔔 お知らせ」の動作状況を見るか、少しおいてもう一度試してください";
-        btn.disabled = false;
-        return;
-      }
-    } catch (e) { /* 次の回でもう一度見る */ }
-  }
-  note.textContent = "時間がかかっています。あとでページを開き直してください";
+  try {
+    note.textContent = "ピンを作っています…（2〜4分）";
+    const ok = await runAndWait("affiliate_drafts.yml", { mode: "pins" });
+    await load();
+    note.textContent = ok ? "✅ できました。画像が出るまで1〜2分かかることがあります"
+                          : "⚠️ うまく作れませんでした。「🔔 お知らせ」の動作状況を確認してください";
+  } catch (e) { note.textContent = "⚠️ " + e.message; }
   btn.disabled = false;
 });
 
-document.getElementById("filter").addEventListener("click", ev => {
-  onlyOpen = !onlyOpen; ev.target.setAttribute("aria-pressed", String(onlyOpen)); render();
-});
-(async () => {
-  pins = (await fresh("_affiliate/manual/pins.json")) || [];
-  Seen.mark("pins");
-  render();
-})();
+setupTabs([["t-wait", "wait"], ["t-done", "done"], ["t-all", "all"]], name => { tab = name; if (pins.length) render(); });
+load().then(() => Seen.mark("pins"));
 </script>
 </body>
 </html>

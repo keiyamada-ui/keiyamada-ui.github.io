@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / pins = Pinterest のピンだけ作る / check-api = 楽天APIの接続確認'
+        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / pins = Pinterest のピンだけ作る / pins-export = Pinterest の1週間分の予約ファイルを作る / check-api = 楽天APIの接続確認'
         type: choice
-        options: [drafts, themes, pins, check-api]
+        options: [drafts, themes, pins, pins-export, check-api]
         default: drafts
       keyword:
         description: '（任意）テーマを使わず、このキーワードで探す 例: なわとび 子供'
@@ -20,6 +20,10 @@ on:
         type: choice
         options: [ichiba, books, travel]
         default: ichiba
+      exclude:
+        description: '（pins-export のとき）手で出したピン。管理画面が自動で入れます'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -76,18 +80,21 @@ jobs:
 
       - name: 5. 下書きを作る
         id: generate
-        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes' || inputs.mode == 'pins'
+        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes' || inputs.mode == 'pins' || inputs.mode == 'pins-export'
         env:
           MODE: ${{ inputs.mode }}
           KEYWORD: ${{ inputs.keyword }}
           SOURCE: ${{ inputs.source }}
+          EXCLUDE: ${{ inputs.exclude }}
           EVENT: ${{ github.event_name }}
         run: |
           # 定期実行が遅れて、すでに今日の下書きがある（自動投稿の側で作った）ときは作り直さない
           if [ "$EVENT" = "schedule" ] && [ -f "_affiliate/drafts/$(TZ=Asia/Tokyo date +%F).json" ]; then
             echo "今日の下書きはもうあるので、作り直しません"; exit 0
           fi
-          if [ "$MODE" = "pins" ]; then
+          if [ "$MODE" = "pins-export" ]; then
+            python _affiliate/pins.py --export --exclude "$EXCLUDE"
+          elif [ "$MODE" = "pins" ]; then
             python _affiliate/generate_drafts.py --pins-only
           elif [ "$MODE" = "themes" ]; then
             python _affiliate/generate_drafts.py --generate-themes
@@ -98,13 +105,18 @@ jobs:
           fi
 
       - name: ピンを保存する（pins のとき）
-        if: steps.generate.outcome == 'success' && inputs.mode == 'pins'
+        if: steps.generate.outcome == 'success' && (inputs.mode == 'pins' || inputs.mode == 'pins-export')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add _affiliate/manual kotori/pins
           git commit -m "Pinterest のピンを追加" || echo "保存する変更なし"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+
+      - name: 日曜日は、Pinterest の予約を待っているピンを通知する
+        if: github.event_name == 'schedule' && steps.generate.outcome == 'success'
+        continue-on-error: true
+        run: python _affiliate/pins.py --remind
 
       - name: 6. ラベルを用意する
         if: steps.generate.outcome == 'success' && steps.generate.outputs.title != ''
