@@ -90,6 +90,8 @@
     <span class="icon">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
   <a class="btn" href="stock.html#room"><span class="nbadge" id="b-room"></span>
     <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の分を投稿（楽天市場が中心）</span></a>
+  <a class="btn" href="pins.html"><span class="nbadge" id="b-pins"></span>
+    <span class="icon">📌</span><span class="label">Pinterest</span><span class="desc">今日のピンを作成（ボタン1つ）</span></a>
   <a class="btn" href="https://www.threads.com/@kotori.family">
     <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
 </div>
@@ -179,9 +181,12 @@ async function updateBadges(day, posted) {
   try { used = JSON.parse(localStorage.getItem("kotori-used-v1") || "{}"); } catch (e) {}
   // 📣 前に「今日の投稿」を見たあとに自動で投稿された数
   badge("b-posts", posted.filter(p => !p.manual && p.at && (!seen.posts || p.at > seen.posts)).length);
-  const [comments, room, stock, store] = await Promise.all([
+  const [comments, room, stock, store, pins] = await Promise.all([
     fresh("_affiliate/manual/comments.json"), raw("_affiliate/manual/room.json"),
-    raw("_affiliate/manual/index.json"), raw("_affiliate/data/insights/latest.json")]);
+    raw("_affiliate/manual/index.json"), raw("_affiliate/data/insights/latest.json"),
+    raw("_affiliate/manual/pins.json")]);
+  // 📌 直近3日のピンで、まだ出していないもの
+  badge("b-pins", (pins || []).filter(p => p.date >= addDays(day, -2) && !used["pin:" + p.key]).length);
   // 💬 まだ対応していないコメント（返さないものは数えない）
   badge("b-comments", ((comments && comments.comments) || []).filter(c => c.action !== "ignore" && !used["comment:" + c.id]).length);
   // 🛍️ 直近3日の ROOM 候補で、まだ投稿していないもの

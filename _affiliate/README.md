@@ -100,6 +100,14 @@ Claude が使えない（キー未登録・残高切れ）ときは自動で Gem
 管理画面の「🛍️ 楽天ROOM」（`kotori/stock.html#room`）で、上から順に
 「① 商品を開く」→ ROOM に投稿 →「② コメントをコピー」して貼り付け →「③ 投稿した」を押します。
 
+## Pinterest（半自動）
+
+毎朝、`pinterest.per_day`（初期値 2）件の商品について、ピン用の縦長画像（ことりのイラストと文字だけ。商品写真は使いません）・タイトル・説明文（#PR 付き）・楽天のリンクを作ります（`pins.py`）。
+画像は `kotori/pins/` に置かれ、GitHub Pages で公開されます（コミット後1〜2分で見られるようになります）。一覧は `manual/pins.json`。
+
+管理画面の「📌 Pinterest」（`kotori/pins.html`）で「📌 Pinterest で作成」を押すと、画像とリンクが入ったピンの作成画面が開くので、ボードを選んで保存 →「投稿した」を押します。
+ボード名は `pinterest.boards` と同じ名前で Pinterest に作っておきます。Pinterest API の審査に通ったら、自動投稿に切り替える予定です（審査用のプライバシーポリシー: `kotori/privacy.html`）。
+
 ## スマホから使う
 
 管理画面 https://keiyamada-ui.github.io/kotori/ をホーム画面に追加すると、アプリのように使えます。
@@ -183,7 +191,7 @@ python _affiliate/generate_drafts.py --check-api        # 楽天 API の接続�
 | `comments.py` | コメントの確認・返信文の案 |
 | `drafts/` | 下書き（Merge した PR の分が残る） |
 | `data/history/` `data/themes/` `data/snapshots/` `data/posted/` `data/insights/` | 紹介履歴・月ごとのテーマ・勢いを測る記録・投稿の記録・反響の記録 |
-| `manual/` | 手動投稿ストック（`index.json`）・楽天ROOM の一覧（`room.json`）・コメント（`comments.json`） |
+| `manual/` | 手動投稿ストック（`index.json`）・楽天ROOM の一覧（`room.json`）・コメント（`comments.json`）・Pinterest のピン（`pins.json`） |
 | `../kotori/` | スマホ用の管理画面・手動投稿ストックの一覧ページ |
 | `../.github/workflows/affiliate_*.yml` | 毎朝の自動実行・フォームの処理 |
 | `../.github/ISSUE_TEMPLATE/` | 推し商品・参考投稿・ネタ帳のフォーム |

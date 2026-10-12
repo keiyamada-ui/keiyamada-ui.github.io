@@ -59,6 +59,13 @@ jobs:
       - name: 3. 必要なツールをインストール
         run: pip install -r _affiliate/requirements.txt
 
+      - name: Pinterest の画像用のフォントを用意する（取れなくても、入っている日本語フォントで作る）
+        run: |
+          mkdir -p _affiliate/fonts
+          curl -sSL --retry 2 -o _affiliate/fonts/ZenMaruGothic-Bold.ttf \
+            https://raw.githubusercontent.com/google/fonts/main/ofl/zenmarugothic/ZenMaruGothic-Bold.ttf \
+            || rm -f _affiliate/fonts/ZenMaruGothic-Bold.ttf
+
       - name: 4. 仕組みの自己テスト
         run: python -m pytest -q _affiliate/tests
 
@@ -102,7 +109,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/drafts _affiliate/data _affiliate/manual
+          git add _affiliate/drafts _affiliate/data _affiliate/manual kotori/pins
           git commit -m "下書きを追加: $TITLE" || echo "保存する変更なし"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
           day=$(TZ=Asia/Tokyo date +%Y-%m-%d)
@@ -129,6 +136,7 @@ jobs:
             _affiliate/data/themes/*.json
             _affiliate/data/snapshots/*.json
             _affiliate/manual/*.json
+            kotori/pins/*.png
           commit-message: '投稿下書きを追加'
           title: ${{ steps.generate.outputs.title }}
           body-path: ${{ steps.generate.outputs.draft_path }}

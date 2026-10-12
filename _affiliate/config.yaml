@@ -88,6 +88,13 @@ room:
   #   - {name: 楽天スーパーSALE, start: 2026-12-04, end: 2026-12-11}
   sales: []
 
+# Pinterest のピン（画像・タイトル・説明・楽天のリンク）。毎朝作って、管理画面の「📌 Pinterest」に並べる
+pinterest:
+  enabled: true
+  per_day: 2
+  # ピンを入れるボード（Pinterest で同じ名前のボードを作っておく）
+  boards: [小学生の習い事・知育, 子どもの本・図鑑, 子連れ旅行・おでかけ, 季節の準備・暮らし]
+
 # 商品を候補に残す条件
 filters:
   min_review_count: 20
