@@ -40,7 +40,7 @@
     <a class="btn" id="import" href="https://www.pinterest.jp/settings/import" target="_blank" rel="noopener">② Pinterest で読み込む</a>
   </div>
   <div class="actions" style="margin-top:6px">
-    <button class="btn" id="again" style="flex:0 0 auto;min-height:34px;font-size:12px">前回のファイルをもう一度保存</button>
+    <button class="btn" id="again" style="flex:0 0 auto;min-height:34px;font-size:12px">前回のファイルをもう一度保存（読み込めなかったときだけ）</button>
   </div>
   <div class="muted" id="export-note" style="margin-top:6px"></div>
   <div class="info" id="mobile-tip" style="display:none;margin:10px 0 0">
@@ -192,6 +192,7 @@ document.getElementById("export").addEventListener("click", async ev => {
   btn.disabled = false;
 });
 document.getElementById("again").addEventListener("click", async () => {
+  if (!confirm("前回と同じファイルをもう一度保存します。\nすでに Pinterest に読み込んだファイルをもう一度読み込むと、同じピンが2回投稿されます。\n（前回うまく読み込めなかったときだけ使ってください）")) return;
   const text = await freshText("kotori/pins/upload.csv");
   if (!text) return toast("まだファイルがありません");
   saveFile(text);
