@@ -8,17 +8,13 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png?v=3">
 <link rel="icon" href="icon-192.png">
-<meta name="theme-color" content="#FFF8EC">
+<meta name="theme-color" content="#FBF6EF">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <style>
   :root {
-    --bg: #FFF8E6; --card: #FFFFFF; --text: #3A2E1F; --sub: #7A6A55; --line: #F0E2C0;
-    --accent: #F5A623; --accent-bg: #FFF0CC; --pr: #D9534F; --pr-bg: #FDECEA; --ok: #3C8D5A; --box: #FBF6EA;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #1E1A14; --card: #2A241B; --text: #F5EBDD; --sub: #BFAF98; --line: #3D3427;
-            --accent: #FFC83C; --accent-bg: #3A3020; --pr: #FF8A80; --pr-bg: #3D2423; --ok: #7BC896; --box: #231E16; }
+    --bg: #FBF6EF; --card: #FFFFFF; --text: #4A4453; --sub: #8F8698; --line: #EFE5D8;
+    --accent: #FFC75A; --accent-bg: #FFF4D9; --pr: #E86F7E; --pr-bg: #FFEAEE; --ok: #4AA57A; --box: #F8F2EA;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
@@ -59,7 +55,7 @@
   button.act, a.act { flex: 1 1 auto; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
                       color: var(--text); font-size: 13px; font-weight: 600; font-family: inherit; text-decoration: none;
                       display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
-  button.act.primary { background: var(--accent); border-color: var(--accent); color: #3A2E1F; }
+  button.act.primary { background: var(--accent); border-color: var(--accent); color: #4A3A12; }
   button.act.done { color: var(--ok); border-color: var(--ok); }
   .who { font-size: 12px; color: var(--sub); margin-bottom: 4px; overflow-wrap: anywhere; }
   .quote { font-size: 12px; color: var(--sub); border-left: 3px solid var(--line); padding-left: 8px; margin: 8px 0; line-height: 1.5; overflow-wrap: anywhere; }
@@ -67,7 +63,7 @@
   .badge.ignore { background: var(--box); color: var(--sub); }
   .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
   #toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%);
-           background: #3A2E1F; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px;
+           background: #4A4453; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px;
            opacity: 0; transition: opacity .2s; pointer-events: none; }
   #toast.show { opacity: 1; }
 </style>
