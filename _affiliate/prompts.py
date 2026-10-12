@@ -61,12 +61,13 @@ REFERENCE_SCHEMA = obj(
 # すべての文章作りに添える
 SEASON_NOTE = ""
 LEARNED_NOTE = ""
-TIPS_NOTE = ""  # 参考投稿フォームで登録した「考え方・コツ」（patterns から作る）
+TIPS_NOTE = ""  # 参考投稿フォームで登録した「考え方・コツ」（ルール帳が作れないときだけ使う）
+RULEBOOK_NOTE = ""  # 考え方・コツと自分の投稿の学びをまとめたルール帳（rulebook.py）
 
 
 def _persona(account):
     base = f"アカウント「{account['name']}」の人物像: {account['persona']}"
-    return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, LEARNED_NOTE, TIPS_NOTE) if n)
+    return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, RULEBOOK_NOTE, LEARNED_NOTE, TIPS_NOTE) if n)
 
 
 SHARED_RULES = """\
@@ -200,7 +201,7 @@ JSON だけを返す。"""
         lines += ["", context]
     if patterns:
         lines += ["", "勝ちパターン（型だけ参考にする）:"]
-        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" for p in patterns[:5]]
+        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" for p in [x for x in patterns if x.get("kind") != "tips"][:5]]
     if feedback:
         lines += ["", "前回の下書きは次のチェックに引っかかりました。すべて直して書き直してください:"]
         lines += [f"- {e}" for e in feedback]
@@ -314,7 +315,7 @@ JSON だけを返す。"""
     lines = [f"今日の日付: {today.isoformat()}", "", "調べたメモ:", research]
     if patterns:
         lines += ["", "勝ちパターン（型だけ参考にする）:"]
-        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" for p in patterns[:5]]
+        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" for p in [x for x in patterns if x.get("kind") != "tips"][:5]]
     if feedback:
         lines += ["", "前回の下書きは次のチェックに引っかかりました。すべて直して書き直してください:"]
         lines += [f"- {e}" for e in feedback]
@@ -472,7 +473,7 @@ def tips_messages(account, content, memo, has_images=False):
     return system, user
 
 
-def tips_note(patterns):
+def tips_note(patterns, limit=10):
     """登録した「考え方・コツ」から、文章作りに添えるルール集を作る。"""
     rules = []
     for p in patterns:
@@ -481,4 +482,4 @@ def tips_note(patterns):
     if not rules:
         return ""
     return ("登録した「考え方・コツ」から作ったルール（当てはまる投稿では取り入れる。ルールと人間らしさが優先）:\n"
-            + "\n".join(f"- {r}" for r in rules[:10]))
+            + "\n".join(f"- {r}" for r in rules[:limit]))

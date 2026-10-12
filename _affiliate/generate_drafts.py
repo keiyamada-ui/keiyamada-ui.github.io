@@ -37,6 +37,7 @@ import pins as pins_mod  # noqa: E402
 import season  # noqa: E402
 import learn  # noqa: E402
 import illust  # noqa: E402
+import rulebook  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -625,10 +626,27 @@ def make_extras(config, today, generate, pats, args):
     return "\n".join(sections), notes
 
 
+def use_rulebook(config, today, pats, generate, build=True):
+    """考え方・コツと自分の投稿の学びを、ルール帳（最大7個）にまとめて文章作りに添える。
+    ルール帳が作れないときは、材料を少しだけ（考え方・コツ5個まで）直接添える。"""
+    learned = learn.load(DATA / "learned.json")
+    book = None
+    try:
+        book = (rulebook.ensure(config, today, pats, learned, generate, path=DATA / "rulebook.json") if build
+                else rulebook.load(DATA / "rulebook.json"))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ ルール帳を作れませんでした（前のルール帳か、材料の一部で続けます）: {str(e)[:150]}")
+        book = rulebook.load(DATA / "rulebook.json")
+    if book and book.get("rules"):
+        prompts.RULEBOOK_NOTE, prompts.LEARNED_NOTE, prompts.TIPS_NOTE = rulebook.note(book), "", ""
+    else:
+        prompts.RULEBOOK_NOTE = ""
+        prompts.TIPS_NOTE = prompts.tips_note(pats, limit=5)
+
+
 def run_daily(config, today, client, generate, args):
     history = selector.load_history(DATA / "history")
     pats = patterns_mod.fetch_patterns(os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN"))
-    prompts.TIPS_NOTE = prompts.tips_note(pats)
     bank_created = ensure_theme_bank(config, today, generate)
     drafts_dir = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts"))
     store, insight_note = update_insights(today, args.dry_run)
@@ -638,6 +656,7 @@ def run_daily(config, today, client, generate, args):
             prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
     except Exception as e:  # noqa: BLE001 - 学びは補助なので、失敗しても下書きは作る
         print(f"⚠️ 自分の投稿から学べませんでした: {str(e)[:150]}")
+    use_rulebook(config, today, pats, generate, build=not args.dry_run)
 
     if args.keyword:
         pool = [themes_mod._make("手動", args.source or "ichiba", args.keyword, "", category="手動指定")]
@@ -748,7 +767,7 @@ def run_item(config, today, client, generate, args):
              "persona": "この商品が気になっている、子育て中の親", "scene": ""}
     analysis, chosen, warn1 = analyze(config, theme, [item], today, generate, owner_note or None)
     pats = patterns_mod.fetch_patterns(os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN"))
-    prompts.TIPS_NOTE = prompts.tips_note(pats)
+    use_rulebook(config, today, pats, None, build=False)
     result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate, owner_note or None)
     title = f"{'⚠️要修正 ' if errors else ''}🛒 推し商品の下書き（{item['name'][:30]}）"
     body = render(today, title, theme, analysis, chosen, [item], result, errors, warn1 + warnings, [],

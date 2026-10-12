@@ -93,3 +93,8 @@ def note(path=PATH):
         return ""
     return (f"このアカウント自身の投稿の分析でわかったこと（{d['updated']}・{d['posts']}件から）: {d['summary']}\n"
             + "\n".join(lines) + "\n当てはまる種類の投稿では、これを参考にする（ルールと人間らしさが優先）。")
+
+
+def load(path=PATH):
+    path = Path(path)
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
