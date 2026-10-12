@@ -94,6 +94,9 @@ pinterest:
   per_day: 2
   # ピンを入れるボード（Pinterest で同じ名前のボードを作っておく）
   boards: [小学生の習い事・知育, 子どもの本・図鑑, 子連れ旅行・おでかけ, 季節の準備・暮らし]
+  # Pinterest API の窓口。審査の最初の段階（Trial）のあいだは https://api-sandbox.pinterest.com/v5、
+  # 本番の許可（Standard）が出たら https://api.pinterest.com/v5 にする
+  api_base: https://api-sandbox.pinterest.com/v5
 
 # 商品を候補に残す条件
 filters:

@@ -40,6 +40,7 @@
   <div class="muted" id="export-note" style="margin-top:6px"></div>
 </section>
 
+<p class="muted" style="margin:-4px 4px 12px">Pinterest の自動投稿の審査に通ったら → <a href="pinterest.html">🔗 Pinterest とつなぐ</a></p>
 <section class="card">
   <div class="row between">
     <div class="muted" style="flex:1 1 180px">ピンは毎朝2枚できます。足りないときは、今日の楽天ROOM の商品から今すぐ作れます。</div>
@@ -67,7 +68,7 @@ const list = document.getElementById("list");
 
 // ピンの状態: 公開（API で出した）・予約済み・公開済み（予約時刻を過ぎた）・手で出した・予約待ち
 function status(p) {
-  if (p.pin_url) return { k: "done", label: "✅ 公開済み", cls: "ok" };
+  if (p.pin_url) return { k: "done", label: "✅ 自動で公開 " + (p.posted_at || "").slice(5, 16).replace("-", "/").replace("T", " "), cls: "ok" };
   if (p.error) return { k: "wait", label: "⚠️ 投稿できませんでした", cls: "ng" };
   if (p.scheduled_at) {
     const t = new Date(p.scheduled_at), when = `${t.getMonth() + 1}/${t.getDate()}（${"日月火水木金土"[t.getDay()]}）${p.scheduled_at.slice(11, 16)}`;

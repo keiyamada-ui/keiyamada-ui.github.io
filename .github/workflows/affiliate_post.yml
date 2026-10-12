@@ -34,6 +34,8 @@ jobs:
     env:
       KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
       KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
+      PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+      PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
       # コメント返しの案を作るため（つぶやき用の AI: Gemini → 使えなければ Claude Sonnet）
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -89,12 +91,20 @@ jobs:
           git pull -q origin main
           python _affiliate/comments.py
 
+      - name: Pinterest（つながっていれば、時刻を過ぎた枠に1枚出す）
+        id: pinterest
+        if: inputs.slot != 'check' && inputs.dry_run != true
+        continue-on-error: true
+        run: |
+          git pull -q origin main
+          python _affiliate/pinterest_api.py post-due
+
       - name: 投稿の記録を保存する
-        if: always() && (steps.post.outcome != 'skipped' || inputs.slot == 'comments') && inputs.dry_run != true
+        if: always() && (steps.post.outcome != 'skipped' || steps.pinterest.outcome != 'skipped' || inputs.slot == 'comments') && inputs.dry_run != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/data/posted _affiliate/manual/comments.json 2>/dev/null || git add _affiliate/data/posted
+          git add _affiliate/data/posted _affiliate/data/push _affiliate/manual/comments.json _affiliate/manual/pins.json 2>/dev/null || git add _affiliate/data/posted
           git commit -m "投稿の記録を追加" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 

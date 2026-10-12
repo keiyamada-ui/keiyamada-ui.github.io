@@ -322,7 +322,7 @@ def export_csv(now, limit=14, exclude=(), manual_dir=None, csv_path=None):
     for p in pins:
         if p["key"] in exclude and not p.get("scheduled_at"):
             p["posted_by_hand"] = True
-    todo = sorted([p for p in pins if not p.get("scheduled_at") and not p.get("posted_by_hand")], key=lambda p: p["date"])[:limit]
+    todo = sorted([p for p in pins if not p.get("scheduled_at") and not p.get("posted_by_hand") and not p.get("pin_id")], key=lambda p: p["date"])[:limit]
     # 前に予約した最後の枠のあとから、明日の朝より前にはしない
     last = max([datetime.datetime.fromisoformat(p["scheduled_at"]) for p in pins if p.get("scheduled_at")], default=None)
     tomorrow = datetime.datetime.combine(now.astimezone(JST).date(), datetime.time(0, 0), JST) + datetime.timedelta(days=1)
@@ -348,7 +348,7 @@ def export_csv(now, limit=14, exclude=(), manual_dir=None, csv_path=None):
 def waiting_count(manual_dir=None):
     path = Path(manual_dir or ROOT / "_affiliate" / "manual") / "pins.json"
     pins = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-    return sum(1 for p in pins if not p.get("scheduled_at") and not p.get("posted_by_hand"))
+    return sum(1 for p in pins if not p.get("scheduled_at") and not p.get("posted_by_hand") and not p.get("pin_id"))
 
 
 def main(argv=None):

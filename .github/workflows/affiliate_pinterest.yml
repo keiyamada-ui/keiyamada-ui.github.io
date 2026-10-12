@@ -1,0 +1,49 @@
+name: ことり Pinterest とつなぐ
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'connect = 管理画面からつなぐ（code は自動で入ります） / check = つながっているか確認'
+        type: choice
+        options: [connect, check]
+        default: check
+      code:
+        description: '（connect のとき）管理画面が自動で入れます'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  pinterest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
+      PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+      PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+      - name: 実行する
+        env:
+          MODE: ${{ inputs.mode }}
+          PINTEREST_CODE: ${{ inputs.code }}
+        run: python _affiliate/pinterest_api.py "$MODE"
+      - name: 保存する
+        if: inputs.mode == 'connect'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/push
+          git commit -m "Pinterest とつないだ記録を保存" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
