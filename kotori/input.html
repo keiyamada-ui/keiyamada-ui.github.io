@@ -102,6 +102,22 @@ function showReference() {
   const text = el("textarea", { placeholder: "伸びている投稿の文章を貼り付け（ツリーは続けてOK）" });
   const likes = el("input", { type: "number", inputmode: "numeric", placeholder: "120" });
   const memo = el("textarea", { placeholder: "どこが良いと思ったか（任意）" });
+  // 種類: 伸びている投稿（型を学ぶ）／考え方・コツ（ことり 用のルールにする）
+  let kind = "post";
+  const kPost = el("button", { class: "btn primary", text: "🔥 伸びている投稿" });
+  const kTips = el("button", { class: "btn", text: "💡 考え方・コツ" });
+  const kindNote = el("p", { class: "muted", style: "margin-top:6px" });
+  const setKind = k => {
+    kind = k;
+    kPost.className = "btn" + (k === "post" ? " primary" : ""); kTips.className = "btn" + (k === "tips" ? " primary" : "");
+    kindNote.textContent = k === "post"
+      ? "実際に伸びている投稿から、書き出しや構成の「型」を学びます。"
+      : "「バズる投稿の作り方」などの解説（投稿・記事・メモ）から、ことり で使える具体的なルールと例文を作ります。毎日の文章作りすべてに使われます。";
+    text.placeholder = k === "post" ? "伸びている投稿の文章を貼り付け（ツリーは続けてOK）" : "考え方・コツの内容を貼り付け（解説の投稿・記事の要点・自分のメモなど）";
+  };
+  kPost.addEventListener("click", () => setKind("post"));
+  kTips.addEventListener("click", () => setKind("tips"));
+  setKind("post");
   const shots = el("input", { type: "file", accept: "image/*", multiple: "" , style: "display:none" });
   const pick = el("button", { class: "btn", text: "📷 スクショを選ぶ（3枚まで）" });
   const previews = el("div", { class: "row", style: "margin-top:8px;gap:8px" });
@@ -124,11 +140,11 @@ function showReference() {
       status.textContent = files.length ? "スクショを小さくしています…" : "";
       const datas = [];
       for (const f of files) datas.push(await shrink(f));
-      const body = [`### 投稿のURL\n\n${v(url.value)}`,
+      const body = [`### 種類\n\n${kind === "tips" ? "考え方・コツ" : "伸びている投稿"}`, `### 投稿のURL\n\n${v(url.value)}`,
                     `### 投稿の本文\n\n${text.value.trim() || "（スクショから読み取ってください）"}`,
                     `### いいねの数\n\n${v(likes.value)}`, `### ひとことメモ\n\n${v(memo.value)}`,
                     datas.length ? `<!-- kotori-shots ${datas.length} -->` : ""].join("\n\n");
-      const title = "[参考投稿] " + (text.value.trim().slice(0, 24) || `スクショ ${jstDate().slice(5).replace("-", "/")}`);
+      const title = "[参考投稿] " + (kind === "tips" ? "💡" : "") + (text.value.trim().slice(0, 24) || `スクショ ${jstDate().slice(5).replace("-", "/")}`);
       const issue = await gh(`/repos/${REPO}/issues`, { method: "POST", body: { title, body } });
       const SIZE = 60000;
       for (let k = 0; k < datas.length; k++) {
@@ -147,10 +163,11 @@ function showReference() {
   });
   main.replaceChildren(el("section", { class: "card" }, [
     el("div", { class: "title", text: "⭐ 参考になる投稿を登録" }),
-    el("p", { class: "note", style: "margin-top:6px", text: "伸びている投稿のスクショか文章を送ると、AI が書き出しや構成の「型」だけを学んで、毎朝の下書きに活かします（文章はまねしません）。" }),
+    el("p", { class: "note", style: "margin-top:6px", text: "伸びている投稿や、伸ばし方の考え方・コツをスクショか文章で送ると、AI が ことり の投稿に使える形に直して、毎朝の下書きに活かします（文章はまねしません）。" }),
+    el("label", { class: "field", text: "何を送りますか？" }), el("div", { class: "actions", style: "margin-top:0" }, [kPost, kTips]), kindNote,
     el("label", { class: "field", text: "スクショ（いちばん簡単）" }), pick, shots, previews,
-    el("p", { class: "muted", style: "margin-top:6px", text: "本文といいね数が写るように撮ってください。スクショは分析が終わると自動で消えます。" }),
-    ...field("投稿の本文", text, "スクショがあれば不要"), ...field("投稿のURL", url, "任意"), ...field("いいねの数", likes, "任意"),
+    el("p", { class: "muted", style: "margin-top:6px", text: "文字が読めるように撮ってください（伸びている投稿なら、いいね数も）。スクショは分析が終わると自動で消えます。" }),
+    ...field("本文・内容", text, "スクショがあれば不要"), ...field("投稿のURL", url, "任意"), ...field("いいねの数", likes, "任意"),
     ...field("ひとことメモ", memo, "任意"),
     el("div", { class: "actions" }, [btn]), status,
     el("div", { class: "actions" }, [el("a", { class: "btn", href: "notices.html#patterns", text: "🏆 勝ちパターン一覧を見る" })])]));

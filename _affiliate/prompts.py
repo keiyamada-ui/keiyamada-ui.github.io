@@ -61,11 +61,12 @@ REFERENCE_SCHEMA = obj(
 # すべての文章作りに添える
 SEASON_NOTE = ""
 LEARNED_NOTE = ""
+TIPS_NOTE = ""  # 参考投稿フォームで登録した「考え方・コツ」（patterns から作る）
 
 
 def _persona(account):
     base = f"アカウント「{account['name']}」の人物像: {account['persona']}"
-    return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, LEARNED_NOTE) if n)
+    return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, LEARNED_NOTE, TIPS_NOTE) if n)
 
 
 SHARED_RULES = """\
@@ -442,3 +443,42 @@ JSON だけを返す。"""
     user = (f"今日の日付: {today.isoformat()}\n種類ごとの平均: {json.dumps(averages, ensure_ascii=False)}\n\n"
             f"## 反響が大きかった投稿\n{lines(top)}\n\n## 反響が小さかった投稿\n{lines(bottom)}")
     return system, user
+
+
+TIPS_SCHEMA = obj(
+    summary=STR,
+    principles={"type": "array", "items": obj(title=STR, explain=STR)},
+    rules_for_us=STRS, example=STR, avoid=STRS,
+)
+
+
+def tips_messages(account, content, memo, has_images=False):
+    """「考え方・コツ」（バズる投稿の作り方の解説など）を、このアカウントで使える具体的なルールに直す。"""
+    system = f"""あなたは SNS 運用のコーチです。{_persona(account)}
+
+渡されたのは、投稿の作り方・伸ばし方についての「考え方・コツ」です（解説の投稿や記事、メモなど）。
+これを読み、子育て家族向けのこのアカウント（Threads）で実際に使える形に落とし込んでください。
+- summary: 何についての考え方か（1文）
+- principles: 考え方の要点を3〜6個。title（短い名前）と explain（中身を短く）
+- rules_for_us: このアカウントの投稿を書くときの具体的なルールに言い換えたもの3〜6個。
+  「〜する」の形で、書き手がそのまま守れるくらい具体的に（例:「1行目は子どもの一言かその場面から始める」）。
+- example: そのルールで書いた、このアカウント用の短い例文（2〜4行。体験談は作らず、あるあるとして）
+- avoid: このアカウントでは取り入れないほうがいい点（煽り・収入アピール・誇大表現・ルール違反になるもの・
+  人間らしさを損なうテクニックなど）
+元の文章はそのまま使わない。JSON だけを返す。"""
+    if has_images:
+        system += "\n\n内容はスクリーンショット（画像）で渡します。まず画像の文字を正確に読み取ってから考えてください。"
+    user = f"投稿者のメモ: {memo or 'なし'}\n\n内容:\n{content or '（スクリーンショットを見てください）'}"
+    return system, user
+
+
+def tips_note(patterns):
+    """登録した「考え方・コツ」から、文章作りに添えるルール集を作る。"""
+    rules = []
+    for p in patterns:
+        if p.get("kind") == "tips":
+            rules += p.get("rules_for_us", [])
+    if not rules:
+        return ""
+    return ("登録した「考え方・コツ」から作ったルール（当てはまる投稿では取り入れる。ルールと人間らしさが優先）:\n"
+            + "\n".join(f"- {r}" for r in rules[:10]))

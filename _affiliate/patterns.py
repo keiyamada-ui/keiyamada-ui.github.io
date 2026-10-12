@@ -16,6 +16,15 @@ _JSON_BLOCK = re.compile(r"```json\n(.*?)\n```", re.S)
 
 
 def format_comment(analysis):
+    if analysis.get("kind") == "tips":
+        lines = [MARK, "## 💡 考え方・コツの分析", "", f"**概要**: {analysis['summary']}", "", "**要点**"]
+        lines += [f"- {s}" for s in analysis["structure"]]
+        lines += ["", "**ことり で使うルール**"] + [f"{n}. {s}" for n, s in enumerate(analysis["rules_for_us"], 1)]
+        lines += ["", "**例文**", "", analysis.get("example", ""), "", "**取り入れないこと**"] + [f"- {s}" for s in analysis["avoid"]]
+        lines += ["", "この Issue を開いている間は、毎朝の文章作りでこのルールが使われます。外したいときは Close してください。",
+                  "", "<details><summary>データ</summary>", "", "```json", json.dumps(analysis, ensure_ascii=False, indent=1),
+                  "```", "", "</details>"]
+        return "\n".join(lines)
     lines = [MARK, "## 🔍 この投稿の分析", "", f"**概要**: {analysis['summary']}",
              f"**書き出しの型**: {analysis['hook_type']}", "", "**構成**"]
     lines += [f"{n}. {s}" for n, s in enumerate(analysis["structure"], 1)]
