@@ -1,0 +1,57 @@
+name: ことり 通知の設定
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'setup = 通知の鍵を作る / subscribe = 端末を登録する / test = テスト通知を送る'
+        type: choice
+        options: [setup, subscribe, test]
+        default: test
+      subscription:
+        description: '（subscribe のとき）管理画面が自動で入れます'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+
+      - name: 実行する
+        env:
+          MODE: ${{ inputs.mode }}
+          SUBSCRIPTION: ${{ inputs.subscription }}
+        run: |
+          if [ -z "$KOTORI_STORE_KEY" ]; then
+            echo "::error::GitHub Secrets に KOTORI_STORE_KEY を登録してください"; exit 1
+          fi
+          case "$MODE" in
+            setup) python _affiliate/push.py setup ;;
+            subscribe) python _affiliate/push.py setup && python _affiliate/push.py subscribe &&
+                       python _affiliate/push.py send --title "🔔 通知をオンにしました" --body "新しいコメントや、うまくいかなかったときにお知らせします" --add 0 ;;
+            test) python _affiliate/push.py send --title "🔔 テスト通知" --body "ことり の管理画面からの通知です" ;;
+          esac
+
+      - name: 保存する
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/push
+          git commit -m "通知の設定を保存" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

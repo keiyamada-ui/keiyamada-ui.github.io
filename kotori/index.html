@@ -59,6 +59,15 @@
   .nbadge { position: absolute; top: 10px; right: 10px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px;
             background: #D9534F; color: #fff; font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; }
   .nbadge:empty { display: none; }
+  .bar { display: flex; gap: 8px; margin: 0 0 10px; }
+  .tool { flex: 1 1 0; min-height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: inherit;
+          font-size: 14px; font-weight: 700; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .tool:disabled { opacity: .5; }
+  .tool.on { color: #3C8D5A; }
+  .pushinfo { display: none; border-radius: 12px; padding: 10px 12px; margin: -2px 0 10px; font-size: 13px; line-height: 1.6;
+              background: var(--accent-bg); border: 1px solid var(--line); }
+  .pushinfo.show { display: block; }
+  .pushinfo a { color: inherit; font-weight: 700; }
   footer { margin-top: 28px; color: var(--sub); font-size: 11px; line-height: 1.6; }
 </style>
 </head>
@@ -73,6 +82,11 @@
   <p class="handle">@kotori.family ・ 管理画面</p>
 </header>
 
+<div class="bar">
+  <button class="tool" id="reload">🔄 更新</button>
+  <button class="tool" id="push">🔔 通知をオンにする</button>
+</div>
+<div class="pushinfo" id="pushinfo"></div>
 <div class="token" id="token"></div>
 <a class="today" id="today" href="posts.html"></a>
 
@@ -205,6 +219,42 @@ async function updateBadges(day, posted) {
   }
 }
 
+// 🔄 更新: 最新の状態を読み直す（GitHub の配信の遅れを避けるため、URL を変えて開き直す）
+document.getElementById("reload").addEventListener("click", () => {
+  const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u.href);
+});
+
+// 🔔 通知: ホーム画面のアプリで許可すると、新しいコメントや失敗を通知し、アイコンに数字が付く
+(function setupPush() {
+  const btn = document.getElementById("push"), info = document.getElementById("pushinfo");
+  const show = (html) => { info.innerHTML = html; info.classList.toggle("show", !!html); };
+  const state = pushState();
+  let on = false;
+  try { on = localStorage.getItem("kotori-push") === "on"; } catch (e) {}
+  if (state === "granted" && on) { btn.textContent = "🔔 通知オン"; btn.classList.add("on"); }
+  btn.addEventListener("click", async () => {
+    const st = pushState();
+    if (st === "need-home") return show("通知とアイコンの数字は、<b>ホーム画面に追加したアプリ</b>で使えます。Safari の共有ボタン →「ホーム画面に追加」→ 追加した「ことり」から開いて、もう一度押してください。");
+    if (st === "unsupported") return show("この端末では通知が使えません（iPhone は iOS 16.4 以降が必要です）。");
+    if (st === "denied") return show("通知が「許可しない」になっています。iPhone の「設定 → 通知 → ことり」で許可してから、もう一度押してください。");
+    if (!Key.get()) { info.replaceChildren(needKeyBox()); info.classList.add("show"); return; }
+    if (btn.classList.contains("on")) {
+      btn.disabled = true;
+      try { await dispatch("affiliate_push.yml", { mode: "test" }); show("テスト通知を送りました。1〜2分で届きます。"); }
+      catch (e) { show("⚠️ " + e.message); }
+      btn.disabled = false;
+      return;
+    }
+    btn.disabled = true;
+    try {
+      await enablePush(msg => show(msg));
+      btn.textContent = "🔔 通知オン"; btn.classList.add("on");
+      show("✅ 通知をオンにしました。1〜2分で「通知をオンにしました」というお知らせが届きます。もう一度押すとテスト通知を送れます。");
+    } catch (e) { show("⚠️ " + e.message); }
+    btn.disabled = false;
+  });
+})();
+
 // 今日の投稿の数・お知らせの数・合い鍵の有無
 (async () => {
   const day = jstDate();
@@ -214,7 +264,10 @@ async function updateBadges(day, posted) {
   box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
   box.classList.add("show");
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
-  updateBadges(day, posted).catch(() => {});
+  updateBadges(day, posted).catch(() => {}).finally(() => setTimeout(() => {
+    const n = [...document.querySelectorAll(".nbadge, #count")].reduce((a, b) => a + (parseInt(b.textContent) || 0), 0);
+    syncAppBadge(n);
+  }, 1500));
   // GitHub の定期実行は遅れることがあるので、管理画面を開いたときにも「出し損ねた投稿・新しいコメント」を確認させる
   // （出す枠がなければ何もしない。30分に1回まで）
   if (Key.get()) {
@@ -236,6 +289,7 @@ async function updateBadges(day, posted) {
       && (!seen.patterns || i.created_at > seen.patterns)).length;
     badge("b-patterns", newPatterns);
   } catch (e) {}
+  setTimeout(() => syncAppBadge([...document.querySelectorAll(".nbadge")].reduce((a, b) => a + (parseInt(b.textContent) || 0), 0)), 2500);
 })();
 </script>
 </body>

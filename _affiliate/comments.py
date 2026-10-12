@@ -146,7 +146,7 @@ def main():
         save(path, items, now)
     text = report(items)
     print(text or "新しいコメントはありません")
-    autopost.write_output(report=text)
+    autopost.write_output(report=text, new_comments=str(len(items)))
     return 0
 
 

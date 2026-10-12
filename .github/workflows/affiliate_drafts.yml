@@ -37,6 +37,7 @@ jobs:
     timeout-minutes: 20
     env:
       RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+      KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
       RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
       RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -173,6 +174,8 @@ jobs:
       - name: 失敗したら Issue で知らせる
         if: failure()
         run: |
+          python _affiliate/push.py send --title "⚠️ 投稿の下書きを作れませんでした" \
+            --body "タップして「お知らせ」を確認してください" --url "https://keiyamada-ui.github.io/kotori/notices.html" || true
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "⚠️ 投稿下書きの作成に失敗しました（$(TZ=Asia/Tokyo date +%Y-%m-%d)）" \

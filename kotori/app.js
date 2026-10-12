@@ -144,3 +144,48 @@ const Seen = {
 };
 
 const KIND = { buzz: "📣 集客投稿", casual: "💬 つぶやき", value: "📘 役立つ投稿", pr: "🛒 PR 投稿" };
+
+// ── 通知とアプリのアイコンの赤いバッジ ──
+// 通知を受け取る係（sw.js）を登録する。ホーム画面に追加したアプリで、通知を許可すると使える
+const SW = ("serviceWorker" in navigator) ? navigator.serviceWorker.register("sw.js").catch(() => null) : Promise.resolve(null);
+
+function isHomeApp() {
+  return navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+}
+
+// アイコンの数字を、管理画面で数えた「まだ見ていないもの」の数に合わせる
+async function syncAppBadge(n) {
+  try { if (n > 0) await navigator.setAppBadge(n); else await navigator.clearAppBadge(); } catch (e) {}
+  try { const reg = await SW; if (reg && reg.active) reg.active.postMessage({ type: "badge", count: n }); } catch (e) {}
+}
+
+function pushState() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    return isHomeApp() ? "unsupported" : "need-home";
+  }
+  return Notification.permission === "granted" ? "granted" : Notification.permission === "denied" ? "denied" : "default";
+}
+
+// 「通知をオンにする」。許可を求め、この端末を登録するワークフローを動かす
+async function enablePush(onProgress) {
+  const permission = await Notification.requestPermission();  // ボタンを押した直後に呼ぶ必要がある
+  if (permission !== "granted") throw new Error("通知が許可されませんでした。iPhone の「設定 → 通知 → ことり」で許可できます");
+  onProgress("準備しています…");
+  let pub = await fresh("_affiliate/data/push/public.json");
+  if (!pub) {
+    await dispatch("affiliate_push.yml", { mode: "setup" });
+    for (let i = 0; i < 30 && !pub; i++) {
+      await new Promise(r => setTimeout(r, 6000));
+      pub = await fresh("_affiliate/data/push/public.json");
+    }
+    if (!pub) throw new Error("準備に時間がかかっています。GitHub Secrets に KOTORI_STORE_KEY が登録されているか確認してください");
+  }
+  const reg = await navigator.serviceWorker.ready;
+  const raw64 = pub.key.replace(/-/g, "+").replace(/_/g, "/");
+  const key = Uint8Array.from(atob(raw64 + "=".repeat((4 - raw64.length % 4) % 4)), c => c.charCodeAt(0));
+  const sub = (await reg.pushManager.getSubscription()) ||
+              (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+  onProgress("この端末を登録しています…（1〜2分）");
+  await dispatch("affiliate_push.yml", { mode: "subscribe", subscription: JSON.stringify(sub) });
+  try { localStorage.setItem("kotori-push", "on"); } catch (e) {}
+}

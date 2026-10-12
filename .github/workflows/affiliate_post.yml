@@ -33,6 +33,7 @@ jobs:
     timeout-minutes: 30
     env:
       KOTORI_THREADS_TOKEN: ${{ secrets.KOTORI_THREADS_TOKEN }}
+      KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
       # コメント返しの案を作るため（つぶやき用の AI: Gemini → 使えなければ Claude Sonnet）
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -97,6 +98,14 @@ jobs:
           git commit -m "投稿の記録を追加" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 
+      - name: 新しいコメントをスマホに通知する
+        if: steps.comments.outputs.new_comments != '' && steps.comments.outputs.new_comments != '0'
+        env:
+          N: ${{ steps.comments.outputs.new_comments }}
+        run: |
+          python _affiliate/push.py send --title "💬 新しいコメントが ${N} 件" \
+            --body "返信文の案ができています。タップして確認" --url "https://keiyamada-ui.github.io/kotori/comments.html" --add "$N"
+
       - name: 今日のレポートにコメントする
         if: steps.post.outcome == 'success' && steps.post.outputs.report != ''
         env:
@@ -116,6 +125,9 @@ jobs:
       - name: 失敗したら Issue で知らせる
         if: failure()
         run: |
+          python _affiliate/push.py send --title "⚠️ Threads への自動投稿に失敗しました" \
+            --body "次の枠で自動でやり直します。続くときは「お知らせ」を確認してください" \
+            --url "https://keiyamada-ui.github.io/kotori/notices.html" || true
           gh issue create --repo "${{ github.repository }}" \
             --title "⚠️ Threads への自動投稿に失敗しました（$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')）" \
             --body "詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
