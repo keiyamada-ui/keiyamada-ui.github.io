@@ -87,6 +87,7 @@
   <button class="tool" id="push">🔔 通知をオンにする</button>
 </div>
 <div class="pushinfo" id="pushinfo"></div>
+<a class="token" id="keywarn" href="key.html"></a>
 <div class="token" id="token"></div>
 <a class="today" id="today" href="posts.html"></a>
 
@@ -100,6 +101,8 @@
     <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></a>
   <a class="btn" href="posts.html#insights"><span class="nbadge" id="b-insights"></span>
     <span class="icon">📈</span><span class="label">反響</span><span class="desc">いいね・表示の数</span></a>
+  <a class="btn" href="stats.html">
+    <span class="icon">📊</span><span class="label">成果の記録</span><span class="desc">売上・フォロワー・クリックの推移</span></a>
   <a class="btn" href="stock.html#threads"><span class="nbadge" id="b-stock"></span>
     <span class="icon">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
   <a class="btn" href="stock.html#room"><span class="nbadge" id="b-room"></span>
@@ -264,6 +267,12 @@ document.getElementById("reload").addEventListener("click", () => {
   box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
   box.classList.add("show");
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
+  // 合い鍵が使えない・期限が近いときは、上に知らせる（確認は少し待ってから。読み込みで状態が更新されるため）
+  setTimeout(() => {
+    const h = keyHealth(), w = document.getElementById("keywarn");
+    if (h.state === "bad") { w.textContent = "🔑 合い鍵が使えなくなっています（期限切れなど）。タップして登録し直してください"; w.className = "token show urgent"; }
+    else if (h.state === "soon") { w.textContent = `🔑 合い鍵の期限まであと${Math.max(h.days, 0)}日です。タップして作り直してください`; w.className = "token show"; }
+  }, 3000);
   updateBadges(day, posted).catch(() => {}).finally(() => setTimeout(() => {
     const n = [...document.querySelectorAll(".nbadge, #count")].reduce((a, b) => a + (parseInt(b.textContent) || 0), 0);
     syncAppBadge(n);

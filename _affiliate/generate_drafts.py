@@ -514,6 +514,11 @@ def update_insights(today, dry_run=False):
     if not token:
         return None, "Threads のトークンがないため、投稿の反響は取得していません"
     posted = autopost.load_posted(DATA / "posted")
+    try:  # 昨日1日分の成果（アカウント全体の反響・フォロワー）を記録する
+        import stats
+        stats.record_day(ThreadsClient(token), today - datetime.timedelta(days=1))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 昨日の成果を記録できませんでした: {str(e)[:150]}")
     try:
         return insights.collect(ThreadsClient(token), posted, today, DATA / "insights" / "latest.json")
     except Exception as e:  # noqa: BLE001 - 反響は補助なので、取れなくても下書きは作る

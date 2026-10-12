@@ -77,6 +77,27 @@ class ThreadsClient:
             out[item.get("name")] = int(value or 0)
         return out
 
+    def account_insights(self, since, until):
+        """アカウント全体の反響（since〜until の UNIX 時刻）。表示は日ごと、ほかは合計。"""
+        data = self._call("GET", f"{BASE}/{self.user_id}/threads_insights",
+                          metric="views,likes,replies,reposts,quotes,clicks", since=int(since), until=int(until))
+        out = {}
+        for item in data.get("data", []):
+            name, total = item.get("name"), item.get("total_value") or {}
+            if item.get("values"):
+                out[name] = sum(int(v.get("value") or 0) for v in item["values"])
+            elif "link_total_values" in item:  # リンクのクリック（リンクごと）
+                out[name] = sum(int(v.get("value") or 0) for v in item["link_total_values"])
+            else:
+                out[name] = int(total.get("value") or 0)
+        return out
+
+    def followers(self):
+        data = self._call("GET", f"{BASE}/{self.user_id}/threads_insights", metric="followers_count")
+        for item in data.get("data", []):
+            return int((item.get("total_value") or {}).get("value") or 0)
+        return 0
+
     def replies(self, media_id):
         """投稿についた返信（コメント）。threads_read_replies の権限が必要。"""
         data = self._call("GET", f"{BASE}/{media_id}/replies",

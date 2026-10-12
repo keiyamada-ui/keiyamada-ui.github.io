@@ -60,8 +60,10 @@ async function check() {
     const me = await gh("/user");
     await gh(`/repos/${REPO}/actions/workflows/affiliate_post.yml`);
     if (me.login !== OWNER) throw new Error(`${me.login} の合い鍵です。${OWNER} のアカウントで作ってください`);
-    statusBox.replaceChildren(el("div", { class: "info" }, [
-      `✅ 合い鍵は使える状態です（@${me.login}）。`, el("br"),
+    const h = keyHealth();
+    const until = h.exp ? `期限: ${h.exp.getFullYear()}年${h.exp.getMonth() + 1}月${h.exp.getDate()}日（あと${h.days}日）` : "";
+    statusBox.replaceChildren(el("div", { class: h.state === "soon" ? "warn" : "info" }, [
+      `✅ 合い鍵は使える状態です（@${me.login}）。`, until ? el("br") : null, until, el("br"),
       el("a", { href: "input.html", text: "✏️ 入力・操作の画面へ →" })]));
   } catch (e) {
     statusBox.replaceChildren(el("div", { class: "warn", text: "⚠️ " + e.message }));
