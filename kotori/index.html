@@ -10,157 +10,177 @@
 <link rel="icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ことり">
-<meta name="theme-color" content="#FFC83C">
+<meta name="theme-color" content="#FFF8EC">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
 <style>
-  :root {
-    --bg: #FFF8E6; --card: #FFFFFF; --text: #3A2E1F; --sub: #7A6A55; --line: #F0E2C0;
-    --accent: #F5A623; --accent-bg: #FFF0CC;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #1E1A14; --card: #2A241B; --text: #F5EBDD; --sub: #BFAF98; --line: #3D3427;
-            --accent: #FFC83C; --accent-bg: #3A3020; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
-         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
-  header.profile { margin: -4px -4px 16px; }
-  .cover { border-radius: 16px; overflow: hidden; aspect-ratio: 1200 / 509; background: var(--card); border: 1px solid var(--line); }
+  /* ── ホームだけの見た目 ── */
+  .hero { position: relative; margin: 0 -4px 6px; }
+  .cover { border-radius: 26px; overflow: hidden; aspect-ratio: 1200 / 470; background: var(--card); box-shadow: var(--shadow); }
   .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .who { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 8px; margin-top: -48px; }
-  .avatar { width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--bg); background: #F7F3E8; display: block; }
-  .chip { margin-bottom: 4px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
-          color: inherit; text-decoration: none; font-size: 13px; font-weight: 700; }
-  h1 { font-size: 18px; margin: 10px 8px 2px; line-height: 1.4; }
-  .handle { margin: 0 8px; color: var(--sub); font-size: 13px; }
-  h2 { font-size: 13px; color: var(--sub); margin: 24px 4px 8px; font-weight: 600; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  a.btn { display: flex; flex-direction: column; gap: 6px; padding: 16px 14px; min-height: 96px;
-          background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-          color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
-  a.btn:active { transform: scale(0.98); }
-  a.btn.main { grid-column: 1 / -1; background: var(--accent-bg); border-color: var(--accent); min-height: 84px; }
-  .icon { font-size: 26px; line-height: 1; }
-  .label { font-weight: 700; font-size: 15px; }
-  .desc { color: var(--sub); font-size: 12px; line-height: 1.4; }
-  .token { display: none; border-radius: 14px; padding: 12px 14px; margin-bottom: 4px; font-size: 14px; line-height: 1.5;
-           background: var(--accent-bg); border: 1px solid var(--line); color: inherit; text-decoration: none; }
-  .token.show { display: block; }
-  .token.urgent { background: #FDECEA; border-color: #D9534F; color: #A12A26; font-weight: 700; }
-  @media (prefers-color-scheme: dark) { .token.urgent { background: #3D2423; border-color: #FF8A80; color: #FF8A80; } }
-  .token small { display: block; font-weight: 400; opacity: .85; }
-  .today { display: none; border-radius: 14px; padding: 12px 14px; margin: 8px 0 4px; font-size: 14px; line-height: 1.5;
-           background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; }
-  .today.show { display: block; }
-  .count { display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #D9534F; color: #fff;
-           font-size: 12px; text-align: center; vertical-align: 2px; }
-  .count:empty { display: none; }
-  a.btn { position: relative; }
-  .nbadge { position: absolute; top: 10px; right: 10px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px;
-            background: #D9534F; color: #fff; font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; }
-  .nbadge:empty { display: none; }
-  .bar { display: flex; gap: 8px; margin: 0 0 10px; }
-  .tool { flex: 1 1 0; min-height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: inherit;
-          font-size: 14px; font-weight: 700; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .tool { height: 36px; padding: 0 12px; border-radius: 999px; border: 0; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+          background: color-mix(in srgb, var(--card) 86%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+          color: var(--text); box-shadow: 0 4px 12px -6px rgba(0,0,0,.35); transition: transform .12s; }
+  .tool:active { transform: scale(.94); }
   .tool:disabled { opacity: .5; }
-  .tool.on { color: #3C8D5A; }
-  .pushinfo { display: none; border-radius: 12px; padding: 10px 12px; margin: -2px 0 10px; font-size: 13px; line-height: 1.6;
-              background: var(--accent-bg); border: 1px solid var(--line); }
+  .tool.on { color: var(--ok); }
+  .me { display: flex; align-items: flex-start; gap: 12px; margin: -40px 8px 0; position: relative; }
+  .avatar { width: 88px; height: 88px; border-radius: 50%; border: 5px solid var(--bg); background: #F7F3E8; flex: none;
+            box-shadow: 0 6px 16px -8px rgba(90,60,20,.5); animation: hop 2.8s ease-in-out 1s infinite; transform-origin: 50% 100%; }
+  @keyframes hop { 0%, 86%, 100% { transform: translateY(0) } 90% { transform: translateY(-6px) rotate(-3deg) } 94% { transform: translateY(0) } 97% { transform: translateY(-2px) } }
+  .me .name { padding-top: 48px; min-width: 0; }
+  .me h1 { font-size: 17px; font-weight: 900; margin: 0; line-height: 1.35; }
+  .me .handle { color: var(--sub); font-size: 12.5px; margin-top: 2px; }
+  .me .handle a { color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor; }
+
+  /* ことりの吹き出し（今日のようす） */
+  .bubble { position: relative; margin: 14px 0 6px; padding: 14px 16px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow);
+            border: 1px solid var(--line); font-size: 14.5px; line-height: 1.75; }
+  .bubble::before { content: ""; position: absolute; top: -9px; left: 38px; width: 18px; height: 18px; background: var(--card);
+                    border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); border-radius: 4px 0 0 0; }
+  .bubble b { color: var(--accent-deep); }
+  .bubble .greet { font-weight: 900; font-size: 15.5px; }
+  .bubble ul { list-style: none; margin: 6px 0 0; padding: 0; }
+  .bubble li { display: flex; gap: 8px; align-items: baseline; }
+  .bubble li a { color: inherit; text-decoration: none; flex: 1; }
+  .bubble li a::after { content: " ›"; color: var(--sub); font-weight: 900; }
+  .bubble li + li { margin-top: 2px; }
+
+  /* 今日の5回（たまご→ことり） */
+  a.today { display: block; margin: 12px 0 4px; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+            box-shadow: var(--shadow); color: inherit; text-decoration: none; transition: transform .12s; }
+  a.today:active { transform: scale(.98); }
+  .today .head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 900; font-size: 15px; }
+  .today .head small { color: var(--sub); font-weight: 700; font-size: 12px; }
+  .slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+  .slots div { text-align: center; font-size: 11px; color: var(--sub); font-weight: 700; }
+  .slots .egg { display: grid; place-items: center; width: 44px; height: 50px; margin: 0 auto 4px; border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+                background: var(--box); border: 2px dashed var(--line); font-size: 22px; }
+  .slots .done .egg { background: var(--p-sun); border: 2px solid transparent; animation: pop .5s ease-out both; }
+  .slots .now .egg { border-color: var(--accent); border-style: solid; }
+  @keyframes pop { 0% { transform: scale(.6) } 70% { transform: scale(1.12) } 100% { transform: scale(1) } }
+
+  .token { display: none; border-radius: 18px; padding: 12px 14px; margin: 10px 0 0; font-size: 13.5px; line-height: 1.6;
+           background: var(--accent-bg); color: inherit; text-decoration: none; }
+  .token.show { display: block; }
+  .token.urgent { background: var(--pr-bg); color: var(--pr); font-weight: 700; }
+  .token small { display: block; font-weight: 500; opacity: .9; }
+  .pushinfo { display: none; border-radius: 16px; padding: 12px 14px; margin: 10px 0 0; font-size: 13px; line-height: 1.7; background: var(--accent-bg); }
   .pushinfo.show { display: block; }
   .pushinfo a { color: inherit; font-weight: 700; }
-  footer { margin-top: 28px; color: var(--sub); font-size: 11px; line-height: 1.6; }
+
+  /* メニューのタイル */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  a.tile { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px; min-height: 112px; background: var(--card);
+           border: 1px solid var(--line); border-radius: 22px; color: inherit; text-decoration: none; box-shadow: var(--shadow);
+           transition: transform .14s ease; }
+  a.tile:active { transform: scale(.96); }
+  a.tile.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 84px; }
+  a.tile.wide .txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 16px; font-size: 24px; flex: none; background: var(--p-sand); }
+  a.tile.wide .ic { width: 54px; height: 54px; border-radius: 18px; font-size: 28px; }
+  .sun .ic { background: var(--p-sun); } .peach .ic { background: var(--p-peach); } .mint .ic { background: var(--p-mint); }
+  .sky .ic { background: var(--p-sky); } .lilac .ic { background: var(--p-lilac); } .pink .ic { background: var(--p-pink); }
+  .label { font-weight: 900; font-size: 15px; line-height: 1.35; }
+  .desc { color: var(--sub); font-size: 12px; line-height: 1.5; }
+  .nbadge { position: absolute; top: 10px; right: 10px; min-width: 24px; height: 24px; padding: 0 8px; border-radius: 999px;
+            background: var(--pr); color: #fff; font-size: 12.5px; font-weight: 900; line-height: 24px; text-align: center;
+            box-shadow: 0 4px 10px -4px rgba(224, 87, 79, .8); animation: pop .4s ease-out both; }
+  .nbadge:empty { display: none; }
+  footer { margin: 30px 4px 0; color: var(--sub); font-size: 11.5px; line-height: 1.8; text-align: center; }
+  footer img { width: 40px; height: 40px; border-radius: 50%; opacity: .9; display: block; margin: 0 auto 6px; }
 </style>
 </head>
 <body>
-<header class="profile">
+<div class="hero">
   <div class="cover"><img src="header.jpg" alt="" width="1200" height="509"></div>
-  <div class="who">
-    <img class="avatar" src="avatar.png" alt="ことり" width="96" height="96">
-    <a class="chip" href="https://www.threads.com/@kotori.family">🧵 Threads を見る</a>
+  <div class="tools">
+    <button class="tool" id="reload" aria-label="最新の状態に更新">🔄 更新</button>
+    <button class="tool" id="push">🔔 通知をオンにする</button>
   </div>
-  <h1>ことり｜子育て家族の"買ってよかった"まとめ</h1>
-  <p class="handle">@kotori.family ・ 管理画面</p>
-</header>
-
-<div class="bar">
-  <button class="tool" id="reload">🔄 更新</button>
-  <button class="tool" id="push">🔔 通知をオンにする</button>
 </div>
+<div class="me">
+  <img class="avatar" src="avatar.png" alt="ことり" width="88" height="88">
+  <div class="name">
+    <h1>ことり｜子育て家族の"買ってよかった"まとめ</h1>
+    <div class="handle"><a href="https://www.threads.com/@kotori.family">@kotori.family</a> の管理画面</div>
+  </div>
+</div>
+
+<div class="bubble" id="bubble"><span class="greet" id="greet">こんにちは🐤</span><ul id="say"><li>いま、ようすを見てくるね…</li></ul></div>
 <div class="pushinfo" id="pushinfo"></div>
 <a class="token" id="keywarn" href="key.html"></a>
 <div class="token" id="token"></div>
-<a class="today" id="today" href="posts.html"></a>
+<a class="today" id="today" href="posts.html">
+  <div class="head"><span>📅 きょうの自動投稿</span><small id="today-count"></small></div>
+  <div class="slots" id="slots"></div>
+</a>
 
-<h2>毎日</h2>
+<h2>まいにち見る</h2>
 <div class="grid">
-  <a class="btn main" href="posts.html"><span class="nbadge" id="b-posts"></span>
-    <span class="icon">📣</span><span class="label">今日の投稿</span>
-    <span class="desc">5回分の予定と結果・下書き。良くない投稿は Threads アプリで削除</span></a>
-  <a class="btn main" href="comments.html"><span class="nbadge" id="b-comments"></span>
-    <span class="icon">💬</span><span class="label">コメント返し</span>
-    <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></a>
-  <a class="btn" href="posts.html#insights"><span class="nbadge" id="b-insights"></span>
-    <span class="icon">📈</span><span class="label">反響</span><span class="desc">いいね・表示の数</span></a>
-  <a class="btn" href="stats.html">
-    <span class="icon">📊</span><span class="label">成果の記録</span><span class="desc">売上・フォロワー・クリックの推移</span></a>
-  <a class="btn" href="stock.html#threads"><span class="nbadge" id="b-stock"></span>
-    <span class="icon">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
-  <a class="btn" href="stock.html#room"><span class="nbadge" id="b-room"></span>
-    <span class="icon">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の分を投稿（楽天市場が中心）</span></a>
-  <a class="btn" href="pins.html"><span class="nbadge" id="b-pins"></span>
-    <span class="icon">📌</span><span class="label">Pinterest</span><span class="desc">予約の状況・週1回のまとめて予約</span></a>
-  <a class="btn" href="https://www.threads.com/@kotori.family">
-    <span class="icon">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family</span></a>
+  <a class="tile wide sun" href="posts.html"><span class="nbadge" id="b-posts"></span>
+    <span class="ic">📣</span><span class="txt"><span class="label">今日の投稿</span>
+    <span class="desc">5回分の予定と結果・下書き。良くない投稿は Threads アプリで削除</span></span></a>
+  <a class="tile wide peach" href="comments.html"><span class="nbadge" id="b-comments"></span>
+    <span class="ic">💬</span><span class="txt"><span class="label">コメント返し</span>
+    <span class="desc">ついたコメントと返信文の案。コピーして自分で返す</span></span></a>
+  <a class="tile mint" href="posts.html#insights"><span class="nbadge" id="b-insights"></span>
+    <span class="ic">📈</span><span class="label">反響</span><span class="desc">いいね・表示の数</span></a>
+  <a class="tile sky" href="stats.html">
+    <span class="ic">📊</span><span class="label">成果の記録</span><span class="desc">売上・フォロワーの推移</span></a>
 </div>
 
-<h2>入力・操作</h2>
+<h2>SNS に出す</h2>
 <div class="grid">
-  <a class="btn main" href="input.html#neta">
-    <span class="icon">✏️</span><span class="label">ネタ帳（今日あったこと）</span>
-    <span class="desc">一言書くと、翌朝のつぶやきになる。あなたの体験として書けるのはここだけ</span></a>
-  <a class="btn" href="input.html#recommend">
-    <span class="icon">🛒</span><span class="label">推し商品を紹介</span><span class="desc">楽天のURLを貼るだけ</span></a>
-  <a class="btn" href="input.html#reference">
-    <span class="icon">⭐</span><span class="label">参考投稿を登録</span><span class="desc">伸びている投稿の型を学ぶ</span></a>
-  <a class="btn" href="input.html#actions">
-    <span class="icon">⏯️</span><span class="label">止める・今すぐ作る</span><span class="desc">自動投稿の停止・再開、下書き作り</span></a>
-  <a class="btn" href="notices.html#patterns"><span class="nbadge" id="b-patterns"></span>
-    <span class="icon">🏆</span><span class="label">勝ちパターン</span><span class="desc">学んだ型の一覧</span></a>
+  <a class="tile lilac" href="stock.html#threads"><span class="nbadge" id="b-stock"></span>
+    <span class="ic">✋</span><span class="label">手動投稿ストック</span><span class="desc">コピーして自分で投稿</span></a>
+  <a class="tile pink" href="stock.html#room"><span class="nbadge" id="b-room"></span>
+    <span class="ic">🛍️</span><span class="label">楽天ROOM</span><span class="desc">今日の分を投稿</span></a>
+  <a class="tile peach" href="pins.html"><span class="nbadge" id="b-pins"></span>
+    <span class="ic">📌</span><span class="label">Pinterest</span><span class="desc">予約の状況・週1回の予約</span></a>
+  <a class="tile" href="https://www.threads.com/@kotori.family">
+    <span class="ic">🧵</span><span class="label">Threads</span><span class="desc">@kotori.family を開く</span></a>
 </div>
 
-<h2>確認</h2>
+<h2>つくる・いれる</h2>
 <div class="grid">
-  <a class="btn" href="notices.html">
-    <span class="nbadge" id="count"></span><span class="icon">🔔</span><span class="label">お知らせ</span>
-    <span class="desc">失敗・AI切り替えの通知</span></a>
-  <a class="btn" href="notices.html#runs">
-    <span class="icon">⚙️</span><span class="label">動作状況</span><span class="desc">自動投稿・下書き作りの記録</span></a>
-  <a class="btn" href="notices.html#themes">
-    <span class="icon">🧭</span><span class="label">今月のテーマ</span><span class="desc">AI が考えた悩みテーマ</span></a>
+  <a class="tile wide mint" href="input.html#neta">
+    <span class="ic">✏️</span><span class="txt"><span class="label">ネタ帳（今日あったこと）</span>
+    <span class="desc">一言書くと、翌朝のつぶやきになる。あなたの体験として書けるのはここだけ</span></span></a>
+  <a class="tile sun" href="input.html#recommend">
+    <span class="ic">🛒</span><span class="label">推し商品を紹介</span><span class="desc">楽天のURLを貼るだけ</span></a>
+  <a class="tile sky" href="input.html#reference">
+    <span class="ic">⭐</span><span class="label">参考投稿を登録</span><span class="desc">伸びている投稿の型を学ぶ</span></a>
+  <a class="tile lilac" href="notices.html#patterns"><span class="nbadge" id="b-patterns"></span>
+    <span class="ic">🏆</span><span class="label">勝ちパターン</span><span class="desc">学んだ型の一覧</span></a>
+  <a class="tile" href="input.html#actions">
+    <span class="ic">⏯️</span><span class="label">止める・今すぐ作る</span><span class="desc">自動投稿の停止・再開</span></a>
 </div>
 
-<h2>お金</h2>
+<h2>ようすを見る</h2>
 <div class="grid">
-  <a class="btn" href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">
-    <span class="icon">💳</span><span class="label">Claude にチャージ</span>
-    <span class="desc">支払いページが開く →「残高を追加」</span></a>
-  <a class="btn" href="https://affiliate.rakuten.co.jp/">
-    <span class="icon">💴</span><span class="label">楽天アフィリエイト</span>
-    <span class="desc">クリック数・売上のレポート</span></a>
-</div>
-
-<h2>設定</h2>
-<div class="grid">
-  <a class="btn" href="key.html">
-    <span class="icon">🔑</span><span class="label">合い鍵の設定</span>
-    <span class="desc" id="keydesc">入力・操作に使う鍵（最初に1回）</span></a>
-  <a class="btn" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/config.yaml">
-    <span class="icon">🛠️</span><span class="label">細かい設定</span>
-    <span class="desc">テーマ・投稿の条件（GitHub）</span></a>
+  <a class="tile pink" href="notices.html"><span class="nbadge" id="count"></span>
+    <span class="ic">🔔</span><span class="label">お知らせ</span><span class="desc">失敗・AI切り替えの通知</span></a>
+  <a class="tile" href="notices.html#runs">
+    <span class="ic">⚙️</span><span class="label">動作状況</span><span class="desc">自動投稿・下書き作りの記録</span></a>
+  <a class="tile sky" href="notices.html#themes">
+    <span class="ic">🧭</span><span class="label">今月のテーマ</span><span class="desc">AI が考えた悩みテーマ</span></a>
+  <a class="tile sun" href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">
+    <span class="ic">💳</span><span class="label">Claude にチャージ</span><span class="desc">支払いページ →「残高を追加」</span></a>
+  <a class="tile mint" href="https://affiliate.rakuten.co.jp/">
+    <span class="ic">💴</span><span class="label">楽天アフィリエイト</span><span class="desc">クリック数・売上のレポート</span></a>
+  <a class="tile" href="key.html">
+    <span class="ic">🔑</span><span class="label">合い鍵の設定</span><span class="desc" id="keydesc">入力・操作に使う鍵</span></a>
+  <a class="tile" href="https://github.com/keiyamada-ui/keiyamada-ui.github.io/blob/main/_affiliate/config.yaml">
+    <span class="ic">🛠️</span><span class="label">細かい設定</span><span class="desc">テーマ・投稿の条件（GitHub）</span></a>
 </div>
 
 <footer>
-  ホーム画面に追加: Safari の共有ボタン →「ホーム画面に追加」／ Chrome のメニュー →「ホーム画面に追加」<br>
+  <img src="avatar.png" alt="">
+  きょうも、おつかれさま。<br>
+  ホーム画面に追加: Safari の共有ボタン →「ホーム画面に追加」<br>
   鍵や売上の数字はこのページに載せていません。合い鍵は、この端末の中だけに保存されます。
 </footer>
 <script>
@@ -222,6 +242,26 @@ async function updateBadges(day, posted) {
   }
 }
 
+// ことりの吹き出し: 今日のようすを一言で（見てほしいものだけ、リンクつきで）
+function speak(auto, next) {
+  const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
+  document.getElementById("greet").textContent = h < 10 ? "おはよう！☀️" : h < 17 ? "こんにちは！🌼" : h < 22 ? "こんばんは🌙" : "おつかれさま🌙";
+  const n = id => parseInt((document.getElementById(id) || {}).textContent) || 0;
+  const lines = [];
+  lines.push(["🐤", auto === 5 ? "きょうの投稿は5回ぜんぶ終わったよ。えらい！" :
+    `きょうは ${auto} 回投稿したよ。` + (next ? `次は ${next} ごろ。` : ""), "posts.html"]);
+  if (n("b-comments")) lines.push(["💬", `コメントが <b>${n("b-comments")}件</b> 来てるよ。返信の案もあるよ`, "comments.html"]);
+  if (n("count")) lines.push(["🔔", `確認してほしいお知らせが <b>${n("count")}件</b> あるよ`, "notices.html"]);
+  if (n("b-room")) lines.push(["🛍️", `楽天ROOM にのせる商品が <b>${n("b-room")}件</b> あるよ`, "stock.html#room"]);
+  if (n("b-pins")) lines.push(["📌", `予約待ちのピンが <b>${n("b-pins")}枚</b>。週1回まとめて予約しよう`, "pins.html"]);
+  if (lines.length === 1) lines.push(["🌿", "ほかに急ぎのことはないよ。ゆっくりしてね", null]);
+  document.getElementById("say").replaceChildren(...lines.map(([i, t, href]) => {
+    const li = el("li", {}, [el("span", { text: i })]);
+    const body = href ? el("a", { href }) : el("span");
+    body.innerHTML = t; li.append(body); return li;
+  }));
+}
+
 // 🔄 更新: 最新の状態を読み直す（GitHub の配信の遅れを避けるため、URL を変えて開き直す）
 document.getElementById("reload").addEventListener("click", () => {
   const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u.href);
@@ -262,10 +302,15 @@ document.getElementById("reload").addEventListener("click", () => {
 (async () => {
   const day = jstDate();
   const posted = (await raw(`_affiliate/data/posted/${day}.json`)) || [];
-  const box = document.getElementById("today");
-  const auto = posted.filter(p => !p.manual).length, manual = posted.length - auto;
-  box.textContent = `📅 今日（${day.slice(5).replace("-", "/")}）の自動投稿: ${auto} / 5 回` + (manual ? `　✋ 手で ${manual} 回` : "");
-  box.classList.add("show");
+  // きょうの5回: 出した枠は、たまごから ことり が生まれる
+  const SLOTS = [["7:40", "集客"], ["10:10", "つぶやき"], ["12:20", "役立つ"], ["15:40", "つぶやき"], ["20:10", "PR"]];
+  const done = new Set(posted.filter(p => !p.manual).map(p => p.slot));
+  const auto = done.size, manual = posted.filter(p => p.manual).length;
+  const nowMin = (() => { const d = new Date(Date.now() + 9 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+  const nextIdx = SLOTS.findIndex(([t], i) => !done.has(i + 1) && (+t.split(":")[0]) * 60 + (+t.split(":")[1]) > nowMin);
+  document.getElementById("today-count").textContent = `${day.slice(5).replace("-", "/")}　${auto} / 5 回` + (manual ? `　✋ 手で ${manual}` : "");
+  document.getElementById("slots").replaceChildren(...SLOTS.map(([t, k], i) => el("div", { class: done.has(i + 1) ? "done" : i === nextIdx ? "now" : "" }, [
+    el("span", { class: "egg", text: done.has(i + 1) ? "🐤" : i === nextIdx ? "🥚" : "" }), t, el("br"), k])));
   document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
   // 合い鍵が使えない・期限が近いときは、上に知らせる（確認は少し待ってから。読み込みで状態が更新されるため）
   setTimeout(() => {
@@ -274,6 +319,7 @@ document.getElementById("reload").addEventListener("click", () => {
     else if (h.state === "soon") { w.textContent = `🔑 合い鍵の期限まであと${Math.max(h.days, 0)}日です。タップして作り直してください`; w.className = "token show"; }
   }, 3000);
   updateBadges(day, posted).catch(() => {}).finally(() => setTimeout(() => {
+    speak(auto, nextIdx >= 0 ? SLOTS[nextIdx][0] : "");
     const n = [...document.querySelectorAll(".nbadge, #count")].reduce((a, b) => a + (parseInt(b.textContent) || 0), 0);
     syncAppBadge(n);
   }, 1500));
@@ -298,6 +344,7 @@ document.getElementById("reload").addEventListener("click", () => {
       && (!seen.patterns || i.created_at > seen.patterns)).length;
     badge("b-patterns", newPatterns);
   } catch (e) {}
+  setTimeout(() => speak(auto, nextIdx >= 0 ? SLOTS[nextIdx][0] : ""), 2600);
   setTimeout(() => syncAppBadge([...document.querySelectorAll(".nbadge")].reduce((a, b) => a + (parseInt(b.textContent) || 0), 0)), 2500);
 })();
 </script>

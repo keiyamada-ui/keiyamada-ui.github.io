@@ -241,3 +241,15 @@ async function freshText(path) {
     return r.ok ? await r.text() : "";
   } catch (e) { return ""; }
 }
+
+// ── 下のナビ（どの画面にも同じものを出す） ──
+(function dock() {
+  if (document.querySelector("nav.dock") || document.body.dataset.nodock !== undefined) return;
+  const here = location.pathname.split("/").pop() || "index.html";
+  const items = [["index.html", "🏠", "ホーム"], ["posts.html", "📣", "投稿"], ["comments.html", "💬", "コメント"],
+                 ["pins.html", "📌", "ピン"], ["stats.html", "📊", "成果"]];
+  const nav = el("nav", { class: "dock", "aria-label": "よく使う画面" },
+    items.map(([href, icon, label]) => el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null },
+      [el("span", { class: "i", text: icon }), label, el("span", { class: "dot", id: "dock-" + href.split(".")[0] })])));
+  document.body.append(nav);
+})();
