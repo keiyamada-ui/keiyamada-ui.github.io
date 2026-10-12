@@ -79,7 +79,21 @@ async function gh(path, { method = "GET", body } = {}) {
   const key = Key.get();
   if (key) headers.Authorization = "Bearer " + key;
   if (body) headers["Content-Type"] = "application/json";
-  const r = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let r = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (key) {
+    // 合い鍵の期限（GitHub が教えてくれる場合）と、使えなくなっていないかを覚えておく
+    const exp = r.headers.get("github-authentication-token-expiration");
+    try {
+      if (exp) localStorage.setItem("kotori-key-exp", exp);
+      if (r.status === 401) localStorage.setItem("kotori-key-bad", "1");
+      else if (r.ok) localStorage.removeItem("kotori-key-bad");
+    } catch (e) {}
+    // 合い鍵が使えなくても、見るだけの情報は合い鍵なしで読めるようにする
+    if (r.status === 401 && method === "GET") {
+      delete headers.Authorization;
+      r = await fetch(API + path, { method, headers });
+    }
+  }
   if (!r.ok) {
     let msg = "";
     try { msg = (await r.json()).message || ""; } catch (e) {}
@@ -91,10 +105,22 @@ async function gh(path, { method = "GET", body } = {}) {
 }
 
 function explain(status, msg) {
-  if (status === 401) return "合い鍵が無効です（期限切れ・入力ミス）。「🔑 合い鍵の設定」で登録し直してください";
+  if (status === 401) return "合い鍵が使えなくなっています（期限切れ・作り直し・削除など）。「🔑 合い鍵の設定」で登録し直してください";
   if (status === 403 && /rate limit/i.test(msg)) return "読み込みの回数制限に達しました。少し待つか、合い鍵を登録すると増えます";
   if (status === 403 || status === 404) return "権限が足りません。合い鍵の権限（Issues・Actions の Read and write）を確認してください";
   return `うまくいきませんでした（${status} ${msg}）`;
+}
+
+// 合い鍵の状態: "none"（未登録）・"bad"（使えない）・"soon"（期限が14日以内）・"ok"。days は期限までの日数
+function keyHealth() {
+  if (!Key.get()) return { state: "none" };
+  let bad = false, exp = "";
+  try { bad = localStorage.getItem("kotori-key-bad") === "1"; exp = localStorage.getItem("kotori-key-exp") || ""; } catch (e) {}
+  const t = exp ? Date.parse(exp.replace(" UTC", "Z").replace(" ", "T")) : NaN;
+  const days = isNaN(t) ? null : Math.floor((t - Date.now()) / 86400000);
+  if (bad) return { state: "bad", days };
+  if (days !== null && days <= 14) return { state: "soon", days, exp: new Date(t) };
+  return { state: "ok", days, exp: isNaN(t) ? null : new Date(t) };
 }
 
 function needKeyBox() {

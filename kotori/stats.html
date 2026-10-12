@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>成果の記録</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+<style>
+  .month { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+  .month b { font-size: 18px; }
+  .month .btn { flex: 0 0 auto; min-width: 52px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .tile { background: var(--box); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .tile .v { font-size: 22px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+  .tile .k { font-size: 12px; color: var(--sub); }
+  .tile .d { font-size: 12px; color: var(--sub); }
+  .hero { font-size: 34px; font-weight: 800; line-height: 1.1; }
+  .chart { position: relative; margin-top: 10px; }
+  .chart svg { display: block; width: 100%; height: 150px; }
+  .chart .bar { fill: var(--accent); }
+  .chart .bar:hover, .chart .bar.on { fill: #C77D10; }
+  .chart .axis { stroke: var(--line); stroke-width: 1; }
+  .chart .lbl { fill: var(--sub); font-size: 10px; }
+  .tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 12px;
+         padding: 4px 8px; border-radius: 8px; pointer-events: none; white-space: nowrap; display: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--sub); font-weight: 600; font-size: 12px; }
+  .scroll { overflow-x: auto; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .form label { font-size: 12px; color: var(--sub); display: block; }
+  .form input { width: 100%; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+                background: var(--card); color: var(--text); font-family: inherit; }
+  .form .wide { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📊 成果の記録</h1></header>
+<p class="note">毎朝、前の日の Threads の反響（表示・いいね・リンクのクリック・フォロワー）を自動で記録しています。楽天の売上は、楽天アフィリエイトの「成果レポート」を見て月ごとに入力してください。将来の実績としてそのまま使えます。</p>
+
+<div class="month">
+  <button class="btn" id="prev" aria-label="前の月">‹</button>
+  <b id="mlabel"></b>
+  <button class="btn" id="next" aria-label="次の月">›</button>
+</div>
+<main id="main"><p class="empty">読み込み中…</p></main>
+
+<script src="app.js"></script>
+<script>
+let daily = {}, earnings = {}, month = jstDate().slice(0, 7);
+const main = document.getElementById("main");
+const yen = n => (n || 0).toLocaleString("ja-JP") + "円";
+const num = n => (n || 0).toLocaleString("ja-JP");
+const shift = (m, n) => { const d = new Date(m + "-01T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); };
+
+function monthRows(m) { return Object.keys(daily).filter(d => d.startsWith(m)).sort().map(d => ({ day: d, ...daily[d] })); }
+function sum(rows, k) { return rows.reduce((a, r) => a + (r[k] || 0), 0); }
+function followersAt(m) {  // その月の最後に記録したフォロワー数
+  const rows = monthRows(m).filter(r => r.followers != null);
+  return rows.length ? rows[rows.length - 1].followers : null;
+}
+
+function chart(rows) {
+  // 日ごとの表示数（1つの系列なので凡例はなし。見出しが名前）
+  const days = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).getUTCDate();
+  const byDay = {}; rows.forEach(r => byDay[+r.day.slice(8, 10)] = r.views || 0);
+  const max = Math.max(1, ...Object.values(byDay));
+  const W = 320, H = 150, top = 18, bottom = 18, step = W / days, bw = Math.max(2, step - 2);
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "日ごとの表示数");
+  const box = el("div", { class: "chart" }), tip = el("div", { class: "tip" });
+  const base = H - bottom;
+  const axis = document.createElementNS(svgNS, "line");
+  Object.entries({ x1: 0, x2: W, y1: base, y2: base, class: "axis" }).forEach(([k, v]) => axis.setAttribute(k, v));
+  svg.append(axis);
+  for (let d = 1; d <= days; d++) {
+    const v = byDay[d];
+    if (v === undefined) continue;
+    const h = Math.max(1, (base - top) * v / max), x = (d - 1) * step + 1, y = base - h;
+    const p = document.createElementNS(svgNS, "path");
+    const r = Math.min(3, bw / 2, h);
+    p.setAttribute("d", `M${x},${base} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${base} Z`);
+    p.setAttribute("class", "bar");
+    const show = () => {
+      svg.querySelectorAll(".bar.on").forEach(b => b.classList.remove("on")); p.classList.add("on");
+      tip.textContent = `${+month.slice(5)}/${d}　表示 ${num(v)}`; tip.style.display = "block";
+      tip.style.left = Math.min(Math.max(((x + bw / 2) / W) * 100, 15), 85) + "%";
+    };
+    p.addEventListener("pointerenter", show); p.addEventListener("click", show);
+    svg.append(p);
+  }
+  for (const d of [1, 10, 20, days]) {
+    const t = document.createElementNS(svgNS, "text");
+    t.setAttribute("x", (d - 0.5) * step); t.setAttribute("y", H - 4); t.setAttribute("text-anchor", "middle");
+    t.setAttribute("class", "lbl"); t.textContent = d; svg.append(t);
+  }
+  svg.addEventListener("pointerleave", () => { tip.style.display = "none"; svg.querySelectorAll(".bar.on").forEach(b => b.classList.remove("on")); });
+  box.append(svg, tip);
+  return box;
+}
+
+function tile(k, v, d) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), d ? el("div", { class: "d", text: d }) : null]); }
+
+function render() {
+  document.getElementById("mlabel").textContent = `${month.slice(0, 4)}年${+month.slice(5)}月`;
+  document.getElementById("next").disabled = month >= jstDate().slice(0, 7);
+  const rows = monthRows(month), e = earnings[month];
+  const f = followersAt(month), fPrev = followersAt(shift(month, -1)) ?? (rows.find(r => r.followers != null) || {}).followers;
+  const fDiff = f != null && fPrev != null ? f - fPrev : null;
+  const nodes = [];
+
+  // 売上（いちばん大事な数字）
+  nodes.push(el("section", { class: "card" }, [
+    el("div", { class: "row between" }, [el("div", { class: "title", text: "💰 楽天アフィリエイト" }),
+      el("a", { class: "muted", href: "https://affiliate.rakuten.co.jp/report/", target: "_blank", rel: "noopener", text: "成果レポートを開く →" })]),
+    e ? el("div", { class: "hero", style: "margin-top:8px", text: yen(e.reward) }) : el("div", { class: "muted", style: "margin-top:8px", text: "この月の売上はまだ入力されていません（下の「入力する」から）" }),
+    e ? el("div", { class: "tiles" }, [tile("売上件数", num(e.orders) + "件"), tile("楽天のクリック", num(e.clicks))]) : null,
+    e && e.memo ? el("div", { class: "muted", style: "margin-top:6px", text: "メモ: " + e.memo }) : null,
+  ]));
+
+  // Threads の反響
+  nodes.push(el("section", { class: "card" }, [
+    el("div", { class: "title", text: "🧵 Threads の反響" }),
+    rows.length ? el("div", { class: "tiles" }, [
+      tile("フォロワー", f != null ? num(f) : "—", fDiff != null ? (fDiff >= 0 ? "+" : "") + num(fDiff) + "（この月）" : ""),
+      tile("表示", num(sum(rows, "views"))),
+      tile("いいね", num(sum(rows, "likes"))),
+      tile("リンクのクリック", num(sum(rows, "clicks"))),
+      tile("返信", num(sum(rows, "replies"))),
+      tile("投稿", num(sum(rows, "posts")) + "本", "ピン " + num(sum(rows, "pins")) + "枚"),
+    ]) : el("div", { class: "muted", style: "margin-top:6px", text: "まだ記録がありません（毎朝、前の日の分を記録します）" }),
+    rows.length ? el("div", { class: "muted", style: "margin-top:12px", text: "日ごとの表示数（棒をタップすると数字が出ます）" }) : null,
+    rows.length ? chart(rows) : null,
+  ]));
+
+  // 売上の入力
+  const val = k => e ? String(e[k] ?? "") : "";
+  const inp = (id, label, v, wide) => el("div", { class: wide ? "wide" : "" }, [el("label", { for: id, text: label }),
+    el("input", { id, value: v, inputmode: id === "f-memo" ? "text" : "numeric", type: "text" })]);
+  const note = el("div", { class: "muted", style: "margin-top:6px" });
+  const btn = el("button", { class: "btn primary", text: "記録する" });
+  btn.addEventListener("click", async () => {
+    if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
+    const get = id => document.getElementById(id).value.replace(/[,，円件\s]/g, "");
+    const inputs = { month, clicks: get("f-clicks") || "0", orders: get("f-orders") || "0", reward: get("f-reward") || "0",
+                     memo: document.getElementById("f-memo").value.trim() };
+    if (![inputs.clicks, inputs.orders, inputs.reward].every(v => /^\d+$/.test(v))) { note.textContent = "数字で入力してください"; return; }
+    btn.disabled = true; note.textContent = "記録しています…（1分ほど）";
+    try {
+      const ok = await runAndWait("affiliate_record.yml", inputs);
+      if (!ok) throw new Error("うまく記録できませんでした");
+      earnings = (await fresh("_affiliate/data/stats/earnings.json")) || earnings;
+      render();
+    } catch (err) { note.textContent = "⚠️ " + err.message; btn.disabled = false; }
+  });
+  nodes.push(el("section", { class: "card" }, [
+    el("details", { open: e ? null : "" }, [el("summary", { text: e ? "この月の売上を直す" : "📝 この月の売上を入力する" }),
+      el("div", { class: "muted", style: "margin-top:6px", text: "楽天アフィリエイト →「レポート」→「成果報酬」で、この月の数字を見て入れてください。月の途中でも、何回でも上書きできます。" }),
+      el("div", { class: "form" }, [inp("f-reward", "報酬（円）", val("reward")), inp("f-orders", "売上件数", val("orders")),
+        inp("f-clicks", "クリック数", val("clicks")), inp("f-memo", "メモ（任意）", val("memo"), true)]),
+      el("div", { class: "actions" }, [btn]), note]),
+  ]));
+
+  // これまでの記録（表とダウンロード）
+  const months = [...new Set([...Object.keys(earnings), ...Object.keys(daily).map(d => d.slice(0, 7))])].sort().reverse();
+  if (months.length) {
+    const head = ["月", "報酬", "件数", "表示", "いいね", "リンク", "フォロワー"];
+    const table = months.map(m => { const r = monthRows(m), x = earnings[m] || {};
+      return [m, x.reward ?? "", x.orders ?? "", sum(r, "views"), sum(r, "likes"), sum(r, "clicks"), followersAt(m) ?? ""]; });
+    const dl = el("button", { class: "btn", text: "📥 記録をダウンロード（表計算用）" });
+    dl.addEventListener("click", () => {
+      const lines = [["日付", "表示", "いいね", "返信", "リンクのクリック", "フォロワー", "投稿", "ピン"].join(",")]
+        .concat(Object.keys(daily).sort().map(d => { const r = daily[d]; return [d, r.views ?? "", r.likes ?? "", r.replies ?? "", r.clicks ?? "", r.followers ?? "", r.posts ?? "", r.pins ?? ""].join(","); }))
+        .concat(["", ["月", "報酬", "件数", "クリック", "メモ"].join(",")])
+        .concat(Object.keys(earnings).sort().map(m => { const x = earnings[m]; return [m, x.reward, x.orders, x.clicks, '"' + (x.memo || "").replace(/"/g, '""') + '"'].join(","); }));
+      const a = el("a", { href: URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv" })), download: `kotori-stats-${jstDate()}.csv` });
+      document.body.append(a); a.click(); a.remove();
+    });
+    nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "📚 これまでの記録" }),
+      el("div", { class: "scroll", style: "margin-top:8px" }, [el("table", {}, [
+        el("thead", {}, [el("tr", {}, head.map(h => el("th", { text: h })))]),
+        el("tbody", {}, table.map(r => el("tr", {}, r.map((v, i) => el("td", { text: i === 0 ? `${+v.slice(5)}月` : i === 1 && v !== "" ? yen(v) : v === "" ? "—" : num(v) })))))])]),
+      el("div", { class: "actions" }, [dl])]));
+  }
+  main.replaceChildren(...nodes);
+}
+
+document.getElementById("prev").addEventListener("click", () => { month = shift(month, -1); render(); });
+document.getElementById("next").addEventListener("click", () => { month = shift(month, 1); render(); });
+(async () => {
+  [daily, earnings] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json")]);
+  daily = daily || {}; earnings = earnings || {};
+  render();
+})();
+</script>
+</body>
+</html>

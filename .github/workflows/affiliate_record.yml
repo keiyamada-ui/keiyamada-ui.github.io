@@ -1,0 +1,52 @@
+name: ことり 成果の記録
+
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: '月（例: 2026-10）'
+        required: true
+      clicks:
+        description: '楽天アフィリエイトのクリック数'
+        default: '0'
+      orders:
+        description: '売上件数'
+        default: '0'
+      reward:
+        description: '報酬（円）'
+        default: '0'
+      memo:
+        description: 'メモ（任意）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 記録する
+        env:
+          MONTH: ${{ inputs.month }}
+          CLICKS: ${{ inputs.clicks }}
+          ORDERS: ${{ inputs.orders }}
+          REWARD: ${{ inputs.reward }}
+          MEMO: ${{ inputs.memo }}
+        run: |
+          python _affiliate/stats.py earnings "$MONTH" --clicks "${CLICKS:-0}" --orders "${ORDERS:-0}" --reward "${REWARD:-0}" --memo "$MEMO"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/stats
+          git commit -m "成果を記録: $MONTH" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
