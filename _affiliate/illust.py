@@ -121,7 +121,16 @@ def draw(scene, models=None, key=None, session=None):
     http = session or requests
     parts = [_b64(p) for p in REFS if p.exists()] + [{"text": f"{STYLE}\n\nScene: {scene}"}]
     last = ""
-    for model in models or DEFAULT_MODELS:
+    names = list(models or DEFAULT_MODELS)
+    try:  # 名前が変わっていても動くように、使える画像の AI を一覧から探して足す
+        listed = http.get("https://generativelanguage.googleapis.com/v1beta/models", params={"pageSize": 1000},
+                          headers={"x-goog-api-key": key}, timeout=30).json().get("models", [])
+        found = [m["name"].split("/")[-1] for m in listed
+                 if "image" in m["name"] and "flash" in m["name"] and "generateContent" in m.get("supportedGenerationMethods", [])]
+        names += [n for n in sorted(found, reverse=True) if n not in names]
+    except Exception:  # noqa: BLE001
+        pass
+    for model in names:
         for config in ({"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": "1:1"}},
                        {"responseModalities": ["TEXT", "IMAGE"]}):
             res = http.post(API.format(model=model), headers={"x-goog-api-key": key, "Content-Type": "application/json"},
@@ -129,6 +138,8 @@ def draw(scene, models=None, key=None, session=None):
             if res.status_code == 404:
                 last = f"{model}: 見つかりません"
                 break  # この名前の AI はない → 次の候補へ
+            if res.status_code == 429 and "quota" in res.text.lower():
+                raise IllustError("Gemini の無料枠では画像を描けません。Google AI Studio で支払い（課金）の設定をすると描けるようになります")
             if res.status_code != 200:
                 last = f"{model}: HTTP {res.status_code} {res.text[:150]}"
                 continue
