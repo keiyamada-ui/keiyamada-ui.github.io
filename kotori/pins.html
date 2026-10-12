@@ -43,7 +43,14 @@
     <button class="btn" id="again" style="flex:0 0 auto;min-height:34px;font-size:12px">前回のファイルをもう一度保存</button>
   </div>
   <div class="muted" id="export-note" style="margin-top:6px"></div>
-  <div class="muted" style="margin-top:6px">※「②」で設定画面が開かないときは、Pinterest の右上のメニュー →「設定」→「コンテンツのインポート」を開いてください。</div>
+  <div class="info" id="mobile-tip" style="display:none;margin:10px 0 0">
+    <b>📱 スマホのときは</b><br>
+    スマホの Pinterest（アプリ・スマホ版のページ）には「コンテンツのインポート」がありません。次のどちらかで読み込んでください。<br>
+    <b>A. パソコンで</b>：パソコンでこの画面を開いて ①② を押す（いちばん確実）<br>
+    <b>B. スマホの Safari で</b>：②を<b>長押し</b>→「新規タブで開く」→ アドレス欄の「<b>ぁあ</b>」→「<b>デスクトップ用Webサイトを表示</b>」→ 左の「<b>コンテンツのインポート</b>」→「アップロード」<br>
+    <span class="muted">（Chrome は右上の「︙」→「PC版サイト」。Pinterest アプリが開いてしまうときも、長押し →「新規タブで開く」を使ってください）</span>
+  </div>
+  <div class="muted" style="margin-top:6px">※「②」で設定画面が開かないときは、Pinterest の右上のメニュー →「設定」→「コンテンツのインポート」を開いてください（パソコン版の画面にあります）。</div>
 </section>
 
 <p class="muted" style="margin:-4px 4px 12px">Pinterest の自動投稿の審査に通ったら → <a href="pinterest.html">🔗 Pinterest とつなぐ</a></p>
@@ -201,6 +208,9 @@ document.getElementById("make").addEventListener("click", async ev => {
   } catch (e) { note.textContent = "⚠️ " + e.message; }
   btn.disabled = false;
 });
+
+// スマホでは、読み込みはパソコン版の画面でしかできないので、やり方を出しておく
+if (matchMedia("(pointer: coarse)").matches) document.getElementById("mobile-tip").style.display = "block";
 
 setupTabs([["t-wait", "wait"], ["t-done", "done"], ["t-all", "all"]], name => { tab = name; if (pins.length) render(); });
 load().then(() => Seen.mark("pins"));
