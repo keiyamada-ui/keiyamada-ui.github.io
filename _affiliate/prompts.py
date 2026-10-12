@@ -57,13 +57,15 @@ REFERENCE_SCHEMA = obj(
 )
 
 
-# 今の季節感（season.py が毎朝、実際の気温から作る）。すべての文章作りに添える
+# 今の季節感（season.py が毎朝、実際の気温から作る）と、自分の投稿から学んだこと（learn.py が週1回作る）。
+# すべての文章作りに添える
 SEASON_NOTE = ""
+LEARNED_NOTE = ""
 
 
 def _persona(account):
     base = f"アカウント「{account['name']}」の人物像: {account['persona']}"
-    return base + (f"\n\n{SEASON_NOTE}" if SEASON_NOTE else "")
+    return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, LEARNED_NOTE) if n)
 
 
 SHARED_RULES = """\
@@ -113,7 +115,7 @@ def theme_messages(account, today, count, existing_keywords):
 - persona: 「誰が＋どんな条件で探しているか」を1文で
 
 JSON だけを返す。"""
-    user = (f"今日の日付: {today.isoformat()}\nこれから1〜2か月の季節・行事を意識して、テーマを{count}個考えてください。\n"
+    user = (f"今日の日付: {today.isoformat()}\nテーマを{count}個考えてください。季節・行事のテーマは半分以下にして、残りは一年中ある悩み（片付け・勉強・習い事・食事・お金・きょうだいなど）にしてください。\n"
             f"すでにあるキーワード（重複させない）: {', '.join(existing_keywords) or 'なし'}")
     return system, user
 
@@ -327,7 +329,7 @@ def casual_messages(account, today, count, memos, recent_texts, feedback=None):
 
 # 書き方
 - 1本 15〜80文字。思いついたまま打ったような短い文。説明しない。オチもいらない。
-- 季節・天気・朝の支度・学校の持ち物・習い事の送迎・週末・夕飯の献立など、今日の日付に合う日常の話題。
+- 朝の支度・学校の持ち物・習い事の送迎・週末・夕飯の献立・きょうだい・片付けなど、日常の話題（季節や天気の話はたまにだけ）。
 - {count}本とも話題と言い回しを変える。問いかけは多くても1本まで。
 - 商品名・リンク・ハッシュタグは書かない。絵文字は0〜1個。
 - 投稿者のメモ（ネタ帳）が渡されたら、そのうち1つを使って本人の出来事として書き、memo_used にそのメモをそのまま書く。
@@ -407,4 +409,32 @@ Pinterest は「検索して保存する」場所です。探している人が�
 {HUMAN_STYLE}
 JSON だけを返す。pins の id は渡された商品の id をそのまま使う。"""
     user = f"今日の日付: {today.isoformat()}\n\n商品:\n" + "\n".join(_candidate_line(i) for i in items)
+    return system, user
+
+
+LEARN_SCHEMA = obj(summary=STR, lessons={"type": "array", "items": obj(
+    title=STR, do=STR, avoid=STR, why=STR, applies_to=STR,
+)})
+
+
+def learn_messages(account, today, top, bottom, averages):
+    """自分の投稿の、伸びたもの・伸びなかったものを比べて、次に活かす書き方を見つける。"""
+    system = f"""あなたは Threads の運用を分析する担当です。{_persona(account)}
+
+同じアカウントの投稿のうち、反響が大きかったものと小さかったものを渡します。
+2つを比べて、「このアカウントで伸びる書き方・伸びない書き方」を見つけてください。
+見るところ: 書き出しの1文・長さ・話題（悩み/あるある/商品/季節など）・問いかけの有無・具体性・本音の出し方・投稿した時間帯・投稿の種類。
+
+- lessons: 次の投稿にそのまま使える学びを3〜5個。
+  title（短い名前）, do（こう書く。具体的に）, avoid（こうは書かない）, why（比べてわかった根拠。数字があれば添える）,
+  applies_to（すべて / 集客投稿 / つぶやき / 役立つ投稿 / PR 投稿 のどれか）
+- 投稿数が少なく、はっきりした差が見えないときは、無理に言い切らず「まだ傾向」と書く。偶然の差を法則にしない。
+- summary: 全体の一言まとめ（例: 「問いかけで終わる短い投稿ほど返信が多い」）
+- 体験していないことを体験として書く、効果を断定する、のような学びは出さない（ルール違反になるため）。
+
+JSON だけを返す。"""
+    def lines(rows):
+        return "\n".join(json.dumps(r, ensure_ascii=False) for r in rows)
+    user = (f"今日の日付: {today.isoformat()}\n種類ごとの平均: {json.dumps(averages, ensure_ascii=False)}\n\n"
+            f"## 反響が大きかった投稿\n{lines(top)}\n\n## 反響が小さかった投稿\n{lines(bottom)}")
     return system, user
