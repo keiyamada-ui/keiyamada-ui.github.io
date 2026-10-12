@@ -46,8 +46,16 @@ AI_SMELL = ["いかがでしたか", "結論から言うと", "解説します",
 EXPERIENCE_WORDS = ["使ってみた", "使ってみました", "愛用", "うちの子", "我が家で", "買ってみた", "泊まってみた", "泊まりました"]
 
 
+# 今の季節に合わない言葉（season.py が毎朝決める。例: まだ暖かいのに「ダウン」）
+SEASON = {"avoid": [], "avg_max": None}
+
+
 def _ng_hits(text):
-    return [(w, reason) for w, reason in NG_WORDS.items() if w in text]
+    import season
+    hits = [(w, reason) for w, reason in NG_WORDS.items() if w in text]
+    for w in season.hits(text, SEASON["avoid"]):
+        hits.append((w, f"今の季節（これから1週間の最高気温は平均{SEASON['avg_max']}℃）に合わない言葉です。今の気温に合う話にしてください"))
+    return hits
 
 
 def check_posts(posts, room_comment=None, owner_note=None):

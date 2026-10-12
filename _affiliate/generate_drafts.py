@@ -31,6 +31,7 @@ import issue_forms  # noqa: E402
 import llm  # noqa: E402
 import patterns as patterns_mod  # noqa: E402
 import pins as pins_mod  # noqa: E402
+import season  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -594,6 +595,9 @@ def run_daily(config, today, client, generate, args):
                 + themes_mod.fixed_themes(config))
         ordered = (themes_mod.rank(pool, history, today, config["themes"]["reuse_after_days"])
                    or themes_mod.rank(pool, [], today, 0))
+        # 今の季節に合わないテーマ（暖かいのに「ダウン」など）は後回しにする
+        ordered = ([t for t in ordered if not season.hits(f"{t['keyword']} {t.get('category', '')}", checks.SEASON["avoid"])]
+                   + [t for t in ordered if season.hits(f"{t['keyword']} {t.get('category', '')}", checks.SEASON["avoid"])])
     followup = None if args.keyword else find_followup(config, today, store, drafts_dir)
     if followup:
         print(f"🔥 反響のあった集客投稿（いいね{followup['likes']}件）の話題で商品を探します: {followup['topic']}")
@@ -810,6 +814,10 @@ def main(argv=None):
         return check_api(config)
 
     today = datetime.date.fromisoformat(args.date) if args.date else datetime.datetime.now(JST).date()
+    # 今の季節感（実際の気温）を調べて、文章作りと確認に使う
+    info = season.get(today, store=DATA / "season", fetcher=(lambda d: None) if args.dry_run else season.fetch)
+    prompts.SEASON_NOTE = info["note"]
+    checks.SEASON.update(avoid=info["avoid"], avg_max=info["avg_max"])
     generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
     if args.analyze_reference:

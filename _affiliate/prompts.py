@@ -57,8 +57,13 @@ REFERENCE_SCHEMA = obj(
 )
 
 
+# 今の季節感（season.py が毎朝、実際の気温から作る）。すべての文章作りに添える
+SEASON_NOTE = ""
+
+
 def _persona(account):
-    return f"アカウント「{account['name']}」の人物像: {account['persona']}"
+    base = f"アカウント「{account['name']}」の人物像: {account['persona']}"
+    return base + (f"\n\n{SEASON_NOTE}" if SEASON_NOTE else "")
 
 
 SHARED_RULES = """\
