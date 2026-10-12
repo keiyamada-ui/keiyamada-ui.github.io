@@ -372,3 +372,30 @@ JSON だけを返す。replies の id は渡されたコメントの id をそ�
         lines.append(json.dumps({"id": item["id"], "自分の投稿": item["post_text"][:200],
                                  "コメントした人": item["username"], "コメント": item["text"]}, ensure_ascii=False))
     return system, "\n".join(lines)
+
+
+# ---------------------------------------------------------------- Pinterest のピン
+
+PIN_SCHEMA = obj(pins={"type": "array", "items": obj(
+    id=STR, title=STR, description=STR, headline=STR, points=STRS, board=STR,
+)})
+
+
+def pin_messages(account, today, items, boards):
+    system = f"""あなたは Pinterest で子育て家族向けの「買ってよかった」ピンを作る担当です。{_persona(account)}
+
+Pinterest は「検索して保存する」場所です。探している人が検索しそうな言葉を、自然に入れてください。
+渡された商品それぞれに、ピン1枚分の文章と、画像に入れる短い文字を作ります。
+
+- title: ピンのタイトル（25〜60文字）。「誰の・どんな悩みに・何が良いか」が分かる言葉。検索されそうな言葉を前のほうに。
+- description: ピンの説明（120〜300文字）。悩み → この商品の良さ（レビューの評判として）→ どんな人に向くか。
+  最後に「#PR」と、関係するハッシュタグを2つまで（例: #小学生ママ #知育）。URL は書かない。
+- headline: 画像に大きく入れる言葉（全角24文字以内）。思わず保存したくなる一言。改行したい所に「/」を入れてよい。
+- points: 画像に入れる短い特徴を3つ（それぞれ全角16文字以内）。レビューや商品情報から分かることだけ。
+- board: 次のボードから1つ選ぶ: {"、".join(boards)}
+- 体験していないことを体験したように書かない。価格や件数は渡された数字だけを使う。
+{SHARED_RULES}
+{HUMAN_STYLE}
+JSON だけを返す。pins の id は渡された商品の id をそのまま使う。"""
+    user = f"今日の日付: {today.isoformat()}\n\n商品:\n" + "\n".join(_candidate_line(i) for i in items)
+    return system, user

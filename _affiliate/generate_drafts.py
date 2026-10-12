@@ -30,6 +30,7 @@ import insights  # noqa: E402
 import issue_forms  # noqa: E402
 import llm  # noqa: E402
 import patterns as patterns_mod  # noqa: E402
+import pins as pins_mod  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -653,7 +654,15 @@ def run_daily(config, today, client, generate, args):
         if have < per_day:
             room_extras += room_more_items(config, today, ordered, history + entries, client.search,
                                            used_ids | {c["id"] for c in room_extras}, per_day - have)
-    for item in build_room_list(config, today, room_picked, room_extras, generate):
+    room_items = build_room_list(config, today, room_picked, room_extras, generate)
+    try:  # Pinterest のピン: 今日の PR の商品と ROOM の候補から
+        pin_items = [c for c in [chosen] + room_items if c.get("url")]
+        pin_items = list({c["id"]: c for c in pin_items}.values())
+        pins_mod.make_pins(config, today, pin_items, generate,
+                           pin_dir=(DATA / "pins") if args.dry_run else pins_mod.PIN_DIR, manual_dir=MANUAL)
+    except Exception as e:  # noqa: BLE001 - ピンは補助なので、失敗しても下書きは止めない
+        print(f"⚠️ Pinterest のピンを作れませんでした: {str(e)[:150]}")
+    for item in room_items:
         if item["id"] not in used_ids:
             entries.append({"date": today.isoformat(), "source": item["source"], "id": item["id"],
                             "name": item["name"], "theme_id": "", "theme": "", "origin": "楽天ROOM",
@@ -732,8 +741,12 @@ class FakeGenerator:
         name = {id(prompts.THEME_SCHEMA): "themes", id(prompts.ANALYSIS_SCHEMA): "analysis",
                 id(prompts.WRITE_SCHEMA): "write", id(prompts.REFERENCE_SCHEMA): "reference",
                 id(prompts.ROOM_SCHEMA): "room", id(prompts.BUZZ_SCHEMA): "buzz",
-                id(prompts.CASUAL_SCHEMA): "casual", id(prompts.COMMENT_SCHEMA): "comment"}[id(schema)]
+                id(prompts.CASUAL_SCHEMA): "casual", id(prompts.COMMENT_SCHEMA): "comment",
+                id(prompts.PIN_SCHEMA): "pins"}[id(schema)]
         result = json.loads(json.dumps(self.fixtures[name]))
+        if name == "pins":
+            ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
+            result = {"pins": [dict(result["pins"][0], id=i) for i in ids]}
         if name == "room":
             ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
             template = result["comments"][0]["comment"]

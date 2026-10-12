@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Pinterest</title>
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FFC83C">
+<link rel="stylesheet" href="app.css">
+<style>
+  .pin { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
+  .pin img { width: 120px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--box); }
+  .pin .noimg { width: 120px; aspect-ratio: 2 / 3; border-radius: 12px; background: var(--box); color: var(--sub);
+                font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📌 Pinterest</h1></header>
+<p class="note">毎朝、ピン用の画像・タイトル・説明文・楽天のリンクを作っています。「📌 Pinterest で作成」を押すと、画像とリンクが入った状態でピンの作成画面が開きます。ボードを選んで保存してください。出したら「投稿した」を押すと、この端末に記録されます。</p>
+<div class="row" style="margin:0 0 12px">
+  <button class="btn" id="filter" style="flex:0 0 auto" aria-pressed="true">まだのものだけ</button>
+</div>
+<main id="list"><p class="empty">読み込み中…</p></main>
+
+<script src="app.js"></script>
+<script>
+const KEY = "kotori-used-v1";  // 手動投稿ストック・ROOM と同じ記録場所
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } },
+  set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} },
+};
+let used = store.get(), onlyOpen = true, pins = [];
+const list = document.getElementById("list");
+
+function pinUrl(p) {
+  return "https://www.pinterest.com/pin/create/button/?url=" + encodeURIComponent(p.link) +
+         "&media=" + encodeURIComponent(p.image_url) + "&description=" + encodeURIComponent(p.title);
+}
+
+function render() {
+  list.replaceChildren();
+  const items = pins.filter(p => !onlyOpen || !used["pin:" + p.key]);
+  const left = pins.filter(p => !used["pin:" + p.key]).length;
+  list.append(el("p", { class: "note", text: `まだ出していないピン ${left} 枚。1日1〜2枚、無理のないペースで大丈夫です。` }));
+  let day = "";
+  for (const p of items) {
+    if (p.date !== day) { day = p.date; list.append(el("h2", { text: `${day.slice(5).replace("-", "/")}（${weekday(day)}）` })); }
+    const key = "pin:" + p.key, done = !!used[key];
+    const img = el("img", { src: p.image_url + "?v=" + p.date, alt: p.title, loading: "lazy" });
+    img.addEventListener("error", () => img.replaceWith(el("div", { class: "noimg", text: "画像の公開まで1〜2分かかります。少し待って開き直してください" })));
+    const doneBtn = el("button", { class: "btn", text: done ? "✓ 投稿した（戻す）" : "投稿した" });
+    doneBtn.addEventListener("click", () => {
+      if (used[key]) delete used[key]; else used[key] = new Date().toISOString();
+      store.set(used); render();
+    });
+    list.append(el("section", { class: "card", style: done ? "opacity:.5" : "" }, [
+      el("div", { class: "pin" }, [
+        el("a", { href: p.image_url, target: "_blank", rel: "noopener" }, [img]),
+        el("div", {}, [
+          el("span", { class: "badge", text: "ボード: " + p.board }),
+          el("div", { class: "title", style: "margin-top:6px", text: p.title }),
+          el("div", { class: "muted", style: "margin-top:4px", text: p.product }),
+        ]),
+      ]),
+      el("details", {}, [el("summary", { text: "説明文" }), el("div", { class: "text", text: p.description })]),
+      el("div", { class: "actions" }, [
+        el("a", { class: "btn primary", text: "📌 Pinterest で作成", href: pinUrl(p), target: "_blank", rel: "noopener" }),
+      ]),
+      el("div", { class: "actions" }, [
+        el("button", { class: "btn", text: "タイトル", onclick: () => copy(p.title) }),
+        el("button", { class: "btn", text: "説明文", onclick: () => copy(p.description) }),
+        el("button", { class: "btn", text: "リンク", onclick: () => copy(p.link) }),
+      ]),
+      el("div", { class: "muted", style: "margin-top:6px", text: "↑ 作成画面に入らなかったときは、コピーして貼り付けてください" }),
+      el("div", { class: "actions" }, [doneBtn]),
+    ]));
+  }
+  if (!items.length) list.append(el("p", { class: "empty", text: pins.length ? "全部出しました 🎉" : "まだピンはありません（毎朝の下書き作りで作られます）" }));
+}
+
+document.getElementById("filter").addEventListener("click", ev => {
+  onlyOpen = !onlyOpen; ev.target.setAttribute("aria-pressed", String(onlyOpen)); render();
+});
+(async () => {
+  pins = (await fresh("_affiliate/manual/pins.json")) || [];
+  Seen.mark("pins");
+  render();
+})();
+</script>
+</body>
+</html>
