@@ -2,22 +2,18 @@
    コンセプト「ことりの陽だまり」: クリーム色の紙の上に、やわらかいパステルの小物が並ぶ。
    丸い文字（Zen Maru Gothic）・大きな角丸・ふんわりした影・押すとぷにっと縮むボタン。 */
 :root {
-  --bg: #FFF8EC; --card: #FFFFFF; --text: #3D3226; --sub: #85725C; --line: #F1E4CB;
-  --accent: #FFB627; --accent-ink: #3D2A08; --accent-bg: #FFF1CF; --accent-deep: #E08A00;
-  --pr: #E0574F; --pr-bg: #FDECEA; --ok: #3E9A64; --ok-bg: #E4F5EA; --box: #FBF4E6;
-  --shadow: 0 1px 0 rgba(120, 90, 40, .04), 0 6px 18px -8px rgba(120, 90, 40, .25);
+  /* ベージュの紙に、やさしいパステル。文字は茶色ではなく、やわらかいグレー（少しだけ紫みのある色） */
+  color-scheme: light;
+  --bg: #FBF6EF; --card: #FFFFFF; --text: #4A4453; --sub: #8F8698; --line: #EFE5D8;
+  --accent: #FFC75A; --accent-ink: #4A3A12; --accent-bg: #FFF4D9; --accent-deep: #F2A93B;
+  --pr: #E86F7E; --pr-bg: #FFEAEE; --ok: #4AA57A; --ok-bg: #E4F6EC; --box: #F8F2EA;
+  --shadow: 0 1px 0 rgba(120, 100, 140, .04), 0 6px 18px -8px rgba(140, 115, 150, .28);
   /* パステルの小物（アイコンの台） */
-  --p-sun: #FFE7A6; --p-peach: #FFD9CC; --p-mint: #CFF0DE; --p-sky: #D3E7FB; --p-lilac: #E6DDF8; --p-pink: #FCD9E6; --p-sand: #F1E6D2;
+  --p-sun: #FFEDB8; --p-peach: #FFDCD2; --p-mint: #D4F1E2; --p-sky: #D8EAFB; --p-lilac: #E9E1FA; --p-pink: #FFDDE8; --p-sand: #F3EADF;
   --radius: 20px;
   --font: "Zen Maru Gothic", -apple-system, BlinkMacSystemFont, "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #1C1813; --card: #27211A; --text: #F6ECDD; --sub: #C2B19A; --line: #3A3127;
-          --accent: #FFC247; --accent-ink: #2B1E05; --accent-bg: #3A2F1C; --accent-deep: #FFC247;
-          --pr: #FF8A80; --pr-bg: #3D2423; --ok: #7BC896; --ok-bg: #1F3326; --box: #221D17;
-          --shadow: 0 1px 0 rgba(0,0,0,.2), 0 8px 20px -10px rgba(0,0,0,.6);
-          --p-sun: #4A3B17; --p-peach: #4A2E26; --p-mint: #1F3E2E; --p-sky: #1F3247; --p-lilac: #332A48; --p-pink: #46283A; --p-sand: #3A3125; }
-}
+/* 暗い色の画面（ダークモード）は使わず、いつもベージュの明るい画面にする */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-weight: 500;
@@ -67,7 +63,7 @@ h2 { font-size: 13px; color: var(--sub); margin: 24px 6px 10px; font-weight: 700
        transition: transform .12s ease, background .2s, box-shadow .2s; }
 .btn:active { transform: scale(.96); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
-               box-shadow: 0 4px 0 var(--accent-deep), 0 8px 16px -8px rgba(224, 138, 0, .6); }
+               box-shadow: 0 4px 0 var(--accent-deep), 0 8px 16px -8px rgba(242, 169, 59, .6); }
 .btn.primary:active { transform: translateY(2px) scale(.98); box-shadow: 0 2px 0 var(--accent-deep); }
 .btn.danger { color: var(--pr); border-color: color-mix(in srgb, var(--pr) 45%, transparent); }
 .btn:disabled { opacity: .5; transform: none; }
@@ -112,7 +108,7 @@ details summary { cursor: pointer; font-size: 13px; color: var(--sub); margin-to
 nav.dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 20;
            display: flex; gap: 2px; padding: 6px; width: min(calc(100% - 24px), 460px);
            background: color-mix(in srgb, var(--card) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-           border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 12px 30px -12px rgba(90, 60, 20, .45); }
+           border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 12px 30px -12px rgba(140, 115, 150, .45); }
 nav.dock a { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; border-radius: 999px;
              text-decoration: none; color: var(--sub); font-size: 10.5px; font-weight: 700; position: relative; }
 nav.dock a .i { font-size: 20px; line-height: 1.1; transition: transform .2s; }
