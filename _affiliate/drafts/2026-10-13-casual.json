@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-13",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-13",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "連絡帳の底から出てくる「提出期限：昨日」のプリント、何度見ても一瞬フリーズする。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "昼間は半袖でいいくらい暑かったのに、夕方になると急に風が冷たくて上着持ってくればよかったって後悔する。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "スーパーで夕飯の献立が思いつかなさすぎて、同じ通路を3往復くらいウロウロしてる時の虚無感すごい。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
