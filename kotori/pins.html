@@ -29,15 +29,19 @@
   <div class="title">📥 週1回のまとめて予約</div>
   <div class="muted" style="margin-top:4px">予約待ちのピン（最大14枚）を、1日2枚（朝8:00・夜20:30）の予約つきファイルにします。</div>
   <ol class="steps">
-    <li>下のボタンでファイルを作って保存（1〜3分）</li>
-    <li>Pinterest アプリ → 右上の設定 →「コンテンツのインポート」→「アップロード」で、そのファイルを選ぶ</li>
+    <li>「① ファイルを作る」→ スマホに保存されます（1〜3分）</li>
+    <li>「② Pinterest で読み込む」→ 開いた画面の「アップロード」で、保存したファイルを選ぶ</li>
     <li>おわり。あとは予約どおりに毎日公開されます</li>
   </ol>
   <div class="actions">
-    <button class="btn primary" id="export">📥 1週間分のファイルを作る</button>
-    <button class="btn" id="again" style="flex:0 0 auto">前回の分</button>
+    <button class="btn primary" id="export">① ファイルを作る</button>
+    <a class="btn" id="import" href="https://www.pinterest.jp/settings/import" target="_blank" rel="noopener">② Pinterest で読み込む</a>
+  </div>
+  <div class="actions" style="margin-top:6px">
+    <button class="btn" id="again" style="flex:0 0 auto;min-height:34px;font-size:12px">前回のファイルをもう一度保存</button>
   </div>
   <div class="muted" id="export-note" style="margin-top:6px"></div>
+  <div class="muted" style="margin-top:6px">※「②」で設定画面が開かないときは、Pinterest の右上のメニュー →「設定」→「コンテンツのインポート」を開いてください。</div>
 </section>
 
 <p class="muted" style="margin:-4px 4px 12px">Pinterest の自動投稿の審査に通ったら → <a href="pinterest.html">🔗 Pinterest とつなぐ</a></p>
@@ -168,8 +172,10 @@ document.getElementById("export").addEventListener("click", async ev => {
     const text = await freshText("kotori/pins/upload.csv");
     const n = Math.max(0, text.trim().split(/\r?\n/).length - 1);
     saveFile(text);
-    note.textContent = `✅ ${n}枚分のファイルを保存しました。Pinterest の「コンテンツのインポート」で読み込んでください。` +
-      "（保存されないときは「前回の分」を押してください）";
+    note.textContent = `✅ ${n}枚分のファイルを保存しました。続けて「② Pinterest で読み込む」を押してください。` +
+      "（保存されないときは「前回のファイルをもう一度保存」）";
+    document.getElementById("import").classList.add("primary");
+    btn.classList.remove("primary");
   } catch (e) { note.textContent = "⚠️ " + e.message; }
   btn.disabled = false;
 });
