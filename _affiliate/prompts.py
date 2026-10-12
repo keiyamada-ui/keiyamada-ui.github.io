@@ -206,7 +206,7 @@ JSON だけを返す。"""
     return system, "\n".join(lines)
 
 
-def reference_messages(account, post_text, likes, memo):
+def reference_messages(account, post_text, likes, memo, has_images=False):
     system = f"""あなたは SNS 投稿の分析者です。{_persona(account)}
 
 渡された Threads の投稿（他の人が書いたもの）が、なぜ伸びたのかを分析してください。
@@ -221,7 +221,11 @@ def reference_messages(account, post_text, likes, memo):
   source は ichiba / books / travel のどれか。
 
 JSON だけを返す。"""
-    user = f"いいね数: {likes or '不明'}\n投稿者のメモ: {memo or 'なし'}\n\n投稿:\n{post_text}"
+    if has_images:
+        system += ("\n\n投稿はスクリーンショット（画像）で渡します。まず画像から本文・いいね数・返信数などを正確に読み取り、"
+                   "そのうえで分析してください。画像の中の名前やアイコンなど、投稿者を特定できる情報は結果に書かない。")
+    user = (f"いいね数: {likes or '不明（画像にあれば読み取る）'}\n投稿者のメモ: {memo or 'なし'}\n\n"
+            f"投稿:\n{post_text or '（スクリーンショットを見てください）'}")
     return system, user
 
 

@@ -14,10 +14,13 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
+import requests
 import yaml
 
 HERE = Path(__file__).resolve().parent
@@ -718,14 +721,58 @@ def run_item(config, today, client, generate, args):
     return title, path
 
 
+SHOT_MARK = re.compile(r"<!-- kotori-shot (\d+):(\d+)/(\d+) -->\n?")
+
+
+def load_shots(body_text, fetch_comments=None, delete_comment=None, wait=None):
+    """管理画面から送られたスクショ（Issue のコメントに分けて入っている）を組み立てる。
+    読んだらコメントは消す（公開リポジトリに画像を残さないため）。返り値: [(mime, base64), ...]"""
+    m = re.search(r"<!-- kotori-shots (\d+) -->", body_text or "")
+    if not m:
+        return []
+    want = int(m.group(1))
+    repo, num, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("ISSUE_NUMBER"), os.environ.get("GH_TOKEN")
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    owner = (repo or "/").split("/")[0]
+    fetch_comments = fetch_comments or (lambda: requests.get(
+        f"https://api.github.com/repos/{repo}/issues/{num}/comments", headers=headers, params={"per_page": 100}, timeout=30).json())
+    delete_comment = delete_comment or (lambda cid: requests.delete(
+        f"https://api.github.com/repos/{repo}/issues/comments/{cid}", headers=headers, timeout=30))
+    wait = wait or (lambda: time.sleep(10))
+    for _ in range(18):  # 管理画面が送り終わるまで、最大3分待つ
+        parts, ids = {}, []
+        for c in fetch_comments():
+            hit = SHOT_MARK.match(c.get("body", ""))
+            if hit and c.get("user", {}).get("login") == owner:
+                img, part, total = (int(x) for x in hit.groups())
+                parts.setdefault(img, {"total": total, "chunks": {}})["chunks"][part] = c["body"][hit.end():].strip()
+                ids.append(c["id"])
+        done = [k for k, v in parts.items() if len(v["chunks"]) == v["total"]]
+        if len(done) >= want:
+            break
+        wait()
+    images = []
+    for k in sorted(done):
+        chunks = parts[k]["chunks"]
+        images.append(("image/jpeg", "".join(chunks[i] for i in sorted(chunks))))
+    for cid in ids:
+        delete_comment(cid)
+    print(f"🖼️ スクショ {len(images)}枚を受け取りました")
+    return images
+
+
 def run_reference(config, generate, body_text):
     form = issue_forms.parse(body_text)
     post_text = form.get("投稿の本文", "").strip()
-    if not post_text:
-        raise RuntimeError("「投稿の本文」が空です。参考にしたい投稿の文章を貼り付けてください")
+    if post_text.startswith("（スクショ"):
+        post_text = ""
+    images = load_shots(body_text)
+    if not post_text and not images:
+        raise RuntimeError("「投稿の本文」が空です。参考にしたい投稿の文章を貼り付けるか、スクショを送ってください")
     system, user = prompts.reference_messages(config["account"], post_text, form.get("いいねの数", ""),
-                                              form.get("ひとことメモ", ""))
-    analysis = generate(system, user, prompts.REFERENCE_SCHEMA)
+                                              form.get("ひとことメモ", ""), has_images=bool(images))
+    analysis = (generate(system, user, prompts.REFERENCE_SCHEMA, images=images) if images
+                else generate(system, user, prompts.REFERENCE_SCHEMA))
     comment = patterns_mod.format_comment(analysis)
     path = Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")) / "reference_comment.md"
     path.parent.mkdir(parents=True, exist_ok=True)
