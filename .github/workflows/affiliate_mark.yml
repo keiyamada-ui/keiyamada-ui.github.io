@@ -15,6 +15,10 @@ on:
         description: '「投稿済み」を取り消す'
         type: boolean
         default: false
+      noimage:
+        description: 'この投稿からイラストを外す（文章だけで投稿する）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -39,8 +43,11 @@ jobs:
           DRAFT: ${{ inputs.draft }}
           INDEX: ${{ inputs.index }}
           UNDO: ${{ inputs.undo }}
+          NOIMAGE: ${{ inputs.noimage }}
         run: |
-          if [ "$UNDO" = "true" ]; then
+          if [ "$NOIMAGE" = "true" ]; then
+            python _affiliate/autopost.py --noimage "$DRAFT" "$INDEX"
+          elif [ "$UNDO" = "true" ]; then
             python _affiliate/autopost.py --mark "$DRAFT" "$INDEX" --undo
           else
             python _affiliate/autopost.py --mark "$DRAFT" "$INDEX"
@@ -50,7 +57,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/data/posted
+          git add _affiliate/data/posted _affiliate/drafts
           git commit -m "手で投稿した記録: $DRAFT" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
         env:

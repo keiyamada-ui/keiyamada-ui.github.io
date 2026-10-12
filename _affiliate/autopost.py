@@ -150,7 +150,15 @@ def pick(slot, today, config, drafts_dir, posted):
 def publish(client, post, ids):
     """本文を投稿し、ツリーや返信（リンク）を自分の投稿への返信としてつなげる。
     途中で失敗しても、出せた分は ids に残る（二重投稿を防ぐ記録に使う）。"""
-    first = client.post_text(post["text"], topic_tag=post.get("topic_tag") or None)
+    first = None
+    if post.get("image_url") and post["type"] != "pr":
+        try:  # イラストつき。うまくいかなければ文章だけで出す
+            first = client.post_text(post["text"], topic_tag=post.get("topic_tag") or None, image_url=post["image_url"])
+            post["_with_image"] = True
+        except Exception as e:  # noqa: BLE001
+            print(f"⚠️ イラストつきで投稿できなかったので、文章だけで出します: {str(e)[:150]}")
+    if first is None:
+        first = client.post_text(post["text"], topic_tag=post.get("topic_tag") or None)
     ids.append(first)
     parent = first
     for part in post.get("thread_parts") or []:
@@ -193,6 +201,8 @@ def run(slot, today, config, drafts_dir, posted_dir, client=None, dry_run=False)
             record_posted(posted_dir, today, entry)
         raise
     entry["permalink"] = link
+    if post.pop("_with_image", False):
+        entry["image"] = True
     record_posted(posted_dir, today, entry)
     extra = f"（ツリー {len(post['thread_parts']) + 1} 件）" if post.get("thread_parts") else ""
     extra += "（返信にリンク）" if post["type"] == "pr" else ""
@@ -306,6 +316,24 @@ def write_output(**values):
                 f.write(f"{key}<<__END__\n{value}\n__END__\n")
 
 
+def remove_image(drafts_dir, draft_name, index):
+    """管理画面の「画像を外す」から呼ばれる。イラストを付けずに文章だけで投稿するようにする。"""
+    if not draft_name.endswith(".json") or "/" in draft_name or ".." in draft_name:
+        print(f"❌ 下書きの名前が正しくありません: {draft_name}")
+        return 1
+    path = Path(drafts_dir) / draft_name
+    draft = load_draft(path)
+    if not draft or index >= len(draft["posts"]):
+        print("❌ 下書きが見つかりません")
+        return 1
+    post = draft["posts"][index]
+    post.pop("image", None)
+    post.pop("image_url", None)
+    path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"🖼️ イラストを外しました: {draft_name} の {index + 1} 本目")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ことり｜下書きを Threads に自動投稿する")
     parser.add_argument("--slot", choices=["auto", "1", "2", "3", "4", "5"], default="auto")
@@ -314,8 +342,11 @@ def main(argv=None):
     parser.add_argument("--check", action="store_true", help="Threads につながるか・トークンの期限を確認する")
     parser.add_argument("--mark", nargs=2, metavar=("DRAFT", "INDEX"), help="手で投稿した投稿を「投稿済み」にする")
     parser.add_argument("--undo", action="store_true", help="--mark と一緒に使う: 「投稿済み」を取り消す")
+    parser.add_argument("--noimage", nargs=2, metavar=("DRAFT", "INDEX"), help="投稿からイラストを外す")
     args = parser.parse_args(argv)
 
+    if args.noimage:
+        return remove_image(HERE / "drafts", args.noimage[0], int(args.noimage[1]))
     token = os.environ.get("KOTORI_THREADS_TOKEN")
     config = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
     now = datetime.datetime.now(JST)

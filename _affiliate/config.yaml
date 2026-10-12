@@ -88,6 +88,13 @@ room:
   #   - {name: 楽天スーパーSALE, start: 2026-12-04, end: 2026-12-11}
   sales: []
 
+# Threads の投稿に、ときどきイラストを付ける（PR 投稿には付けない）
+illust:
+  enabled: true
+  every: [7, 10]     # 何回に1回か（この間でランダム）
+  # 画像を描く AI（上から順に試す。名前が変わったらここを直す）
+  models: [gemini-3.1-flash-image, gemini-2.5-flash-image]
+
 # Pinterest のピン（画像・タイトル・説明・楽天のリンク）。毎朝作って、管理画面の「📌 Pinterest」に並べる
 pinterest:
   enabled: true

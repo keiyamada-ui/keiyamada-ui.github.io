@@ -33,6 +33,7 @@ import patterns as patterns_mod  # noqa: E402
 import pins as pins_mod  # noqa: E402
 import season  # noqa: E402
 import learn  # noqa: E402
+import illust  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -683,6 +684,12 @@ def run_daily(config, today, client, generate, args):
             entries.append({"date": today.isoformat(), "source": item["source"], "id": item["id"],
                             "name": item["name"], "theme_id": "", "theme": "", "origin": "楽天ROOM",
                             "hidden_gem": item.get("is_hidden_gem", False)})
+    if not args.dry_run and not args.keyword:
+        try:  # 7〜10回に1回、PR 以外の投稿に ことり のイラストを付ける
+            illust.maybe_make(config, today, generate, Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")),
+                              autopost.load_posted(DATA / "posted"))
+        except Exception as e:  # noqa: BLE001 - イラストは補助なので、失敗しても下書きは止めない
+            print(f"⚠️ イラストを付けられませんでした（文章だけで投稿します）: {str(e)[:150]}")
     if not args.dry_run:
         for entry in entries:
             selector.save_history_entry(DATA / "history", entry)

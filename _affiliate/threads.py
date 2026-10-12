@@ -36,9 +36,10 @@ class ThreadsClient:
             self._user_id = self.me()["id"]
         return self._user_id
 
-    def post_text(self, text, reply_to=None, topic_tag=None):
-        """テキストを投稿して、投稿のIDを返す。reply_to を付けると、その投稿への返信（ツリー）になる。"""
-        params = {"media_type": "TEXT", "text": text}
+    def post_text(self, text, reply_to=None, topic_tag=None, image_url=None):
+        """テキストを投稿して、投稿のIDを返す。reply_to を付けると、その投稿への返信（ツリー）になる。
+        image_url を付けると、その画像（公開されている URL）つきの投稿になる。"""
+        params = {"media_type": "IMAGE", "image_url": image_url, "text": text} if image_url else {"media_type": "TEXT", "text": text}
         if reply_to:
             params["reply_to_id"] = reply_to
         if topic_tag:
