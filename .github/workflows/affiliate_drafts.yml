@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / pins = Pinterest のピンだけ作る / pins-export = Pinterest の1週間分の予約ファイルを作る / check-api = 楽天APIの接続確認'
+        description: 'drafts = 下書きを作る / themes = 今月のテーマを作り直す / pins = Pinterest のピンだけ作る / pins-export = Pinterest の1週間分の予約ファイルを作る / illust-sample = イラストの見本を描く / check-api = 楽天APIの接続確認'
         type: choice
-        options: [drafts, themes, pins, pins-export, check-api]
+        options: [drafts, themes, pins, pins-export, illust-sample, check-api]
         default: drafts
       keyword:
         description: '（任意）テーマを使わず、このキーワードで探す 例: なわとび 子供'
@@ -82,7 +82,7 @@ jobs:
 
       - name: 5. 下書きを作る
         id: generate
-        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes' || inputs.mode == 'pins' || inputs.mode == 'pins-export'
+        if: github.event_name == 'schedule' || inputs.mode == 'drafts' || inputs.mode == 'themes' || inputs.mode == 'pins' || inputs.mode == 'pins-export' || inputs.mode == 'illust-sample'
         env:
           MODE: ${{ inputs.mode }}
           KEYWORD: ${{ inputs.keyword }}
@@ -94,7 +94,9 @@ jobs:
           if [ "$EVENT" = "schedule" ] && [ -f "_affiliate/drafts/$(TZ=Asia/Tokyo date +%F).json" ]; then
             echo "今日の下書きはもうあるので、作り直しません"; exit 0
           fi
-          if [ "$MODE" = "pins-export" ]; then
+          if [ "$MODE" = "illust-sample" ]; then
+            python _affiliate/illust.py
+          elif [ "$MODE" = "pins-export" ]; then
             python _affiliate/pins.py --export --exclude "$EXCLUDE"
           elif [ "$MODE" = "pins" ]; then
             python _affiliate/generate_drafts.py --pins-only
@@ -107,12 +109,12 @@ jobs:
           fi
 
       - name: ピンを保存する（pins のとき）
-        if: steps.generate.outcome == 'success' && (inputs.mode == 'pins' || inputs.mode == 'pins-export')
+        if: steps.generate.outcome == 'success' && (inputs.mode == 'pins' || inputs.mode == 'pins-export' || inputs.mode == 'illust-sample')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/manual kotori/pins
-          git commit -m "Pinterest のピンを追加" || echo "保存する変更なし"
+          git add _affiliate/manual kotori/pins kotori/illust
+          git commit -m "Pinterest のピン・イラストの見本を追加" || echo "保存する変更なし"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 
       - name: 日曜日は、Pinterest の予約を待っているピンを通知する
@@ -135,7 +137,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add _affiliate/drafts _affiliate/data _affiliate/manual kotori/pins
+          git add _affiliate/drafts _affiliate/data _affiliate/manual kotori/pins kotori/illust
           git commit -m "下書きを追加: $TITLE" || echo "保存する変更なし"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
           day=$(TZ=Asia/Tokyo date +%Y-%m-%d)
@@ -163,6 +165,7 @@ jobs:
             _affiliate/data/snapshots/*.json
             _affiliate/manual/*.json
             kotori/pins/*.png
+            kotori/illust/*.jpg
           commit-message: '投稿下書きを追加'
           title: ${{ steps.generate.outputs.title }}
           body-path: ${{ steps.generate.outputs.draft_path }}

@@ -63,6 +63,22 @@ async function sendMark(name, i, undo, btn) {
   } catch (e) { btn.disabled = false; toast(e.message); }
 }
 
+// イラストを外す（文章だけで投稿するようにする）
+async function sendNoImage(name, i, btn) {
+  if (!Key.get()) {
+    const box = btn.closest("section");
+    if (!box.querySelector(".info")) box.prepend(needKeyBox());
+    return;
+  }
+  if (!confirm("この投稿のイラストを外して、文章だけで投稿しますか？")) return;
+  btn.disabled = true;
+  try {
+    await dispatch("affiliate_mark.yml", { draft: name, index: String(i), noimage: "true" });
+    btn.textContent = "外しました（1〜2分で反映）";
+    toast("イラストを外しました");
+  } catch (e) { btn.disabled = false; toast(e.message); }
+}
+
 // その日の投稿記録。古い下書きを手で投稿した記録は「投稿した日」のファイルに入るので、数日分まとめて読む
 async function loadPosted(d) {
   const days = [...new Set([d, addDays(d, 1), addDays(d, 2), jstDate()])].filter(x => x <= jstDate());
@@ -73,7 +89,14 @@ async function loadPosted(d) {
 function postBlock(post, extra = []) {
   const parts = post.thread_parts || [];
   const all = [post.text, ...parts].join("\n\n――\n\n");
-  return [el("div", { class: "text", text: all }),
+  let pic = null;
+  if (post.image_url) {
+    const img = el("img", { src: post.image_url, alt: "投稿に付けるイラスト", loading: "lazy",
+      style: "display:block;width:100%;max-width:360px;border-radius:16px;margin-top:10px;background:var(--box)" });
+    img.addEventListener("error", () => img.replaceWith(el("div", { class: "muted", text: "🖼️ イラスト（公開まで1〜2分かかります）" })));
+    pic = el("div", {}, [el("div", { class: "muted", style: "margin-top:10px", text: "🖼️ この投稿にはイラストが付きます" }), img]);
+  }
+  return [el("div", { class: "text", text: all }), pic,
           post.reply_text ? el("div", { class: "muted", text: "返信（リンク）: " + post.reply_text }) : null,
           el("div", { class: "actions" }, [el("button", { class: "btn", text: "コピー", onclick: () => copy(post.text) }), ...extra])]
     .filter(Boolean);
@@ -166,6 +189,7 @@ async function showDay() {
         extra = [el("a", { class: "btn", target: "_blank", rel: "noopener", text: "Threads で開く",
                            href: "https://www.threads.com/intent/post?text=" + encodeURIComponent(p.text) }),
                  el("button", { class: "btn primary", text: "✋ 手で投稿した", onclick: ev => sendMark(name, i, false, ev.currentTarget) })];
+        if (p.image_url) extra.push(el("button", { class: "btn danger", text: "🖼️ イラストを外す", onclick: ev => sendNoImage(name, i, ev.currentTarget) }));
       }
       card.append(el("div", { class: "row", style: "margin-top:12px" }, [
         el("span", { class: "badge" + (p.type === "pr" ? " pr" : ""), text: KIND[p.type] || p.type }),
