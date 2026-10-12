@@ -484,3 +484,29 @@ def test_load_shots_assembles_and_deletes(monkeypatch):
     assert images == [("image/jpeg", "AAABBB"), ("image/jpeg", "CCC")]
     assert sorted(deleted) == [1, 2, 3]
     assert generate_drafts.load_shots("### 投稿の本文\n\nふつう") == []
+
+
+def test_room_mixes_themes_and_skips_similar(out_dir, monkeypatch):
+    monkeypatch.setattr(generate_drafts, "MANUAL", Path(out_dir) / "manual")
+    (Path(out_dir) / "manual").mkdir(parents=True, exist_ok=True)
+    recent = [{"key": "k", "date": "2026-10-20", "name": "携帯スリッパ 折りたたみ 入学式 卒業式 レディース"}]
+    (Path(out_dir) / "manual" / "room.json").write_text(json.dumps(recent), encoding="utf-8")
+    cfg = dict(CONFIG, room={"per_day": 5, "max_books": 1, "max_per_theme": 2, "sale_per_day": 5, "sales": []})
+    hangers = [dict(item(i), id=f"h{i}", name=f"ハンガーラック 玄関 スリム 型{i}", score=50 - i, _group="ハンガー") for i in range(5)]
+    books = [dict(item(9), id="n1", name="なわとび 子供 ビーズ", score=20, _group="なわとび"),
+             dict(item(8), id="n2", name="水筒 子供 ワンタッチ", score=19, _group="水筒"),
+             dict(item(7), id="s1", name="携帯スリッパ 折りたたみ 入学式 卒業式 メンズ", score=99, _group="スリッパ")]
+
+    def gen(system, user, schema, tier="standard"):
+        ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
+        return {"comments": [{"id": i, "comment": "レビューで評判の良い一品です。記事作成時点の情報です #PR"} for i in ids]}
+    out = generate_drafts.build_room_list(cfg, TODAY, [], hangers + books, gen)
+    ids = [i["id"] for i in out]
+    assert sum(1 for i in ids if i.startswith("h")) <= 2      # 同じテーマは2件まで
+    assert "s1" not in ids                                    # 最近出したスリッパとよく似ている
+    assert {"n1", "n2"} <= set(ids)
+
+
+def test_similar_names():
+    assert generate_drafts.similar("【送料無料】ハンガーラック 玄関 スリム", "ハンガーラック 玄関 スリム 木製")
+    assert not generate_drafts.similar("なわとび 子供", "水筒 子供 ワンタッチ")
