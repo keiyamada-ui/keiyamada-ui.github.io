@@ -12,6 +12,7 @@ import yaml  # noqa: E402
 from PIL import Image  # noqa: E402
 
 CONFIG = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
+CONFIG = {**CONFIG, "illust": {**CONFIG["illust"], "enabled": True}}  # 本番では保留中でも、仕組みは確かめる
 TODAY = datetime.date(2026, 10, 25)
 
 

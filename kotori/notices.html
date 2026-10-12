@@ -76,6 +76,18 @@ async function showPatterns() {
   catch (e) { return fail(e); }
   const nodes = [el("p", { class: "note" }, ["参考投稿から学んだ「型」です。毎朝の下書きで参考にされます。合わない型は「外す」で使われなくなります。",
                                               el("br"), el("a", { href: "input.html#reference", text: "⭐ 参考投稿を登録する →" })])];
+  // ルール帳: 考え方・コツと自分の投稿の学びを、AI が最大7個にまとめたもの（毎日の文章作りにはこれだけを使う）
+  const book = await fresh("_affiliate/data/rulebook.json");
+  if (book && book.rules && book.rules.length) {
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "row between" }, [el("div", { class: "title", text: "📏 いま使っているルール帳" }),
+        el("span", { class: "badge ok", text: `${book.updated.slice(5).replace("-", "/")} 更新・材料${book.materials}個 → ${book.rules.length}個` })]),
+      el("div", { class: "text", text: book.rules.map((r, n) => `${n + 1}. ${r.rule}（${r.applies_to}）`).join("\n") }),
+      book.dropped && book.dropped.length ? el("details", {}, [el("summary", { text: `まとめた・外したもの（${book.dropped.length}）` }),
+        el("div", { class: "muted", style: "margin-top:6px", text: book.dropped.map(d => `・${d.rule} → ${d.reason}`).join("\n") })]) : null,
+      el("div", { class: "muted", style: "margin-top:8px", text: "考え方・コツや自分の投稿の学びが増えても、AI がぶつかるもの・似たものを整理して、大事な7個だけを毎日の文章作りに使います（優先順位: アカウントの決まり ＞ 自分の投稿の結果 ＞ 考え方・コツ）。" }),
+    ]));
+  }
   // 自分の投稿から学んだこと（毎週、自動で更新）
   const learned = await fresh("_affiliate/data/learned.json");
   nodes.push(el("section", { class: "card" }, learned && learned.lessons && learned.lessons.length ? [
@@ -93,6 +105,8 @@ async function showPatterns() {
   ]));
   nodes.push(el("h2", { text: "参考投稿・考え方から学んだこと" }));
   const own = issues.filter(i => i.user && i.user.login === OWNER);
+  const tipsCount = own.filter(i => /^\[参考投稿\] 💡/.test(i.title)).length;
+  if (tipsCount > 8) nodes.push(el("div", { class: "info", text: `💡 考え方・コツが${tipsCount}件あります。古いものや合わないものを「外す」と、ルール帳が整理しやすくなります。` }));
   if (!own.length) nodes.push(el("p", { class: "empty", text: "まだ勝ちパターンはありません" }));
   for (const i of own) {
     let data = null;

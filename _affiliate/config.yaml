@@ -92,7 +92,7 @@ room:
 
 # Threads の投稿に、ときどきイラストを付ける（PR 投稿には付けない）
 illust:
-  enabled: true
+  enabled: false     # 保留中（イラストは本人があとから付ける）。使うときは true にして、画像の AI を用意する
   every: [7, 10]     # 何回に1回か（この間でランダム）
   # 画像を描く AI（上から順に試す。名前が変わったらここを直す）
   models: [gemini-3.1-flash-image, gemini-2.5-flash-image]
