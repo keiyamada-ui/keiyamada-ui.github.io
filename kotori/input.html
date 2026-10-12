@@ -79,27 +79,80 @@ function showRecommend() {
     el("div", { class: "actions" }, [btn])]));
 }
 
+// スクショを小さくして（横720px・JPEG）base64 にする
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 720 / img.width);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL("image/jpeg", 0.72).split(",")[1]);
+    };
+    img.onerror = () => reject(new Error("画像を読み込めませんでした"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 function showReference() {
   const url = el("input", { type: "url", placeholder: "https://www.threads.com/@.../post/..." });
   const text = el("textarea", { placeholder: "伸びている投稿の文章を貼り付け（ツリーは続けてOK）" });
   const likes = el("input", { type: "number", inputmode: "numeric", placeholder: "120" });
   const memo = el("textarea", { placeholder: "どこが良いと思ったか（任意）" });
+  const shots = el("input", { type: "file", accept: "image/*", multiple: "" , style: "display:none" });
+  const pick = el("button", { class: "btn", text: "📷 スクショを選ぶ（3枚まで）" });
+  const previews = el("div", { class: "row", style: "margin-top:8px;gap:8px" });
+  let files = [];
+  pick.addEventListener("click", () => shots.click());
+  shots.addEventListener("change", () => {
+    files = [...shots.files].slice(0, 3);
+    previews.replaceChildren(...files.map(f => el("img", { src: URL.createObjectURL(f), alt: "スクショ",
+      style: "width:84px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line)" })));
+    if (shots.files.length > 3) toast("スクショは3枚までです");
+  });
+  const status = el("div", { class: "muted", style: "margin-top:6px" });
   const btn = el("button", { class: "btn primary", text: "型を分析してもらう" });
   btn.addEventListener("click", async () => {
-    if (!text.value.trim()) { toast("投稿の本文を貼り付けてください"); return; }
-    const body = [`### 投稿のURL\n\n${v(url.value)}`, `### 投稿の本文\n\n${text.value.trim()}`,
-                  `### いいねの数\n\n${v(likes.value)}`, `### ひとことメモ\n\n${v(memo.value)}`].join("\n\n");
-    if (await createIssue("[参考投稿] " + text.value.trim().slice(0, 24), body, [], btn,
-                          "受け付けました。数分で分析が終わり、勝ちパターンに入ります")) {
-      url.value = text.value = likes.value = memo.value = "";
-    }
+    if (!text.value.trim() && !files.length) { toast("投稿の本文を貼り付けるか、スクショを選んでください"); return; }
+    if (!Key.get()) { toast("送るには合い鍵が必要です（上の案内から登録してください）"); window.scrollTo(0, 0); return; }
+    btn.disabled = true;
+    try {
+      // スクショは Issue のコメントに分けて送り、分析が終わったら自動で消す（公開の場所に残さない）
+      status.textContent = files.length ? "スクショを小さくしています…" : "";
+      const datas = [];
+      for (const f of files) datas.push(await shrink(f));
+      const body = [`### 投稿のURL\n\n${v(url.value)}`,
+                    `### 投稿の本文\n\n${text.value.trim() || "（スクショから読み取ってください）"}`,
+                    `### いいねの数\n\n${v(likes.value)}`, `### ひとことメモ\n\n${v(memo.value)}`,
+                    datas.length ? `<!-- kotori-shots ${datas.length} -->` : ""].join("\n\n");
+      const title = "[参考投稿] " + (text.value.trim().slice(0, 24) || `スクショ ${jstDate().slice(5).replace("-", "/")}`);
+      const issue = await gh(`/repos/${REPO}/issues`, { method: "POST", body: { title, body } });
+      const SIZE = 60000;
+      for (let k = 0; k < datas.length; k++) {
+        const parts = Math.ceil(datas[k].length / SIZE);
+        for (let p = 0; p < parts; p++) {
+          status.textContent = `スクショを送っています…（${k + 1}枚目 ${p + 1}/${parts}）`;
+          await gh(`/repos/${REPO}/issues/${issue.number}/comments`, { method: "POST",
+            body: { body: `<!-- kotori-shot ${k + 1}:${p + 1}/${parts} -->\n` + datas[k].slice(p * SIZE, (p + 1) * SIZE) } });
+        }
+      }
+      status.textContent = "";
+      toast("受け付けました。数分で分析が終わり、勝ちパターンに入ります");
+      url.value = text.value = likes.value = memo.value = ""; files = []; shots.value = ""; previews.replaceChildren();
+    } catch (e) { toast(e.message); status.textContent = "⚠️ " + e.message; }
+    btn.disabled = false;
   });
   main.replaceChildren(el("section", { class: "card" }, [
     el("div", { class: "title", text: "⭐ 参考になる投稿を登録" }),
-    el("p", { class: "note", style: "margin-top:6px", text: "伸びている投稿を貼ると、AI が書き出しや構成の「型」だけを学んで、毎朝の下書きに活かします（文章はまねしません）。" }),
-    ...field("投稿の本文", text), ...field("投稿のURL", url, "任意"), ...field("いいねの数", likes, "任意"),
+    el("p", { class: "note", style: "margin-top:6px", text: "伸びている投稿のスクショか文章を送ると、AI が書き出しや構成の「型」だけを学んで、毎朝の下書きに活かします（文章はまねしません）。" }),
+    el("label", { class: "field", text: "スクショ（いちばん簡単）" }), pick, shots, previews,
+    el("p", { class: "muted", style: "margin-top:6px", text: "本文といいね数が写るように撮ってください。スクショは分析が終わると自動で消えます。" }),
+    ...field("投稿の本文", text, "スクショがあれば不要"), ...field("投稿のURL", url, "任意"), ...field("いいねの数", likes, "任意"),
     ...field("ひとことメモ", memo, "任意"),
-    el("div", { class: "actions" }, [btn]),
+    el("div", { class: "actions" }, [btn]), status,
     el("div", { class: "actions" }, [el("a", { class: "btn", href: "notices.html#patterns", text: "🏆 勝ちパターン一覧を見る" })])]));
 }
 

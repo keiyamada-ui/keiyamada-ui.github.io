@@ -468,3 +468,19 @@ def test_room_prefers_ichiba_and_limits_books(out_dir, monkeypatch):
 def test_check_room_comment():
     assert checks.check_room_comment(ROOM) == []
     assert checks.check_room_comment("") and checks.check_room_comment("必ず効く https://x.com")
+
+
+def test_load_shots_assembles_and_deletes(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "keiyamada-ui/repo")
+    body = "### 投稿の本文\n\n（スクショから読み取ってください）\n\n<!-- kotori-shots 2 -->"
+    comments = [
+        {"id": 1, "user": {"login": "keiyamada-ui"}, "body": "<!-- kotori-shot 1:2/2 -->\nBBB"},
+        {"id": 2, "user": {"login": "keiyamada-ui"}, "body": "<!-- kotori-shot 1:1/2 -->\nAAA"},
+        {"id": 3, "user": {"login": "keiyamada-ui"}, "body": "<!-- kotori-shot 2:1/1 -->\nCCC"},
+        {"id": 4, "user": {"login": "someone"}, "body": "<!-- kotori-shot 3:1/1 -->\nEVIL"},
+    ]
+    deleted = []
+    images = generate_drafts.load_shots(body, fetch_comments=lambda: comments, delete_comment=deleted.append, wait=lambda: None)
+    assert images == [("image/jpeg", "AAABBB"), ("image/jpeg", "CCC")]
+    assert sorted(deleted) == [1, 2, 3]
+    assert generate_drafts.load_shots("### 投稿の本文\n\nふつう") == []

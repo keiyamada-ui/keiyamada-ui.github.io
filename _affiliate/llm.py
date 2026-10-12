@@ -50,7 +50,7 @@ def _parse_json(text, schema):
     return data
 
 
-def _call_gemini(system, user, schema=None, search=False):
+def _call_gemini(system, user, schema=None, search=False, images=None):
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise LLMError("GEMINI_API_KEY が未設定です（GitHub Secrets を確認してください）")
@@ -60,7 +60,8 @@ def _call_gemini(system, user, schema=None, search=False):
         body["generationConfig"] = {"responseMimeType": "application/json"}
     if search:
         body["tools"] = [{"google_search": {}}]
-    body["contents"] = [{"role": "user", "parts": [{"text": user}]}]
+    pics = [{"inline_data": {"mime_type": m, "data": d}} for m, d in (images or [])]
+    body["contents"] = [{"role": "user", "parts": pics + [{"text": user}]}]
     for wait in GEMINI_RETRY_WAITS + [None]:
         res = requests.post(GEMINI_URL.format(model=GEMINI_MODEL),
                             headers={"x-goog-api-key": key, "Content-Type": "application/json"},
@@ -80,7 +81,7 @@ def _call_gemini(system, user, schema=None, search=False):
     return "".join(p.get("text", "") for p in parts if not p.get("thought"))
 
 
-def _call_claude(system, user, model, effort, schema=None, search=False):
+def _call_claude(system, user, model, effort, schema=None, search=False, images=None):
     import anthropic
 
     client = anthropic.Anthropic()
@@ -95,7 +96,11 @@ def _call_claude(system, user, model, effort, schema=None, search=False):
     params["output_config"] = output_config
     if search:
         params["tools"] = [WEB_SEARCH_TOOL]
-    messages = [{"role": "user", "content": user}]
+    content = user
+    if images:  # スクショなどの画像（base64）を一緒に見てもらう
+        content = [{"type": "image", "source": {"type": "base64", "media_type": m, "data": d}} for m, d in images]
+        content.append({"type": "text", "text": user})
+    messages = [{"role": "user", "content": content}]
     for _ in range(MAX_CONTINUATIONS + 1):
         with client.beta.messages.stream(messages=messages, **params) as stream:
             response = stream.get_final_message()
@@ -176,13 +181,16 @@ class Generator:
     def label(self):
         return "・".join(self.used) or "（AI 未使用）"
 
-    def __call__(self, system, user, schema, tier="standard"):
+    def __call__(self, system, user, schema, tier="standard", images=None):
+        """images: [(mime_type, base64文字列), ...] を渡すと、画像も見て答える。"""
         effort = self.tiers[tier]["effort"]
+
+        extra = {"images": images} if images else {}
 
         def call(provider, model):
             if provider == "claude":
-                return _parse_json(_call_claude(system, user, model, effort, schema), schema)
-            return _parse_json(_call_gemini(system, user, schema), schema)
+                return _parse_json(_call_claude(system, user, model, effort, schema, **extra), schema)
+            return _parse_json(_call_gemini(system, user, schema, **extra), schema)
         return self._run(tier, call)
 
     def research(self, system, user, tier="important"):

@@ -28,6 +28,18 @@
 <section class="card" id="summary"><div class="muted">読み込み中…</div></section>
 
 <section class="card">
+  <div class="title">🔗 Pinterest を開く</div>
+  <div class="actions">
+    <a class="btn" id="open-mine" href="#" target="_blank" rel="noopener">📌 自分のピン一覧</a>
+    <a class="btn" href="https://www.pinterest.jp/business/hub/" target="_blank" rel="noopener">🏠 ビジネスの管理画面</a>
+  </div>
+  <div class="actions" style="margin-top:8px">
+    <a class="btn" href="https://analytics.pinterest.com/" target="_blank" rel="noopener">📈 アナリティクス（見られた数）</a>
+  </div>
+  <div class="muted" id="mine-note" style="margin-top:6px"></div>
+</section>
+
+<section class="card">
   <div class="title">📥 週1回のまとめて予約</div>
   <div class="muted" style="margin-top:4px">予約待ちのピン（最大14枚）を、1日2枚（朝8:00・夜20:30）の予約つきファイルにします。</div>
   <ol class="steps">
@@ -40,7 +52,7 @@
     <a class="btn" id="import" href="https://www.pinterest.jp/settings/import" target="_blank" rel="noopener">② Pinterest で読み込む</a>
   </div>
   <div class="actions" style="margin-top:6px">
-    <button class="btn" id="again" style="flex:0 0 auto;min-height:34px;font-size:12px">前回のファイルをもう一度保存（読み込めなかったときだけ）</button>
+    <button class="btn" id="again" style="flex:0 1 auto;min-height:34px;font-size:12px;white-space:normal;line-height:1.4;padding:6px 14px">前回のファイルをもう一度保存（読み込めなかったときだけ）</button>
   </div>
   <div class="muted" id="export-note" style="margin-top:6px"></div>
   <div class="info" id="mobile-tip" style="display:none;margin:10px 0 0">
@@ -108,7 +120,7 @@ function summary() {
   const box = document.getElementById("summary");
   box.replaceChildren(
     el("div", { class: "row between" }, [el("div", { class: "title", text: "いまの状況" }),
-      el("a", { class: "muted", href: "https://www.pinterest.jp/", target: "_blank", rel: "noopener", text: "Pinterest を開く →" })]),
+      el("span")]),
     el("div", { class: "stat3" }, [
       el("div", {}, [el("b", { class: "big", text: String(waiting) }), el("span", { text: "予約待ち" })]),
       el("div", {}, [el("b", { class: "big", text: String(future.length) }), el("span", { text: "予約済み" })]),
@@ -212,6 +224,26 @@ document.getElementById("make").addEventListener("click", async ev => {
   } catch (e) { note.textContent = "⚠️ " + e.message; }
   btn.disabled = false;
 });
+
+// 自分のピン一覧: Pinterest のユーザー名を一度だけ入れてもらい、この端末に覚えておく
+(function myPins() {
+  const a = document.getElementById("open-mine"), note = document.getElementById("mine-note");
+  const get = () => { try { return localStorage.getItem("kotori-pinterest-user") || ""; } catch (e) { return ""; } };
+  const apply = () => {
+    const u = get();
+    a.href = u ? `https://www.pinterest.jp/${encodeURIComponent(u)}/_created/` : "#";
+    note.replaceChildren(u ? `@${u} の「作成済み」のピン一覧を開きます。` : "最初に1回、Pinterest のユーザー名を登録してください。",
+      el("button", { class: "btn", style: "min-height:30px;font-size:12px;margin-left:6px", text: u ? "変える" : "登録する", onclick: ask }));
+  };
+  function ask() {
+    const u = (prompt("Pinterest のユーザー名（プロフィールの @ のあとの文字。例: kotori_family）", get()) || "").trim().replace(/^@/, "");
+    if (!u) return;
+    try { localStorage.setItem("kotori-pinterest-user", u); } catch (e) {}
+    apply();
+  }
+  a.addEventListener("click", ev => { if (!get()) { ev.preventDefault(); ask(); } });
+  apply();
+})();
 
 // スマホでは、読み込みはパソコン版の画面でしかできないので、やり方を出しておく
 if (matchMedia("(pointer: coarse)").matches) document.getElementById("mobile-tip").style.display = "block";
