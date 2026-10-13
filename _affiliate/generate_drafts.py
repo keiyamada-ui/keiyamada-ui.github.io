@@ -479,9 +479,21 @@ def room_more_items(config, today, ordered, history, search, used_ids, need, ski
     return found
 
 
-def build_room_list(config, today, picked, extras, generate):
+def stock_names(today, path=None):
+    """最近の手動投稿ストックの商品名（ROOM タブに同じ・よく似た商品を出さないために使う）。"""
+    path = Path(path or MANUAL / "index.json")
+    if not path.exists():
+        return []
+    since = (today - datetime.timedelta(days=ROOM_RECENT_DAYS)).isoformat()
+    sets = json.loads(path.read_text(encoding="utf-8")).get("sets", [])
+    return [s["item"]["name"] for s in sets if s.get("date", "") >= since and (s.get("item") or {}).get("name")]
+
+
+def build_room_list(config, today, picked, extras, generate, avoid=()):
     """ROOM 用の一覧に今日の分を追加する。picked = すでにコメントがある (商品, コメント)、extras = 追加候補。
-    楽天市場の商品を優先し、本（投稿のたびに検索の手間がかかる）は1日 max_books 件までにする。"""
+    楽天市場の商品を優先し、本（投稿のたびに検索の手間がかかる）は1日 max_books 件までにする。
+    avoid = 手動投稿ストックの商品名。ストックにも ROOM 用コメントがあるので、同じ・よく似た商品は ROOM タブに出さない
+    （同じ商品を2回 ROOM に投稿してしまわないように）。"""
     per_day, _ = room_per_day(config, today)
     max_books = config.get("room", {}).get("max_books", 1)
     per_theme = config.get("room", {}).get("max_per_theme", 2)
@@ -489,10 +501,13 @@ def build_room_list(config, today, picked, extras, generate):
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
     since = (today - datetime.timedelta(days=ROOM_RECENT_DAYS)).isoformat()
     recent = [e["name"] for e in old if e.get("date", "") >= since and e.get("date") != today.isoformat()]
+    avoid = list(avoid)
     entries, seen = [], set()
     books = lambda: sum(1 for i, _ in entries if i["source"] == "books")  # noqa: E731
     for item, comment in picked:
         if item["source"] == "books" and books() >= max_books:
+            continue
+        if any(similar(item["name"], n) for n in avoid):
             continue
         if item["source"] in ROOM_SOURCES and item["id"] not in seen and not checks.check_room_comment(comment):
             entries.append((item, comment))
@@ -517,7 +532,7 @@ def build_room_list(config, today, picked, extras, generate):
         group = item.get("_group", "")
         if group and count.get(group, 0) >= per_theme:
             continue  # このテーマはもう十分
-        names = [m["name"] for m in more] + [i["name"] for i, _ in entries] + recent
+        names = [m["name"] for m in more] + [i["name"] for i, _ in entries] + recent + avoid
         if any(similar(item["name"], n) for n in names):
             continue  # 今日や最近出した商品とよく似ている
         count[group] = count.get(group, 0) + 1
@@ -715,15 +730,16 @@ def run_daily(config, today, client, generate, args):
 
     room_picked = [(dict(chosen, _group=theme["keyword"]), result["room_comment"])]
     room_extras = [dict(c, _group=theme["keyword"]) for c in candidates if c["id"] != chosen["id"]]
+    avoid_names = stock_names(today)
     if config.get("manual_stock", {}).get("enabled") and not args.keyword:
         manual = make_manual_stock(config, today, ordered, theme, history + entries, pats,
                                    client.search, client.ranking_codes, generate)
         if manual:
-            m_theme, m_chosen, m_candidates, m_room = manual
+            m_theme, m_chosen, m_candidates, _ = manual
             entries.append({"date": today.isoformat(), "source": m_chosen["source"], "id": m_chosen["id"],
                             "name": m_chosen["name"], "theme_id": m_theme["id"], "theme": m_theme["keyword"],
                             "origin": "手動投稿ストック", "hidden_gem": False})
-            room_picked.append((dict(m_chosen, _group=m_theme["keyword"]), m_room))
+            avoid_names.append(m_chosen["name"])  # ストックの商品は ROOM タブに出さない（ストックに ROOM 用コメントがある）
             room_extras += [dict(c, _group=m_theme["keyword"]) for c in m_candidates if c["id"] != m_chosen["id"]]
     used_ids = {e["id"] for e in entries}
     if not args.keyword:
@@ -734,7 +750,7 @@ def run_daily(config, today, client, generate, args):
         done_kw = [{"_group": i.get("_group")} for i, _ in room_picked]
         room_extras += room_more_items(config, today, ordered, history + entries, client.search,
                                        used_ids | {c["id"] for c in room_extras}, per_day, done_kw)
-    room_items = build_room_list(config, today, room_picked, room_extras, generate)
+    room_items = build_room_list(config, today, room_picked, room_extras, generate, avoid=avoid_names)
     try:  # Pinterest のピン: 今日の PR の商品と ROOM の候補から
         pin_items = [c for c in [chosen] + room_items if c.get("url")]
         pin_items = list({c["id"]: c for c in pin_items}.values())

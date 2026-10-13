@@ -237,7 +237,7 @@ function render() {
       box.append(...textBlock(parts.length ? `本文（ツリー 1/${parts.length + 1}）` : "本文", p.text, true));
       parts.forEach((t, i) => box.append(...textBlock(`ツリー ${i + 2}/${parts.length + 1}（自分の投稿への返信として）`, t, false)));
       if (isPr && p.reply_text) box.append(...textBlock("返信（自分の投稿への返信に貼る・リンク入り）", p.reply_text, false));
-      if (isPr && set.room_comment) box.append(...textBlock("楽天ROOM 用コメント", set.room_comment, false));
+      if (isPr && set.room_comment) box.append(...textBlock("楽天ROOM 用コメント（この商品は「楽天ROOM」タブには出ません）", set.room_comment, false));
       const doneBtn = el("button", { class: "act" + (used[p.key] ? " done" : ""), text: used[p.key] ? "✓ 使った（戻す）" : "使った" });
       doneBtn.addEventListener("click", () => {
         if (used[p.key]) delete used[p.key]; else used[p.key] = new Date().toISOString();
