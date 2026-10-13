@@ -1,0 +1,41 @@
+name: ことり Claude の残高を入力
+
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: 'set = Console に出ている残高に合わせる / add = チャージした金額を足す'
+        type: choice
+        options: [set, add]
+        default: set
+      usd:
+        description: '金額（ドル。例: 18.40）'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 記録する
+        env:
+          KIND: ${{ inputs.kind }}
+          USD: ${{ inputs.usd }}
+        run: |
+          python _affiliate/claude_cost.py "$KIND" "$USD"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/stats/claude.json
+          git commit -m "Claude の残高を入力" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

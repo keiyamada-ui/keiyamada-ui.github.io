@@ -108,6 +108,16 @@ jobs:
           git commit -m "投稿の記録を追加" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
 
+      - name: Claude の使用量を保存する（管理画面の残高表示用）
+        if: always()
+        run: |
+          [ -f _affiliate/data/stats/claude.json ] || exit 0
+          git add _affiliate/data/stats/claude.json
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Claude の使用量を記録" -- _affiliate/data/stats/claude.json
+          for i in 1 2 3; do git pull --rebase --autostash -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+
       - name: 新しいコメントをスマホに通知する
         if: steps.comments.outputs.new_comments != '' && steps.comments.outputs.new_comments != '0'
         env:

@@ -169,6 +169,8 @@ const Seen = {
   },
 };
 
+// Claude の残高: 円の目安に使うレート・「少ない」と知らせる金額（ドル）
+const USD_YEN = 150, CLAUDE_LOW_USD = 3;
 const KIND = { buzz: "📣 集客投稿", casual: "💬 つぶやき", value: "📘 役立つ投稿", pr: "🛒 PR 投稿" };
 
 // ── 通知とアプリのアイコンの赤いバッジ ──

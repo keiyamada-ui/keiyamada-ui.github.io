@@ -188,6 +188,16 @@ jobs:
           Close するまでは、毎日同じお知らせは届きません（下書きは Gemini で作り続けます）。"
           fi
 
+      - name: Claude の使用量を保存する（管理画面の残高表示用）
+        if: always()
+        run: |
+          [ -f _affiliate/data/stats/claude.json ] || exit 0
+          git add _affiliate/data/stats/claude.json
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Claude の使用量を記録" -- _affiliate/data/stats/claude.json
+          for i in 1 2 3; do git pull --rebase --autostash -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+
       - name: 失敗したら Issue で知らせる
         if: failure()
         run: |

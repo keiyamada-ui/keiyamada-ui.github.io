@@ -167,8 +167,8 @@
     <span class="ic">⚙️</span><span class="label">動作状況</span><span class="desc">自動投稿・下書き作りの記録</span></a>
   <a class="tile sky" href="notices.html#themes">
     <span class="ic">🧭</span><span class="label">今月のテーマ</span><span class="desc">AI が考えた悩みテーマ</span></a>
-  <a class="tile sun" href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">
-    <span class="ic">💳</span><span class="label">Claude にチャージ</span><span class="desc">支払いページ →「残高を追加」</span></a>
+  <a class="tile sun" href="stats.html#claude"><span class="nbadge" id="b-claude"></span>
+    <span class="ic">💳</span><span class="label">Claude の残高</span><span class="desc" id="claudedesc">残高の目安・チャージ</span></a>
   <a class="tile mint" href="https://affiliate.rakuten.co.jp/">
     <span class="ic">💴</span><span class="label">楽天アフィリエイト</span><span class="desc">クリック数・売上のレポート</span></a>
   <a class="tile" href="key.html">
@@ -222,6 +222,8 @@ async function updateBadges(day, posted) {
     fresh("_affiliate/manual/comments.json"), raw("_affiliate/manual/room.json"),
     raw("_affiliate/manual/index.json"), raw("_affiliate/data/insights/latest.json"),
     raw("_affiliate/manual/pins.json")]);
+  // 💳 Claude の残高の目安（少ないときは「!」）
+  showClaude(await fresh("_affiliate/data/stats/claude.json"));
   // 📌 予約待ちのピン
   badge("b-pins", (pins || []).filter(p => !p.scheduled_at && !p.pin_url && !p.posted_by_hand && !used["pin:" + p.key]).length);
   // 💬 まだ対応していないコメント（返さないものは数えない）
@@ -242,6 +244,13 @@ async function updateBadges(day, posted) {
   }
 }
 
+function showClaude(c) {
+  const b = c && c.balance;
+  if (!b) return;
+  document.getElementById("claudedesc").textContent = `目安 $${b.usd.toFixed(2)}（約${Math.round(b.usd * USD_YEN).toLocaleString("ja-JP")}円）`;
+  document.getElementById("b-claude").textContent = b.usd < CLAUDE_LOW_USD ? "!" : "";
+}
+
 // ことりの吹き出し: 今日のようすを一言で（見てほしいものだけ、リンクつきで）
 function speak(auto, next) {
   const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
@@ -253,6 +262,7 @@ function speak(auto, next) {
   if (n("b-comments")) lines.push(["💬", `コメントが <b>${n("b-comments")}件</b> 来てるよ。返信の案もあるよ`, "comments.html"]);
   if (n("count")) lines.push(["🔔", `確認してほしいお知らせが <b>${n("count")}件</b> あるよ`, "notices.html"]);
   if (n("b-room")) lines.push(["🛍️", `楽天ROOM にのせる商品が <b>${n("b-room")}件</b> あるよ`, "stock.html#room"]);
+  if (n("b-claude")) lines.push(["💳", "Claude の残高が少なくなってきたよ。チャージしてね", "stats.html#claude"]);
   if (n("b-pins")) lines.push(["📌", `予約待ちのピンが <b>${n("b-pins")}枚</b>。週1回まとめて予約しよう`, "pins.html"]);
   if (lines.length === 1) lines.push(["🌿", "ほかに急ぎのことはないよ。ゆっくりしてね", null]);
   document.getElementById("say").replaceChildren(...lines.map(([i, t, href]) => {
