@@ -38,11 +38,12 @@
   .form input { width: 100%; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
                 background: var(--card); color: var(--text); font-family: inherit; }
   .form .wide { grid-column: 1 / -1; }
+  #claude { scroll-margin-top: 80px; }
 </style>
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📊 成果の記録</h1></header>
-<p class="note">毎朝、前の日の Threads の反響（表示・いいね・リンクのクリック・フォロワー）を自動で記録しています。楽天の売上は、楽天アフィリエイトの「成果レポート」を見て月ごとに入力してください。将来の実績としてそのまま使えます。</p>
+<p class="note">毎朝、前の日の Threads の反響（表示・いいね・リンクのクリック・フォロワー）を自動で記録しています。楽天の売上は、楽天アフィリエイトの「成果レポート」を見て月ごとに入力してください。Claude の残高の目安もここで見られます。将来の実績としてそのまま使えます。</p>
 
 <div class="month">
   <button class="btn" id="prev" aria-label="前の月">‹</button>
@@ -53,7 +54,7 @@
 
 <script src="app.js"></script>
 <script>
-let daily = {}, earnings = {}, month = jstDate().slice(0, 7);
+let daily = {}, earnings = {}, claude = {}, month = jstDate().slice(0, 7);
 const main = document.getElementById("main");
 const yen = n => (n || 0).toLocaleString("ja-JP") + "円";
 const num = n => (n || 0).toLocaleString("ja-JP");
@@ -109,6 +110,50 @@ function chart(rows) {
 
 function tile(k, v, d) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), d ? el("div", { class: "d", text: d }) : null]); }
 
+// 💳 Claude の残高（目安）: 入力した残高・チャージから、AI が使った分を引いた金額
+const usd = v => "$" + (v || 0).toFixed(2), usdYen = v => `約${Math.round((v || 0) * USD_YEN).toLocaleString("ja-JP")}円`;
+function claudeCard() {
+  const b = claude.balance, use = claude.usage || {};
+  const monthUse = Object.keys(use).filter(d => d.startsWith(month)).reduce((a, d) => a + use[d].usd, 0);
+  const week = [...Array(7)].map((_, i) => use[jstDate(-i)]).filter(Boolean);
+  const perDay = week.length ? week.reduce((a, r) => a + r.usd, 0) / 7 : 0;
+  const low = b && b.usd < CLAUDE_LOW_USD;
+  const note = el("div", { class: "muted", style: "margin-top:6px" });
+  const amount = el("input", { id: "c-usd", type: "text", inputmode: "decimal", placeholder: "例: 18.40" });
+  const send = async (kind, btn) => {
+    if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
+    const v = amount.value.replace(/[$＄,，\s]/g, "");
+    if (!/^\d+(\.\d{1,2})?$/.test(v) || (kind === "add" && +v === 0)) { note.textContent = "ドルの金額を数字で入力してください（例: 18.40）"; return; }
+    btn.disabled = true; note.textContent = "記録しています…（1分ほど）";
+    try {
+      if (!(await runAndWait("affiliate_claude.yml", { kind, usd: v }))) throw new Error("うまく記録できませんでした");
+      claude = (await fresh("_affiliate/data/stats/claude.json")) || claude;
+      render();
+    } catch (err) { note.textContent = "⚠️ " + err.message; btn.disabled = false; }
+  };
+  const setBtn = el("button", { class: "btn primary", text: "残高を合わせる" });
+  const addBtn = el("button", { class: "btn", text: "チャージした分を足す" });
+  setBtn.addEventListener("click", () => send("set", setBtn));
+  addBtn.addEventListener("click", () => send("add", addBtn));
+  return el("section", { class: "card", id: "claude" }, [
+    el("div", { class: "row between" }, [el("div", { class: "title", text: "💳 Claude の残高（目安）" }),
+      el("a", { class: "muted", href: "https://platform.claude.com/settings/billing", target: "_blank", rel: "noopener", text: "支払いページ →" })]),
+    b ? el("div", { class: "hero", style: "margin-top:8px" + (low ? ";color:var(--pr)" : ""), text: usd(b.usd) }) :
+        el("div", { class: "muted", style: "margin-top:8px", text: "まだ残高が入力されていません。支払いページに出ている残高（Credit balance）を下に入れてください。" }),
+    b ? el("div", { class: "muted", text: `${usdYen(b.usd)}（1ドル=${USD_YEN}円で計算）` }) : null,
+    low ? el("div", { class: "badge ng", style: "margin-top:6px", text: "⚠️ 残りわずかです。支払いページでチャージしてください" }) : null,
+    el("div", { class: "tiles" }, [
+      tile("この月に使った分", usd(monthUse), usdYen(monthUse)),
+      tile("1日あたり", usd(perDay), perDay > 0 && b ? `あと約${Math.max(0, Math.floor(b.usd / perDay))}日分` : "直近7日の平均"),
+    ]),
+    el("details", { open: b ? null : "" }, [el("summary", { text: b ? "残高を直す・チャージを記録する" : "📝 残高を入力する" }),
+      el("div", { class: "muted", style: "margin-top:6px", text: "Claude の残高は、外から読み取る仕組みがありません。そのため、ここに入れた金額から、AI が使った分を毎回自動で引いて目安を出しています。ずれてきたら、支払いページの金額を入れて「残高を合わせる」を押してください。チャージしたときは、チャージした金額を入れて「足す」を押します。" }),
+      el("div", { class: "form" }, [el("div", { class: "wide" }, [el("label", { for: "c-usd", text: "金額（ドル）" }), amount])]),
+      el("div", { class: "actions" }, [setBtn, addBtn]), note,
+      b ? el("div", { class: "muted", style: "margin-top:6px", text: `最後に合わせた日時: ${jstTime(b.at)}（${usd(b.set_usd)}）` }) : null]),
+  ]);
+}
+
 function render() {
   document.getElementById("mlabel").textContent = `${month.slice(0, 4)}年${+month.slice(5)}月`;
   document.getElementById("next").disabled = month >= jstDate().slice(0, 7);
@@ -116,6 +161,8 @@ function render() {
   const f = followersAt(month), fPrev = followersAt(shift(month, -1)) ?? (rows.find(r => r.followers != null) || {}).followers;
   const fDiff = f != null && fPrev != null ? f - fPrev : null;
   const nodes = [];
+
+  nodes.push(claudeCard());
 
   // 売上（いちばん大事な数字）
   nodes.push(el("section", { class: "card" }, [
@@ -196,9 +243,11 @@ function render() {
 document.getElementById("prev").addEventListener("click", () => { month = shift(month, -1); render(); });
 document.getElementById("next").addEventListener("click", () => { month = shift(month, 1); render(); });
 (async () => {
-  [daily, earnings] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json")]);
-  daily = daily || {}; earnings = earnings || {};
+  [daily, earnings, claude] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json"),
+    fresh("_affiliate/data/stats/claude.json")]);
+  daily = daily || {}; earnings = earnings || {}; claude = claude || {};
   render();
+  if (location.hash === "#claude") document.getElementById("claude").scrollIntoView();
 })();
 </script>
 </body>

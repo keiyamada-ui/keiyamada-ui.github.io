@@ -85,6 +85,16 @@ jobs:
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "⚠️ 下書きを作れませんでした。URL が楽天の商品ページか確認してください。
           詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
+      - name: Claude の使用量を保存する（管理画面の残高表示用）
+        if: always()
+        run: |
+          [ -f _affiliate/data/stats/claude.json ] || exit 0
+          git add _affiliate/data/stats/claude.json
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Claude の使用量を記録" -- _affiliate/data/stats/claude.json
+          for i in 1 2 3; do git pull --rebase --autostash -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+
   # 「参考になる投稿を登録」フォーム → AI が型を分析して Issue にコメント、勝ちパターンとして使う
   reference:
     if: startsWith(github.event.issue.title, '[参考投稿]') && github.event.issue.user.login == github.repository_owner
@@ -120,3 +130,13 @@ jobs:
         run: |
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "⚠️ 分析できませんでした。
           詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Claude の使用量を保存する（管理画面の残高表示用）
+        if: always()
+        run: |
+          [ -f _affiliate/data/stats/claude.json ] || exit 0
+          git add _affiliate/data/stats/claude.json
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Claude の使用量を記録" -- _affiliate/data/stats/claude.json
+          for i in 1 2 3; do git pull --rebase --autostash -q origin main && git push -q origin HEAD:main && break; sleep 5; done

@@ -104,6 +104,7 @@ def _call_claude(system, user, model, effort, schema=None, search=False, images=
     for _ in range(MAX_CONTINUATIONS + 1):
         with client.beta.messages.stream(messages=messages, **params) as stream:
             response = stream.get_final_message()
+        _log_cost(response)
         if response.stop_reason != "pause_turn":
             break
         # ネット検索が長引いて一度止まった。続きから再開してもらう
@@ -116,6 +117,15 @@ def _call_claude(system, user, model, effort, schema=None, search=False, images=
     if not text.strip():
         raise LLMError("Claude の返答に本文がありませんでした")
     return text
+
+
+def _log_cost(response):
+    """使った金額を記録する（管理画面の「Claude の残高」用）。記録に失敗しても投稿づくりは止めない。"""
+    try:
+        import claude_cost
+        claude_cost.log(getattr(response, "model", ""), response.usage)
+    except Exception as e:  # noqa: BLE001
+        print(f"（Claude の使用量を記録できませんでした: {str(e)[:100]}）")
 
 
 def _describe_claude_error(e):
