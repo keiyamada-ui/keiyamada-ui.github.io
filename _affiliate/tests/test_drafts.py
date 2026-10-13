@@ -527,3 +527,24 @@ def test_reference_tips_become_rules(monkeypatch, tmp_path):
     assert "考え方・コツの分析" in text and "1行目は子どもの一言から始める" in text
     data = patterns.parse_comment(text)
     assert data["kind"] == "tips" and "1行目は子どもの一言から始める" in prompts.tips_note([data])
+
+
+def test_room_skips_manual_stock_items(out_dir, monkeypatch):
+    """手動投稿ストックの商品（とよく似た商品）は ROOM タブに出さない。同じ商品を2回投稿しないように。"""
+    monkeypatch.setattr(generate_drafts, "MANUAL", Path(out_dir) / "manual")
+    cfg = dict(CONFIG, room={"per_day": 4, "max_books": 1})
+    stock = dict(item(1), id="s:stock", name="携帯スリッパ ニット レディース 軽量 コンパクト 洗濯可", score=50)
+    twin = dict(item(2), id="s:twin", name="【特典】携帯スリッパ ニット レディース 軽量 コンパクト 洗える", score=40)
+    other = dict(item(3), id="s:other", name="ランドセルカバー 透明 反射材つき", score=30)
+
+    def gen(system, user, schema, tier="standard"):
+        ids = [json.loads(line)["id"] for line in user.splitlines() if line.startswith("{")]
+        return {"comments": [{"id": i, "comment": "レビューで評判の良い一品です。記事作成時点の情報です #PR"} for i in ids]}
+    out = generate_drafts.build_room_list(cfg, TODAY, [(stock, ROOM)], [twin, other], gen, avoid=[stock["name"]])
+    assert [i["id"] for i in out] == ["s:other"]
+
+    (Path(out_dir) / "manual").mkdir(parents=True, exist_ok=True)
+    (Path(out_dir) / "manual" / "index.json").write_text(json.dumps({"sets": [
+        {"date": TODAY.isoformat(), "item": {"name": stock["name"]}},
+        {"date": "2020-01-01", "item": {"name": "古い商品"}}]}, ensure_ascii=False), encoding="utf-8")
+    assert generate_drafts.stock_names(TODAY) == [stock["name"]]
