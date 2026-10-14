@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-15",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-15",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "木曜の夕方、習い事の送迎があるだけで一気に気力削られる。帰ってきたら最短ルートで寝かせるシミュレーションだけは完璧。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "靴下を片方だけ履いた状態でフリーズしてる時間、毎朝見かける気がする。頼むからもう片方も履いて。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "筆箱の中の鉛筆が全部丸くなってて、もはや太い線しか引けない状態のまま平気で持っていくのなんでだろう。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
