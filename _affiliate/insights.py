@@ -33,7 +33,7 @@ def collect(client, posted, today, path):
             continue
         store[media_id] = {"date": entry["date"], "kind": entry["kind"], "draft": entry["draft"],
                            "post_index": entry["post_index"], "permalink": entry.get("permalink", ""),
-                           "metrics": metrics, "fetched": today.isoformat()}
+                           "metrics": metrics, "own_replies": len(entry["ids"]) - 1, "fetched": today.isoformat()}
         fetched += 1
     # 古い記録は30日で消す
     store = {k: v for k, v in store.items() if (today - _date(v["date"])).days <= 30}

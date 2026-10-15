@@ -313,7 +313,7 @@ document.getElementById("reload").addEventListener("click", () => {
   const day = jstDate();
   const posted = (await raw(`_affiliate/data/posted/${day}.json`)) || [];
   // きょうの5回: 出した枠は、たまごから ことり が生まれる
-  const SLOTS = [["7:40", "集客"], ["10:10", "つぶやき"], ["12:20", "役立つ"], ["15:40", "つぶやき"], ["20:10", "PR"]];
+  const SLOTS = [["7:40", "集客"], ["10:10", "つぶやき"], ["12:20", "役立つ"], ["15:40", "つぶやき"], ["17:40", "PR"]];
   const done = new Set(posted.filter(p => !p.manual).map(p => p.slot));
   const auto = done.size, manual = posted.filter(p => p.manual).length;
   const nowMin = (() => { const d = new Date(Date.now() + 9 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();

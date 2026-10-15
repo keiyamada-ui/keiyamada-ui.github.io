@@ -25,8 +25,8 @@ const SLOTS = [  // min = 開始時刻、end = 締め切り（日本時間・0�
   { n: 1, time: "7:40", min: 460, end: 840, plan: "buzz" },
   { n: 2, time: "10:10", min: 610, end: 740, plan: "casual" },
   { n: 3, time: "12:20", min: 740, end: 940, plan: "value" },
-  { n: 4, time: "15:40", min: 940, end: 1210, plan: "casual" },
-  { n: 5, time: "20:10", min: 1210, end: 1440, plan: "pr" },
+  { n: 4, time: "15:40", min: 940, end: 1060, plan: "casual" },
+  { n: 5, time: "17:40", min: 1060, end: 1440, plan: "pr" },
 ];
 const draftCache = {};
 async function draft(name) {
@@ -229,6 +229,9 @@ async function showInsights() {
     const m = r.metrics;
     const hot = (m.likes || 0) >= 10 && (m.likes || 0) >= 2 * median;
     const post = await postOf(r);
+    // 返信の数から、自分で付けた返信（ツリーの続き・PR のリンク）を除く
+    const own = r.own_replies ?? (post ? (post.thread_parts || []).length + (post.type === "pr" && post.reply_text ? 1 : 0) : 0);
+    const replies = Math.max(0, (m.replies || 0) - own);
     nodes.push(el("section", { class: "card" }, [
       el("div", { class: "row between" }, [
         el("span", { class: "badge" + (r.kind === "pr" ? " pr" : ""), text: (hot ? "🔥 " : "") + (KIND[r.kind] || r.kind) }),
@@ -237,7 +240,7 @@ async function showInsights() {
       el("div", { class: "stat" }, [
         el("div", {}, [el("b", { text: String(m.likes || 0) }), el("span", { text: "いいね" })]),
         el("div", {}, [el("b", { text: String(m.views || 0) }), el("span", { text: "表示" })]),
-        el("div", {}, [el("b", { text: String((m.replies || 0) + (m.reposts || 0) + (m.quotes || 0)) }), el("span", { text: "返信・再投稿" })])]),
+        el("div", {}, [el("b", { text: String(replies + (m.reposts || 0) + (m.quotes || 0)) }), el("span", { text: "返信・再投稿" })])]),
       r.permalink ? el("div", { class: "actions" }, [el("a", { class: "btn", href: r.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })]) : null,
     ]));
   }

@@ -38,6 +38,7 @@ import season  # noqa: E402
 import learn  # noqa: E402
 import illust  # noqa: E402
 import rulebook  # noqa: E402
+import variety  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -227,6 +228,9 @@ def write_posts(config, theme, chosen, analysis, pats, today, generate, owner_no
                                               today, owner_note, feedback, context)
         result = generate(system, user, prompts.WRITE_SCHEMA, tier=tier)
         errors, warnings = checks.check_posts(result["posts"], result["room_comment"], owner_note)
+        if attempt == MAX_ATTEMPTS:  # 言い回しのくり返しが直りきらなくても、投稿は止めない
+            errors, soft = checks.soften(errors)
+            warnings += soft
         print(f"✍️ 下書き {attempt}回目: エラー{len(errors)}件・要確認{len(warnings)}件")
         if not errors:
             break
@@ -967,6 +971,9 @@ def main(argv=None):
     prompts.SEASON_NOTE = info["note"]
     checks.SEASON.update(avoid=info["avoid"], avg_max=info["avg_max"])
     prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
+    # 最近使いすぎの言い回しを避け、書き出しの形を毎日変える
+    prompts.VARIETY_NOTE, checks.OVERUSED[:] = variety.setup(
+        today, DATA / "posted", Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")))
     generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
     if args.analyze_reference:

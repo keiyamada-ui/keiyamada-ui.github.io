@@ -1,7 +1,7 @@
 """作った下書きを Threads に自動で投稿する。
 
     python _affiliate/autopost.py              # 今の時間帯の投稿をする
-    python _affiliate/autopost.py --slot 5     # 夜の枠（PR 投稿）を今すぐ投稿する
+    python _affiliate/autopost.py --slot 5     # 夕方の枠（PR 投稿）を今すぐ投稿する
     python _affiliate/autopost.py --dry-run    # 何を投稿するかだけ表示する（投稿しない）
     python _affiliate/autopost.py --check      # Threads につながるか・権限・トークンの期限を確認する
 
@@ -25,14 +25,14 @@ sys.path.insert(0, str(HERE))
 from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
-SLOT_NAMES = {1: "朝（集客投稿）", 2: "午前（つぶやき）", 3: "昼（役立つ投稿）", 4: "午後（つぶやき）", 5: "夜（PR 投稿）"}
+SLOT_NAMES = {1: "朝（集客投稿）", 2: "午前（つぶやき）", 3: "昼（役立つ投稿）", 4: "午後（つぶやき）", 5: "夕方（PR 投稿）"}
 # 枠ごとに、出すものの優先順（前のものがなければ次を出す）
 SLOT_KINDS = {1: ["buzz", "value"], 2: ["casual"], 3: ["value"], 4: ["casual"], 5: ["pr", "value", "casual"]}
 # 各枠の開始時刻と締め切り（日本時間・0時からの分）。
 # GitHub の定期実行は数時間遅れることがあるため、20分おきに起動して「開始時刻を過ぎて、まだ出していない枠」を出す。
 # 締め切りを過ぎた枠は出さない（集客投稿は大事なので、昼の役立つ投稿の後まで待つ）
-SLOT_START = {1: 7 * 60 + 40, 2: 10 * 60 + 10, 3: 12 * 60 + 20, 4: 15 * 60 + 40, 5: 20 * 60 + 10}
-SLOT_DEADLINE = {1: 14 * 60, 2: 12 * 60 + 20, 3: 15 * 60 + 40, 4: 20 * 60 + 10, 5: 24 * 60}
+SLOT_START = {1: 7 * 60 + 40, 2: 10 * 60 + 10, 3: 12 * 60 + 20, 4: 15 * 60 + 40, 5: 17 * 60 + 40}
+SLOT_DEADLINE = {1: 14 * 60, 2: 12 * 60 + 20, 3: 15 * 60 + 40, 4: 17 * 60 + 40, 5: 24 * 60}
 MIN_GAP_MINUTES = 60  # 遅れを取り戻すときも、投稿どうしは60分以上あける
 FOLLOWUP_DAYS = 3
 

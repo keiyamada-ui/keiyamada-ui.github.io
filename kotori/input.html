@@ -67,7 +67,7 @@ function showRecommend() {
                   `### ひとことメモ\n\n${v(memo.value)}`,
                   `### 実際に使いましたか？\n\n- [${used.checked ? "X" : " "}] 使ったことがある（体験談として書いてOK）`].join("\n\n");
     if (await createIssue("[推し商品] " + (url.value.trim() || isbn.value.trim()).slice(0, 40), body, [], btn,
-                          "受け付けました。数分で下書きができ、夜の PR 投稿の枠で優先して投稿します")) {
+                          "受け付けました。数分で下書きができ、夕方（17:40ごろ）の PR 投稿の枠で優先して投稿します")) {
       url.value = isbn.value = memo.value = ""; used.checked = false;
     }
   });
