@@ -64,6 +64,16 @@
     <span class="ic">🌐</span><span class="label">まとめサイト</span><span class="desc">自分のサイトを開く</span></a>
 </div>
 
+<h2>まとめサイト</h2>
+<section class="card" style="background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:var(--shadow)">
+  <div style="font-weight:900;font-size:15px">📝 まとめ記事を今すぐ作る</div>
+  <div class="desc" style="margin:4px 0 10px">毎週水曜の朝に自動で1本書きます。テーマを決めて書きたいときはここから（空なら自動で選びます）。</div>
+  <input type="text" id="mkw" placeholder="例）お名前シール 入学準備">
+  <div class="actions"><button class="btn primary" id="mgo">記事を書く（3〜5分）</button>
+    <a class="btn" href="../" target="_blank" rel="noopener">サイトを見る</a></div>
+  <div class="desc" id="mnote" style="margin-top:6px"></div>
+</section>
+
 <h2>設定</h2>
 <div class="grid">
   <a class="tile" href="input.html#actions">
@@ -78,6 +88,16 @@
 
 <script src="app.js"></script>
 <script>
+document.getElementById("mgo").addEventListener("click", async e => {
+  const note = document.getElementById("mnote"), btn = e.currentTarget;
+  if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
+  btn.disabled = true; note.textContent = "書いています…（3〜5分。閉じても大丈夫です）";
+  try {
+    const ok = await runAndWait("affiliate_matome.yml", { keyword: document.getElementById("mkw").value.trim(), source: "ichiba" }, null, 12);
+    note.textContent = ok ? "✅ 書きました。数分でサイトに載ります" : "⚠️ うまく書けませんでした（商品が少ないテーマかもしれません）";
+  } catch (err) { note.textContent = "⏳ " + err.message; }
+  btn.disabled = false;
+});
 document.getElementById("keydesc").textContent = Key.get() ? "✅ この端末に登録済み" : "未登録（入力・操作に必要）";
 fresh("_affiliate/data/stats/claude.json").then(c => {
   const b = c && c.balance;

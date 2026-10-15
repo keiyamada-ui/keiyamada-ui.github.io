@@ -499,3 +499,39 @@ def tips_note(patterns, limit=10):
         return ""
     return ("登録した「考え方・コツ」から作ったルール（当てはまる投稿では取り入れる。ルールと人間らしさが優先）:\n"
             + "\n".join(f"- {r}" for r in rules[:limit]))
+
+
+# ---------------------------------------------------------------- まとめサイトの記事
+
+MATOME_SCHEMA = obj(
+    title=STR, description=STR, slug=STR, intro=STR,
+    items={"type": "array", "items": obj(id=STR, heading=STR, body=STR, good_for=STR)},
+    closing=STR,
+)
+
+
+def matome_messages(account, today, topic, persona, event, candidates):
+    """まとめサイトの記事（場面ごとの「買ってよかった」まとめ）を書く。"""
+    system = f"""あなたは「{account['name']}」のまとめサイトの記事を書く人です。{_persona(account)}
+
+テーマに合う楽天の商品の候補を渡します。この中から、読む人の役に立つものを4〜6個選んで、まとめ記事を書きます。
+読む人は、その場面で困っている子育て中の親。検索や Pinterest から来て、何を買えばいいか早く知りたい人です。
+
+- title: 検索されそうな言葉を前に入れた、32文字以内のタイトル（例:「入学準備で買ってよかった物まとめ｜名前付けが楽になる5選」）。「最強」「神」「おすすめ〇選！」のような煽りは使わない。
+- description: 検索結果に出る説明。80〜110文字。
+- slug: URL に使う英小文字とハイフンだけの短い名前（例: school-prep-name-labels）。
+- intro: 書き出し。その場面のよくある困りごとを、話し言葉で2〜3文（150文字以内）。
+- items: 選んだ商品。id は渡された id をそのまま使う。
+  heading = その商品の一番の良さを一言で（20文字以内。商品名ではなく良さ）
+  body = どんなところが良いと言われているか（レビューの評判として。100〜180文字）。体験していないので「使ってみた」とは書かない。
+  good_for = こんな人に向いている、を一言（30文字以内）
+- closing: しめくくり（100文字以内）。売り込まない。
+- 価格やレビューの数字は渡されたものだけを使う。効果を断定しない。
+{SHARED_RULES}
+{HUMAN_STYLE}
+JSON だけを返す。"""
+    lines = [f"今日の日付: {today.isoformat()}", f"テーマ: {topic}", f"読む人: {persona}"]
+    if event:
+        lines.append(f"今の時期の行事: {event}")
+    lines += ["", "商品の候補:"] + [_candidate_line(c) for c in candidates]
+    return system, "\n".join(lines)
