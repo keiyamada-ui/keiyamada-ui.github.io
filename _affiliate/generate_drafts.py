@@ -39,6 +39,7 @@ import learn  # noqa: E402
 import illust  # noqa: E402
 import rulebook  # noqa: E402
 import variety  # noqa: E402
+import events  # noqa: E402
 import rewrites  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
@@ -689,6 +690,13 @@ def run_daily(config, today, client, generate, args):
         # 今の季節に合わないテーマ（暖かいのに「ダウン」など）は後回しにする
         ordered = ([t for t in ordered if not season.hits(f"{t['keyword']} {t.get('category', '')}", checks.SEASON["avoid"])]
                    + [t for t in ordered if season.hits(f"{t['keyword']} {t.get('category', '')}", checks.SEASON["avoid"])])
+        # 行事の先取り: 2日に1回は、今の時期の行事（クリスマス・入学準備など）のテーマを優先する
+        event_ordered = themes_mod.rank(events.themes(today), history, today, config["themes"]["reuse_after_days"])
+        if event_ordered and today.toordinal() % 2 == 0:
+            print(f"🎄 行事の先取り: {event_ordered[0]['category']}（{event_ordered[0]['keyword']}）を優先します")
+            ordered = event_ordered[:2] + [t for t in ordered if t["id"] not in {e["id"] for e in event_ordered[:2]}]
+        else:
+            ordered = ordered + event_ordered
     followup = None if args.keyword else find_followup(config, today, store, drafts_dir)
     if followup:
         print(f"🔥 反響のあった集客投稿（いいね{followup['likes']}件）の話題で商品を探します: {followup['topic']}")
@@ -969,7 +977,7 @@ def main(argv=None):
     today = datetime.date.fromisoformat(args.date) if args.date else datetime.datetime.now(JST).date()
     # 今の季節感（実際の気温）を調べて、文章作りと確認に使う
     info = season.get(today, store=DATA / "season", fetcher=(lambda d: None) if args.dry_run else season.fetch)
-    prompts.SEASON_NOTE = info["note"]
+    prompts.SEASON_NOTE = info["note"] + (("\n" + events.note(today)) if events.note(today) else "")
     checks.SEASON.update(avoid=info["avoid"], avg_max=info["avg_max"])
     prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
     # 最近使いすぎの言い回しを避け、書き出しの形を毎日変える

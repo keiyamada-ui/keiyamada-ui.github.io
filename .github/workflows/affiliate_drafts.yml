@@ -152,6 +152,15 @@ jobs:
           自動で Threads に投稿し、結果をこの Issue にコメントします。
           良くない投稿は Threads アプリで削除してください。自動投稿を止めたいときは _affiliate/config.yaml の auto_post.enabled を false に。"
 
+      - name: 7b'. 朝の通知（今日の予定と、出す前に止められること）
+        if: steps.generate.outcome == 'success' && steps.generate.outputs.title != '' && steps.generate.outputs.auto_post == 'true'
+        continue-on-error: true
+        run: |
+          TIMES=$(python -c "import json;d=json.load(open('_affiliate/data/schedule.json'));print('・'.join(('お休み' if s['rest'] else s['time']) for s in d['slots']))" 2>/dev/null || echo "")
+          python _affiliate/push.py send --title "☀️ 今日の投稿ができました" \
+            --body "予定: ${TIMES}。気になる投稿は、出す前に止めたり直したりできます" \
+            --url "https://keiyamada-ui.github.io/kotori/posts.html" --add 0 || true
+
       - name: 7b. 確認用の PR を作る
         if: steps.generate.outcome == 'success' && steps.generate.outputs.title != '' && steps.generate.outputs.auto_post != 'true'
         uses: peter-evans/create-pull-request@v7
