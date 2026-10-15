@@ -56,6 +56,8 @@ def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect
         # AI が選んだ案を優先し、チェックに通らなければ点数の高い順に次の案を使う
         order = [best] + sorted((i for i in range(len(drafts)) if i != best), key=lambda i: -_total(drafts[i]))
         problems = {i: checks.check_simple_post(drafts[i]["text"], "集客投稿", 20, 400) for i in order}
+        if attempt == MAX_ATTEMPTS:  # 言い回しのくり返しが直りきらなくても、投稿は止めない
+            problems = {i: checks.soften(p)[0] for i, p in problems.items()}
         chosen = next((i for i in order if not problems[i]), None)
         print(f"📣 集客投稿 {attempt}回目: {len(drafts)}案中 合格{sum(1 for p in problems.values() if not p)}案")
         if chosen is not None:
@@ -159,6 +161,8 @@ def make_casual(config, today, generate, drafts_dir, neta):
         good, errors = [], []
         for n, post in enumerate(result["posts"], 1):
             problems = checks.check_simple_post(post["text"], f"つぶやき{n}", 5, 140)
+            if attempt == MAX_ATTEMPTS:
+                problems = checks.soften(problems)[0]
             (errors.extend(problems) if problems else good.append(post))
         print(f"💬 つぶやき {attempt}回目: {len(result['posts'])}本中 合格{len(good)}本")
         if len(good) >= count:

@@ -52,7 +52,7 @@ jobs:
           git add _affiliate/drafts _affiliate/data
           git commit -m "推し商品の下書きを追加（#$ISSUE_NUMBER）" || echo "保存する変更なし"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
-          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "✅ 下書きができました。夜（20時ごろ）の PR 投稿の枠で、優先して自動投稿します（PR 投稿の開始日・間隔のルールに従います）。
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body "✅ 下書きができました。夕方（17:40ごろ）の PR 投稿の枠で、優先して自動投稿します（PR 投稿の開始日・間隔のルールに従います）。
           下書き: ${{ github.server_url }}/${{ github.repository }}/tree/main/_affiliate/drafts"
           gh issue close "$ISSUE_NUMBER" --repo "${{ github.repository }}"
 

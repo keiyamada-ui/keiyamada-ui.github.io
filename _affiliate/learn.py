@@ -20,16 +20,31 @@ EVERY_DAYS = 7
 
 
 def score(m):
-    """反響の点数: 反応（いいね・返信・再投稿・引用）を重く、表示を軽く。"""
+    """反響の点数: 反応（いいね・返信・再投稿・引用）を重く、表示を軽く。
+    m の replies は、自分で付けた返信（ツリー・リンク）を除いた数にしておくこと（real_metrics）。"""
     return m.get("likes", 0) + 3 * m.get("replies", 0) + 3 * m.get("reposts", 0) + 2 * m.get("quotes", 0) + m.get("views", 0) / 100
 
 
-def _text(drafts_dir, v):
+def _post(drafts_dir, v):
     path = Path(drafts_dir) / v["draft"]
     if not path.exists():
-        return ""
+        return {}
     posts = json.loads(path.read_text(encoding="utf-8")).get("posts", [])
-    return posts[v["post_index"]].get("text", "") if v["post_index"] < len(posts) else ""
+    return posts[v["post_index"]] if v["post_index"] < len(posts) else {}
+
+
+def own_replies(v, post):
+    """自分で付けた返信（ツリーの続き・PR のリンク）の数。Threads の「返信」の数にはこれも入ってしまう。"""
+    if v.get("own_replies") is not None:
+        return v["own_replies"]
+    return len(post.get("thread_parts") or []) + (1 if post.get("type") == "pr" and post.get("reply_text") else 0)
+
+
+def real_metrics(v, post):
+    """反響の数字から、自分の返信を除いたもの（読んだ人からの返信だけを数える）。"""
+    m = dict(v["metrics"])
+    m["replies"] = max(0, m.get("replies", 0) - own_replies(v, post))
+    return m
 
 
 def rows(store, today, drafts_dir, posted_times=None):
@@ -37,10 +52,11 @@ def rows(store, today, drafts_dir, posted_times=None):
     for media_id, v in store.items():
         if (today - datetime.date.fromisoformat(v["date"])).days < 1:
             continue  # 当日の投稿は、まだ反響が出そろっていない
-        text = _text(drafts_dir, v)
+        post = _post(drafts_dir, v)
+        text = post.get("text", "")
         if not text:
             continue
-        m = v["metrics"]
+        m = real_metrics(v, post)
         out.append({"kind": KINDS.get(v["kind"], v["kind"]), "date": v["date"], "time": (posted_times or {}).get(media_id, ""),
                     "views": m.get("views", 0), "likes": m.get("likes", 0), "replies": m.get("replies", 0),
                     "reposts": m.get("reposts", 0), "chars": len(text), "text": text[:400], "_score": score(m)})
@@ -92,7 +108,8 @@ def note(path=PATH):
     if not lines:
         return ""
     return (f"このアカウント自身の投稿の分析でわかったこと（{d['updated']}・{d['posts']}件から）: {d['summary']}\n"
-            + "\n".join(lines) + "\n当てはまる種類の投稿では、これを参考にする（ルールと人間らしさが優先）。")
+            + "\n".join(lines) + "\n当てはまる種類の投稿では、これを参考にする（ルールと人間らしさが優先）。"
+            "ここに書かれた言い回しをそのまま使ったり、毎回同じ形にしたりはしない。")
 
 
 def load(path=PATH):

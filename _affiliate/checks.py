@@ -94,7 +94,7 @@ def check_posts(posts, room_comment=None, owner_note=None):
         whole = "\n".join([text, reply, *parts])
         for word, reason in _ng_hits(whole):
             errors.append(f"{label}: NGワード「{word}」— {reason}")
-        errors += [f"{label}: {e}" for e in _ai_smell(whole)]
+        errors += [f"{label}: {e}" for e in _ai_smell(whole) + _overused("\n".join([text, *parts]))]
         for word in EXPERIENCE_WORDS:
             if word in whole:
                 hint = "メモの内容と合っているか確認してください" if owner_note else "実際に使った・泊まった場合だけ残してください"
@@ -137,6 +137,22 @@ def check_room_comment(comment):
     return errors
 
 
+# 最近の投稿で使いすぎている言い回し（variety.py が毎朝決める）。入っていたら書き直してもらう。
+# 書き直しても残ったときは投稿を止めず、要確認にする（soften）
+OVERUSED = []
+VARIETY_TAG = "【言い回しのくり返し】"
+
+
+def _overused(text):
+    hits = [w for w in OVERUSED if w in text]
+    return [f"{VARIETY_TAG}「{'」「'.join(hits)}」は最近の投稿で何度も使っています。別の言い方にしてください"] if hits else []
+
+
+def soften(errors):
+    """言い回しのくり返しだけは、投稿を止めるほどではないので (残すエラー, 要確認) に分ける。"""
+    return [e for e in errors if VARIETY_TAG not in e], [e for e in errors if VARIETY_TAG in e]
+
+
 def _ai_smell(text):
     return [f"「{w}」は AI が書いた感じが出る言い回しです。別の言い方にしてください" for w in AI_SMELL if w in text]
 
@@ -156,5 +172,5 @@ def check_simple_post(text, label, min_chars=1, max_chars=THREADS_MAX_CHARS):
         errors.append(f"{label}: ハッシュタグは入れないでください")
     for word, reason in _ng_hits(text):
         errors.append(f"{label}: NGワード「{word}」— {reason}")
-    errors += [f"{label}: {e}" for e in _ai_smell(text)]
+    errors += [f"{label}: {e}" for e in _ai_smell(text) + _overused(text)]
     return errors
