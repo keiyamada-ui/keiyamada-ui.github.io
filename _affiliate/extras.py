@@ -55,7 +55,7 @@ def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect
         best = min(max(result["best_index"], 0), len(drafts) - 1)
         # AI が選んだ案を優先し、チェックに通らなければ点数の高い順に次の案を使う
         order = [best] + sorted((i for i in range(len(drafts)) if i != best), key=lambda i: -_total(drafts[i]))
-        problems = {i: checks.check_simple_post(drafts[i]["text"], "集客投稿", 20, 400) for i in order}
+        problems = {i: checks.check_simple_post(drafts[i]["text"], "集客投稿", 20, 250) for i in order}
         if attempt == MAX_ATTEMPTS:  # 言い回しのくり返しが直りきらなくても、投稿は止めない
             problems = {i: checks.soften(p)[0] for i, p in problems.items()}
         chosen = next((i for i in order if not problems[i]), None)

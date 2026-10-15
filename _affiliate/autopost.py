@@ -1,7 +1,7 @@
 """作った下書きを Threads に自動で投稿する。
 
     python _affiliate/autopost.py              # 今の時間帯の投稿をする
-    python _affiliate/autopost.py --slot 5     # 夕方の枠（PR 投稿）を今すぐ投稿する
+    python _affiliate/autopost.py --slot 2     # 夕方の枠（役立つ投稿・PR 投稿）を今すぐ投稿する
     python _affiliate/autopost.py --dry-run    # 何を投稿するかだけ表示する（投稿しない）
     python _affiliate/autopost.py --check      # Threads につながるか・権限・トークンの期限を確認する
 
@@ -14,6 +14,7 @@ import argparse
 import datetime
 import json
 import os
+import random
 import sys
 from pathlib import Path
 
@@ -25,14 +26,15 @@ sys.path.insert(0, str(HERE))
 from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
-SLOT_NAMES = {1: "朝（集客投稿）", 2: "午前（つぶやき）", 3: "昼（役立つ投稿）", 4: "午後（つぶやき）", 5: "夕方（PR 投稿）"}
+SLOT_NAMES = {1: "昼（短い投稿）", 2: "夕方（役立つ投稿・PR 投稿）", 3: "夜（短い投稿）"}
 # 枠ごとに、出すものの優先順（前のものがなければ次を出す）
-SLOT_KINDS = {1: ["buzz", "value"], 2: ["casual"], 3: ["value"], 4: ["casual"], 5: ["pr", "value", "casual"]}
-# 各枠の開始時刻と締め切り（日本時間・0時からの分）。
-# GitHub の定期実行は数時間遅れることがあるため、20分おきに起動して「開始時刻を過ぎて、まだ出していない枠」を出す。
-# 締め切りを過ぎた枠は出さない（集客投稿は大事なので、昼の役立つ投稿の後まで待つ）
-SLOT_START = {1: 7 * 60 + 40, 2: 10 * 60 + 10, 3: 12 * 60 + 20, 4: 15 * 60 + 40, 5: 17 * 60 + 40}
-SLOT_DEADLINE = {1: 14 * 60, 2: 12 * 60 + 20, 3: 15 * 60 + 40, 4: 17 * 60 + 40, 5: 24 * 60}
+SLOT_KINDS = {1: ["casual", "buzz"], 2: ["pr", "value", "casual"], 3: ["buzz", "casual"]}
+# 各枠の時間の幅（日本時間・0時からの分）。毎日この幅の中から時刻をランダムに決める（人が投稿しているように）
+SLOT_WINDOW = {1: (11 * 60 + 30, 13 * 60), 2: (17 * 60, 19 * 60), 3: (20 * 60 + 30, 22 * 60)}
+# GitHub の定期実行は遅れることがあるので、幅の終わりからこの分数までは出してよい
+GRACE_MINUTES = 90
+# たまに（だいたい週1回）1日2回だけの日にする。休むのは昼か夜（夕方の役立つ・PR は休まない）
+TWO_POST_RATE = 1 / 7
 MIN_GAP_MINUTES = 60  # 遅れを取り戻すときも、投稿どうしは60分以上あける
 FOLLOWUP_DAYS = 3
 
@@ -41,10 +43,32 @@ def _minutes(now):
     return now.hour * 60 + now.minute
 
 
+def _hhmm(minutes):
+    return f"{minutes // 60}:{minutes % 60:02d}"
+
+
+def day_plan(day):
+    """その日の投稿予定。日付から決まるので、何度呼んでも同じ予定になる。"""
+    rng = random.Random(f"kotori-{day.isoformat()}")
+    times = {s: rng.randint(a, b) for s, (a, b) in SLOT_WINDOW.items()}
+    rest = rng.choice([1, 3]) if rng.random() < TWO_POST_RATE else None
+    return [{"slot": s, "name": SLOT_NAMES[s], "minute": times[s], "time": _hhmm(times[s]),
+             "window": f"{_hhmm(SLOT_WINDOW[s][0])}〜{_hhmm(SLOT_WINDOW[s][1])}", "rest": s == rest}
+            for s in SLOT_WINDOW]
+
+
+def save_plan(day, path):
+    """管理画面で今日の予定を見られるように保存する。"""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"date": day.isoformat(), "slots": day_plan(day)}, ensure_ascii=False, indent=1) + "\n",
+                    encoding="utf-8")
+
+
 def slot_for(now):
     """今の時刻にいちばん近い枠（手動で --slot を指定しないときの目安）。"""
     minutes = _minutes(now)
-    started = [s for s, start in SLOT_START.items() if start <= minutes]
+    started = [s for s, (a, _) in SLOT_WINDOW.items() if a <= minutes]
     return started[-1] if started else 1
 
 
@@ -52,9 +76,13 @@ def due_slot(now, posted):
     """今出すべき枠を返す: (枠, None) / 出さないとき (None, 理由)。"""
     today = now.date().isoformat()
     mine = [p for p in posted if p["date"] == today and not p.get("manual")]
+    plan = [p for p in day_plan(now.date()) if not p["rest"]]
+    if len(mine) >= len(plan):
+        return None, "今日の分はすべて出しました"
     done = {p["slot"] for p in mine}
     minutes = _minutes(now)
-    pending = [s for s in SLOT_START if SLOT_START[s] <= minutes < SLOT_DEADLINE[s] and s not in done]
+    pending = [p["slot"] for p in plan if p["slot"] not in done
+               and p["minute"] <= minutes < SLOT_WINDOW[p["slot"]][1] + GRACE_MINUTES]
     if not pending:
         return None, "今出す枠はありません"
     times = [datetime.datetime.fromisoformat(p["at"]) for p in mine if p.get("at")]
@@ -132,9 +160,30 @@ def _pick_pr(today, config, drafts_dir, posted, done):
     return None, None, "投稿できる PR の下書きがありません（エラーが残っているか、すでに投稿済みです）"
 
 
-def pick(slot, today, config, drafts_dir, posted):
+SKIPPED = HERE / "data" / "skipped.json"
+
+
+def load_skipped(path=None):
+    """管理画面で「この投稿は出さない」にした投稿（下書き名, 番号）。"""
+    path = Path(path or SKIPPED)
+    return {(x["draft"], x["post_index"]) for x in json.loads(path.read_text(encoding="utf-8"))} if path.exists() else set()
+
+
+def mark_skip(draft_name, index, undo=False, path=None):
+    path = Path(path or SKIPPED)
+    entries = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    entries = [x for x in entries if (x["draft"], x["post_index"]) != (draft_name, index)]
+    if not undo:
+        entries.append({"draft": draft_name, "post_index": index, "at": datetime.datetime.now(JST).isoformat(timespec="minutes")})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(entries[-200:], ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print("⏭️ 出さない投稿にしました（次の候補が出ます）" if not undo else "↩️ 出さない設定を取り消しました")
+    return 0
+
+
+def pick(slot, today, config, drafts_dir, posted, skipped=None):
     """この枠で出す（下書き, 投稿の番号）を決める。出さないときは (None, None, 理由)。"""
-    done = {(p["draft"], p["post_index"]) for p in posted}
+    done = {(p["draft"], p["post_index"]) for p in posted} | (load_skipped() if skipped is None else skipped)
     reasons = []
     for kind in SLOT_KINDS[slot]:
         if kind == "pr":
@@ -336,17 +385,21 @@ def remove_image(drafts_dir, draft_name, index):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ことり｜下書きを Threads に自動投稿する")
-    parser.add_argument("--slot", choices=["auto", "1", "2", "3", "4", "5"], default="auto")
+    parser.add_argument("--slot", choices=["auto", "1", "2", "3"], default="auto")
     parser.add_argument("--date", help="日付（例: 2026-10-10）。省略すると今日（日本時間）")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true", help="Threads につながるか・トークンの期限を確認する")
     parser.add_argument("--mark", nargs=2, metavar=("DRAFT", "INDEX"), help="手で投稿した投稿を「投稿済み」にする")
     parser.add_argument("--undo", action="store_true", help="--mark と一緒に使う: 「投稿済み」を取り消す")
     parser.add_argument("--noimage", nargs=2, metavar=("DRAFT", "INDEX"), help="投稿からイラストを外す")
+    parser.add_argument("--skip", nargs=2, metavar=("DRAFT", "INDEX"), help="この投稿は出さない（--undo で取り消し）")
     args = parser.parse_args(argv)
 
     if args.noimage:
         return remove_image(HERE / "drafts", args.noimage[0], int(args.noimage[1]))
+    if args.skip:
+        name = Path(args.skip[0]).name
+        return mark_skip(name, int(args.skip[1]), args.undo)
     token = os.environ.get("KOTORI_THREADS_TOKEN")
     config = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
     now = datetime.datetime.now(JST)
@@ -356,6 +409,7 @@ def main(argv=None):
     if args.mark:
         return mark_manual(HERE / "drafts", HERE / "data" / "posted", args.mark[0], int(args.mark[1]), now, args.undo)
     if args.slot == "auto":
+        save_plan(today, HERE / "data" / "schedule.json")
         slot, reason = due_slot(now, load_posted(HERE / "data" / "posted"))
         if slot is None:
             # 20分おきに起動するので、出さないときはレポートを書かない

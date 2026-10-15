@@ -19,6 +19,10 @@ on:
         description: 'この投稿からイラストを外す（文章だけで投稿する）'
         type: boolean
         default: false
+      skip:
+        description: 'この投稿は自動で出さない（undo と一緒なら取り消し）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -44,8 +48,13 @@ jobs:
           INDEX: ${{ inputs.index }}
           UNDO: ${{ inputs.undo }}
           NOIMAGE: ${{ inputs.noimage }}
+          SKIP: ${{ inputs.skip }}
         run: |
-          if [ "$NOIMAGE" = "true" ]; then
+          if [ "$SKIP" = "true" ] && [ "$UNDO" = "true" ]; then
+            python _affiliate/autopost.py --skip "$DRAFT" "$INDEX" --undo
+          elif [ "$SKIP" = "true" ]; then
+            python _affiliate/autopost.py --skip "$DRAFT" "$INDEX"
+          elif [ "$NOIMAGE" = "true" ]; then
             python _affiliate/autopost.py --noimage "$DRAFT" "$INDEX"
           elif [ "$UNDO" = "true" ]; then
             python _affiliate/autopost.py --mark "$DRAFT" "$INDEX" --undo
@@ -58,6 +67,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add _affiliate/data/posted _affiliate/drafts
+          git add _affiliate/data/skipped.json 2>/dev/null || true
           git commit -m "手で投稿した記録: $DRAFT" || exit 0
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
         env:

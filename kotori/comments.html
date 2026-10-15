@@ -13,7 +13,7 @@
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>💬 コメント返し</h1></header>
-<p class="note">自分の投稿についたコメントと、AI が考えた返信文の案です。「コメントを開く」→ 返信欄に貼り付けて、自分で返してください。返したら「対応した」を押すと一覧から消えます（この端末に記録）。</p>
+<p class="note">自分の投稿についたコメントと、AI が考えた返信文の案です。「📋 コピーしてコメントを開く」→ 開いた返信欄に貼り付けて、自分で返してください。返したら「対応した」を押すと一覧から消えます（この端末に記録）。</p>
 
 <section class="card">
   <div class="row between">
@@ -42,16 +42,18 @@ function render() {
   list.replaceChildren();
   const items = comments.filter(c => !onlyOpen || !used["comment:" + c.id]);
   const left = comments.filter(c => c.action !== "ignore" && !used["comment:" + c.id]).length;
-  list.append(el("p", { class: "note", text: `対応待ち ${left} 件。❤️ いいねだけ のものは、Threads で ♡ を押すだけで大丈夫です。` }));
+  list.append(el("p", { class: "note", "data-keep": "", text: `対応待ち ${left} 件。❤️ いいねだけ のものは、Threads で ♡ を押すだけで大丈夫です。` }));
   for (const c of items) {
     const key = "comment:" + c.id;
     const done = !!used[key];
     const [label, cls] = ACTION[c.action] || ACTION.reply;
     const card = el("section", { class: "card", style: done ? "opacity:.5" : "" }, [
-      el("div", { class: "row" }, [el("span", { class: "badge" + cls, text: label }), el("span", { class: "muted", text: c.reason || "" })]),
+      el("div", { class: "row" }, [el("span", { class: "badge" + cls, text: label })]),
       el("div", { class: "muted", style: "margin-top:6px", text: `@${c.username}　${jstTime(c.timestamp)}` }),
       el("div", { class: "text", text: c.text }),
-      c.post_text ? el("div", { class: "muted", style: "margin-top:8px", text: "自分の投稿: " + c.post_text.slice(0, 80) }) : null,
+      c.post_text || c.reason ? el("details", { class: "help", style: "margin-top:8px" }, [el("summary", { text: "くわしく" }),
+        c.post_text ? el("div", { class: "muted", text: "自分の投稿: " + c.post_text.slice(0, 80) }) : null,
+        c.reason ? el("div", { class: "muted", text: "AI の考え: " + c.reason }) : null]) : null,
     ]);
     if (c.reply_text) {
       card.append(el("div", { class: "muted", style: "margin-top:10px", text: "返信文の案（自由に直してOK）" }),
@@ -63,12 +65,15 @@ function render() {
       store.set(used); render();
     });
     card.append(el("div", { class: "actions" }, [
-      c.reply_text ? el("button", { class: "btn primary", text: "返信文をコピー", onclick: () => copy(c.reply_text) }) : null,
-      c.permalink ? el("a", { class: "btn", text: "コメントを開く", href: c.permalink, target: "_blank", rel: "noopener" }) : null,
+      // コピーと、Threads でコメントを開くのを1回で（開いた返信欄に貼るだけ）
+      c.reply_text && c.permalink ? el("button", { class: "btn primary", text: "📋 コピーしてコメントを開く", onclick: () => { copy(c.reply_text); window.open(c.permalink, "_blank", "noopener"); } })
+        : c.reply_text ? el("button", { class: "btn primary", text: "返信文をコピー", onclick: () => copy(c.reply_text) })
+        : c.permalink ? el("a", { class: "btn", text: "コメントを開く", href: c.permalink, target: "_blank", rel: "noopener" }) : null,
       doneBtn]));
     list.append(card);
   }
   if (!items.length) list.append(el("p", { class: "empty", text: comments.length ? "対応待ちのコメントはありません 🎉" : "まだコメントはありません" }));
+  foldHelpIn(list);
 }
 
 async function load() {
