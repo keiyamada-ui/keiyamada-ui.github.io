@@ -1,0 +1,29 @@
+{
+ "date": "2026-10-16",
+ "slots": [
+  {
+   "slot": 1,
+   "name": "昼（短い投稿）",
+   "minute": 751,
+   "time": "12:31",
+   "window": "11:30〜13:00",
+   "rest": false
+  },
+  {
+   "slot": 2,
+   "name": "夕方（役立つ投稿・PR 投稿）",
+   "minute": 1115,
+   "time": "18:35",
+   "window": "17:00〜19:00",
+   "rest": false
+  },
+  {
+   "slot": 3,
+   "name": "夜（短い投稿）",
+   "minute": 1260,
+   "time": "21:00",
+   "window": "20:30〜22:00",
+   "rest": false
+  }
+ ]
+}
