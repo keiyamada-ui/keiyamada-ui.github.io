@@ -1,0 +1,63 @@
+name: ことり まとめ記事
+
+on:
+  schedule:
+    # 毎週水曜 日本時間 5:43 ごろ（GitHub は UTC なので 9 時間引く）
+    - cron: '43 20 * * 2'
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: '（任意）このキーワードで書く 例: お名前シール 入学準備'
+        required: false
+        default: ''
+      source:
+        description: 'keyword を使うときの検索先'
+        type: choice
+        options: [ichiba, books]
+        default: ichiba
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  matome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      KOTORI_STORE_KEY: ${{ secrets.KOTORI_STORE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r _affiliate/requirements.txt
+      - name: まとめ記事を書く
+        id: write
+        env:
+          KEYWORD: ${{ inputs.keyword }}
+          SOURCE: ${{ inputs.source }}
+        run: python _affiliate/matome.py --keyword "${KEYWORD}" --source "${SOURCE:-ichiba}"
+      - name: 保存する（サイトに載る）
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _posts _affiliate/data/matome.json _affiliate/data/stats/claude.json 2>/dev/null || true
+          git commit -m "まとめ記事を追加" || exit 0
+          for i in 1 2 3; do git pull --rebase --autostash -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+      - name: 通知する
+        if: steps.write.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python _affiliate/push.py send --title "📝 まとめ記事を公開しました" \
+            --body "数分でサイトに載ります。Pinterest や Threads のプロフィールから案内できます" \
+            --url "https://keiyamada-ui.github.io/" --add 0 || true

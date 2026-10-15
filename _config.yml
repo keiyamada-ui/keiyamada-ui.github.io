@@ -1,10 +1,24 @@
-theme: minima
-title: AI Tech News Curator
-timezone: Asia/Tokyo
-future: true
-title: AI Tech News Curator
-description: 世界中の最新AI・テクノロジーニュースを日本語で要約・解説
+# ことり｜子育て家族の"買ってよかった"まとめ（GitHub Pages）
+title: 'ことり｜子育て家族の"買ってよかった"まとめ'
+description: 子育て中の家族向けに、楽天のレビューや評判をもとに「買ってよかった」と言われている物を、場面ごとにまとめています。
 url: "https://keiyamada-ui.github.io"
-author: aitech_news_curator
-twitter:
-  username: aitechnewscurator
+lang: ja
+timezone: Asia/Tokyo
+future: false
+author: ことり
+threads: kotori.family
+permalink: /:year/:month/:title/
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+exclude:
+  - _affiliate
+  - _archive_ai_news
+  - auto_curator.py
+  - requirements.txt
+  - README.md
+  - stock-reports
+defaults:
+  - scope: { path: "", type: posts }
+    values: { layout: post }

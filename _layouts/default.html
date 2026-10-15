@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% seo %}
+  {% feed_meta %}
+  <link rel="icon" href="{{ '/kotori/icon-192.png' | relative_url }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+  <meta property="og:image" content="{{ site.url }}{% if page.image %}{{ page.image }}{% else %}/kotori/header.jpg{% endif %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="google-site-verification" content="YypLa66c5fzfF7ZQKyQv2be_7jKo00w8bf2Em667p6w" />
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-MLTQ26XK');</script>
+</head>
+<body>
+<header class="site-head">
+  <a class="brand" href="{{ '/' | relative_url }}">
+    <img src="{{ '/kotori/avatar.png' | relative_url }}" alt="" width="40" height="40">
+    <span>ことり<small>子育て家族の"買ってよかった"まとめ</small></span>
+  </a>
+  <a class="follow" href="https://www.threads.com/@{{ site.threads }}" target="_blank" rel="noopener">Threads</a>
+</header>
+<main class="wrap">
+{{ content }}
+</main>
+<footer class="site-foot">
+  <nav>
+    <a href="{{ '/about/' | relative_url }}">このサイトについて</a>
+    <a href="{{ '/privacy/' | relative_url }}">プライバシーポリシー</a>
+    <a href="{{ '/contact/' | relative_url }}">お問い合わせ</a>
+  </nav>
+  <p>当サイトは楽天アフィリエイトを利用しています。価格や在庫は記事作成時点のものです。</p>
+  <p>&copy; {{ site.time | date: "%Y" }} ことり</p>
+</footer>
+</body>
+</html>

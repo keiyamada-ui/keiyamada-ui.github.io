@@ -1,0 +1,18 @@
+---
+layout: default
+---
+<article class="post">
+  <p class="pr">PR　この記事には楽天アフィリエイトのリンクが含まれています。</p>
+  {% if page.event %}<span class="chip">{{ page.event }}</span>{% endif %}
+  <h1>{{ page.title }}</h1>
+  <p class="meta"><time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y年%-m月%-d日" }}</time>　価格・在庫は{{ page.date | date: "%-m月%-d日" }}時点のものです</p>
+  <div class="content">
+    {{ content }}
+  </div>
+  <aside class="author">
+    <img src="{{ '/kotori/avatar.png' | relative_url }}" alt="" width="56" height="56">
+    <div><b>ことり</b><br>子育て中の家族向けに、レビューや評判から「買ってよかった」と言われている物をまとめています。
+      <a href="https://www.threads.com/@{{ site.threads }}" target="_blank" rel="noopener">Threads でも発信中</a></div>
+  </aside>
+  <p><a href="{{ '/' | relative_url }}">← まとめの一覧へ</a></p>
+</article>

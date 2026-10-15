@@ -1,0 +1,65 @@
+/* ことり まとめサイト。管理画面と同じ「ことりの陽だまり」の色: ベージュの紙にパステル */
+:root {
+  --bg: #FBF6EF; --card: #FFFFFF; --text: #403A49; --sub: #6F6779; --line: #EFE5D8; --box: #F8F2EA;
+  --accent: #FFC75A; --accent-ink: #4A3A12; --accent-bg: #FFF4D9; --accent-deep: #F2A93B; --pr: #E86F7E; --pr-bg: #FFEAEE;
+  --shadow: 0 1px 0 rgba(120, 100, 140, .04), 0 6px 18px -8px rgba(140, 115, 150, .28);
+  --font: "Zen Maru Gothic", -apple-system, BlinkMacSystemFont, "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-weight: 500; line-height: 1.8; }
+a { color: inherit; }
+img { max-width: 100%; height: auto; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 40px; }
+
+.site-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+             padding: 10px 16px; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 900; font-size: 18px; line-height: 1.2; }
+.brand img { border-radius: 50%; background: #F7F3E8; }
+.brand small { display: block; font-size: 11.5px; font-weight: 700; color: var(--sub); }
+.follow { flex: none; text-decoration: none; font-size: 13px; font-weight: 900; padding: 7px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+
+.hero { margin: 8px 0 20px; }
+.hero .cover { display: block; width: 100%; aspect-ratio: 1200 / 470; object-fit: cover; border-radius: 24px; box-shadow: var(--shadow); }
+.hello { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px 20px; margin: -28px 12px 0; position: relative; box-shadow: var(--shadow); }
+.hello h1 { margin: 0 0 6px; font-size: 22px; font-weight: 900; line-height: 1.45; }
+.hello p { margin: 0; color: var(--sub); font-size: 14.5px; }
+
+.sec { font-size: 15px; color: var(--sub); margin: 28px 4px 12px; letter-spacing: .04em; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
+        text-decoration: none; box-shadow: var(--shadow); transition: transform .15s; }
+.card:hover { transform: translateY(-2px); }
+.card img { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; width: 100%; }
+.card .body { padding: 12px 14px 14px; }
+.card h3 { margin: 4px 0; font-size: 16px; line-height: 1.5; font-weight: 900; }
+.card p { margin: 0; font-size: 13.5px; color: var(--sub); line-height: 1.6; }
+.card time { display: block; margin-top: 6px; font-size: 12.5px; color: var(--sub); }
+.chip { display: inline-block; font-size: 12px; font-weight: 900; padding: 2px 10px; border-radius: 999px; background: var(--accent-bg); }
+.empty { text-align: center; color: var(--sub); padding: 30px 0; }
+
+.post { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 20px 18px; margin-top: 10px; box-shadow: var(--shadow); }
+.post h1 { font-size: 23px; line-height: 1.5; margin: 6px 0 4px; font-weight: 900; }
+.post .meta { color: var(--sub); font-size: 13px; margin: 0 0 14px; }
+.post .pr { margin: 0 0 10px; font-size: 12.5px; color: var(--pr); background: var(--pr-bg); border-radius: 12px; padding: 6px 12px; font-weight: 700; }
+.content { font-size: 16px; }
+.content h2 { font-size: 19px; margin: 30px 0 10px; padding: 8px 12px; background: var(--accent-bg); border-radius: 12px; line-height: 1.5; }
+.content h3 { font-size: 17px; margin: 22px 0 8px; }
+.content p { margin: 0 0 14px; }
+
+/* 商品カード */
+.item { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; border: 1px solid var(--line); border-radius: 18px;
+        padding: 14px; margin: 12px 0 16px; background: #fff; }
+.item img { width: 120px; height: 120px; object-fit: contain; border-radius: 12px; background: #fff; }
+.item .name { font-weight: 700; font-size: 14px; line-height: 1.55; margin: 0 0 4px; }
+.item .spec { font-size: 13.5px; color: var(--sub); margin: 0 0 8px; }
+.item .buy { display: inline-block; text-decoration: none; font-weight: 900; font-size: 14px; padding: 9px 18px; border-radius: 999px;
+             background: var(--accent); color: var(--accent-ink); box-shadow: 0 3px 0 var(--accent-deep); }
+.good { font-size: 14px; background: var(--box); border-radius: 12px; padding: 8px 12px; margin: -6px 0 18px; }
+@media (max-width: 480px) { .item { grid-template-columns: 96px 1fr; } .item img { width: 96px; height: 96px; } }
+
+.author { display: flex; gap: 12px; align-items: flex-start; margin: 28px 0 10px; padding: 14px; background: var(--box); border-radius: 18px; font-size: 14px; }
+.author img { border-radius: 50%; background: #F7F3E8; flex: none; }
+
+.site-foot { text-align: center; color: var(--sub); font-size: 13px; padding: 24px 16px 40px; }
+.site-foot nav { display: flex; gap: 6px 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.site-foot p { margin: 4px 0; }

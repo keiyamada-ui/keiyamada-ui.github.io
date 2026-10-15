@@ -1,10 +1,9 @@
 name: AI News Auto Post
 
+# サイトを「ことり」のまとめサイトに作り変えたため、自動実行は止めています（2026-10）。
+# もう一度動かすときは、下の schedule を戻してください。昔の記事は _archive_ai_news に残しています。
 on:
-  schedule:
-    # 毎日 日本時間の朝7時 と 夜19時 に自動で動く設定（※GitHubの時間はUTCのため9時間引いています）
-    - cron: '0 22,10 * * *'
-  workflow_dispatch: # 「今すぐ実行」ボタンも付ける設定
+  workflow_dispatch: # 「今すぐ実行」ボタンだけ残す
 
 jobs:
   build:
