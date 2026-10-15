@@ -74,3 +74,33 @@ def test_rewrites_note(tmp_path):
     import pytest
     with pytest.raises(ValueError):
         rewrites.add("rewrite", "", "x", path=path)
+
+
+def test_events_calendar():
+    import events
+    names = lambda d: [e["name"] for e in events.active(datetime.date.fromisoformat(d))]  # noqa: E731
+    assert "クリスマス" in names("2026-11-25") and "クリスマス" not in names("2026-10-01")
+    assert "入学準備" in names("2027-01-10")  # 年をまたぐ行事
+    assert "ハロウィン" in names("2026-10-16")
+    assert "あと" in events.note(datetime.date(2026, 10, 16))
+    ts = events.themes(datetime.date(2026, 12, 1))
+    assert ts and all(t["origin"] == "行事" and t["urgency"] == 5 for t in ts)
+
+
+def test_weekly_report(tmp_path):
+    import weekly
+    (tmp_path / "stats").mkdir()
+    (tmp_path / "insights").mkdir()
+    (tmp_path / "stats" / "daily.json").write_text(json.dumps({
+        "2026-10-08": {"followers": 5}, "2026-10-10": {"views": 100, "likes": 2, "followers": 7, "posts": 5},
+        "2026-10-11": {"views": 50, "clicks": 1, "followers": 8}}), encoding="utf-8")
+    (tmp_path / "insights" / "latest.json").write_text(json.dumps({"1": {"date": "2026-10-10", "draft": "d.json", "post_index": 0,
+        "metrics": {"views": 300, "likes": 1}, "permalink": "p"}}), encoding="utf-8")
+    drafts = tmp_path / "drafts"
+    drafts.mkdir()
+    (drafts / "d.json").write_text(json.dumps({"posts": [{"text": "靴下を片方だけ"}]}), encoding="utf-8")
+    r = weekly.build(datetime.date(2026, 10, 11), data=tmp_path, drafts=drafts)
+    assert r["views"] == 150 and r["likes"] == 2 and r["followers"] == 8 and r["followers_diff"] == 3
+    assert r["best"]["text"] == "靴下を片方だけ"
+    text = weekly.message(r)
+    assert "フォロワー +3" in text and "靴下" in text

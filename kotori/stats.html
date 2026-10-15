@@ -58,7 +58,7 @@
 
 <script src="app.js"></script>
 <script>
-let daily = {}, earnings = {}, topPosts = [], month = jstDate().slice(0, 7);
+let daily = {}, earnings = {}, topPosts = [], weekly = null, month = jstDate().slice(0, 7);
 const main = document.getElementById("main");
 const yen = n => (n || 0).toLocaleString("ja-JP") + "円";
 const num = n => (n || 0).toLocaleString("ja-JP");
@@ -146,6 +146,12 @@ function render() {
   const f = followersAt(month), fPrev = followersAt(shift(month, -1)) ?? (rows.find(r => r.followers != null) || {}).followers;
   const fDiff = f != null && fPrev != null ? f - fPrev : null;
   const nodes = [];
+
+  // 週のふり返り（日曜の夜に作る）
+  if (weekly) nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "📮 先週のふり返り（" + weekly.week.replace(/2\d{3}-/g, "").replace(/-/g, "/") + "）" }),
+    el("div", { class: "tiles" }, [tile("表示", num(weekly.views)), tile("いいね", num(weekly.likes)),
+      tile("リンクのクリック", num(weekly.clicks)), tile("フォロワー", weekly.followers ?? "—", weekly.followers_diff != null ? (weekly.followers_diff >= 0 ? "+" : "") + weekly.followers_diff : "")]),
+    weekly.next_events && weekly.next_events.length ? el("div", { class: "muted", style: "margin-top:8px", text: "これからの行事: " + weekly.next_events.join("、") }) : null]));
 
   // 売上（いちばん大事な数字）
   nodes.push(el("section", { class: "card" }, [
@@ -240,6 +246,11 @@ document.getElementById("next").addEventListener("click", () => { month = shift(
   [daily, earnings] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json")]);
   daily = daily || {}; earnings = earnings || {};
   render();
+  // 先週のふり返り（いちばん近い日曜）
+  for (let i = 0; i < 7 && !weekly; i++) {
+    const d = addDays(jstDate(), -i);
+    if (new Date(d + "T00:00:00Z").getUTCDay() === 0) weekly = await raw(`_affiliate/data/weekly/${d}.json`);
+  }
   // よく見られた投稿（本文は下書きから読む）
   const store = (await raw("_affiliate/data/insights/latest.json")) || {};
   topPosts = Object.values(store).sort((a, b) => (b.metrics.views || 0) - (a.metrics.views || 0)).slice(0, 5);
