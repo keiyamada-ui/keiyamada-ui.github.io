@@ -54,3 +54,23 @@ def test_learning_ignores_own_replies(tmp_path):
     assert row["replies"] == 1  # 4件のうち3件は自分のツリー
     store["1"]["own_replies"] = 4
     assert learn.rows(store, DAY, tmp_path)[0]["replies"] == 0
+
+
+def test_rewrites_note(tmp_path):
+    import rewrites
+    path = tmp_path / "r.json"
+    assert rewrites.note(path) == ""
+    rewrites.add("rewrite", "2枚3180円で送料無料！", "2枚で3,180円、送料0円。『え、〜？』ってなった。", "pr", "驚かない", path=path)
+    rewrites.add("sample", "ロンT1枚1590円！", path=path)
+    rewrites.add("good", before="いい投稿", path=path)
+    rewrites.add("bad", before="ダメな投稿", note="長い", path=path)
+    rewrites.add("good", before="ダメな投稿", path=path)  # 押し直すと前のは消える
+    text = rewrites.note(path)
+    assert "直した後: 2枚3180円で送料無料！" in text and "ロンT1枚1590円！" in text
+    assert "ダメな投稿" in text.split("「良い」")[1] and "「ダメ」" not in text
+    entries = rewrites.load(path)
+    assert [e["id"] for e in entries] == [1, 2, 3, 5]
+    assert rewrites.delete(1, path=path) == 1 and len(rewrites.load(path)) == 3
+    import pytest
+    with pytest.raises(ValueError):
+        rewrites.add("rewrite", "", "x", path=path)

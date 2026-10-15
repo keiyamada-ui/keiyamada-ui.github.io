@@ -15,18 +15,18 @@
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📣 投稿</h1></header>
 <div class="tabs" role="tablist">
   <button class="tab" id="t-day" role="tab">今日の投稿</button>
+  <button class="tab" id="t-rewrite" role="tab">📝 書き直し帳</button>
   <button class="tab" id="t-insights" role="tab">📈 反響</button>
 </div>
 <main id="main"><p class="empty">読み込み中…</p></main>
 
 <script src="app.js"></script>
 <script>
-const SLOTS = [  // min = 開始時刻、end = 締め切り（日本時間・0時からの分）。autopost.py と同じ
-  { n: 1, time: "7:40", min: 460, end: 840, plan: "buzz" },
-  { n: 2, time: "10:10", min: 610, end: 740, plan: "casual" },
-  { n: 3, time: "12:20", min: 740, end: 940, plan: "value" },
-  { n: 4, time: "15:40", min: 940, end: 1060, plan: "casual" },
-  { n: 5, time: "17:40", min: 1060, end: 1440, plan: "pr" },
+// 投稿の枠（autopost.py と同じ）。時刻は毎日この幅の中でランダムに決まる（data/schedule.json）
+const SLOTS = [
+  { n: 1, window: "11:30〜13:00", end: 870, plan: "casual", label: "昼・短い投稿" },
+  { n: 2, window: "17:00〜19:00", end: 1230, plan: "value", label: "夕方・役立つ投稿か PR 投稿" },
+  { n: 3, window: "20:30〜22:00", end: 1410, plan: "buzz", label: "夜・短い投稿" },
 ];
 const draftCache = {};
 async function draft(name) {
@@ -86,7 +86,57 @@ async function loadPosted(d) {
   return lists.flatMap(x => x || []);
 }
 
-function postBlock(post, extra = []) {
+// ── AI に覚えてもらう（書き直し帳）──
+async function sendRewrite(inputs, btn, done) {
+  if (!Key.get()) { const box = btn.closest("section"); if (!box.querySelector(".info")) box.prepend(needKeyBox()); return false; }
+  btn.disabled = true;
+  try {
+    await dispatch("affiliate_rewrite.yml", Object.assign({ mode: "add", kind: "", before: "", after: "", note: "", id: "" }, inputs));
+    toast(done || "記録しました。明日の朝の下書きから使います");
+    return true;
+  } catch (e) { btn.disabled = false; toast(e.message); return false; }
+}
+
+function learnRow(post) {
+  const before = [post.text, ...(post.thread_parts || [])].join("\n");
+  const kind = post.type || "";
+  const editor = el("div", { style: "display:none;margin-top:10px" });
+  const area = el("textarea", { placeholder: "例）2枚3180円で送料無料！", rows: "3" });
+  const memo = el("input", { type: "text", placeholder: "メモ（任意）例: 驚いたふりはいらない" });
+  const save = el("button", { class: "btn primary", text: "記録する" });
+  save.addEventListener("click", async () => {
+    if (!area.value.trim()) { toast("書き直した文を入れてください"); return; }
+    if (await sendRewrite({ type: "rewrite", kind, before, after: area.value.trim(), note: memo.value.trim() }, save)) {
+      editor.replaceChildren(el("div", { class: "info", text: "✅ 覚えました。明日の朝の下書きから、この書き方をお手本にします" }));
+    }
+  });
+  editor.append(el("label", { class: "field", text: "私ならこう書く" }), area, memo, el("div", { class: "actions" }, [save]));
+  const edit = el("button", { class: "btn", text: "✏️ 私ならこう書く" });
+  edit.addEventListener("click", () => { editor.style.display = editor.style.display === "none" ? "" : "none"; if (editor.style.display === "") area.focus(); });
+  const good = el("button", { class: "btn", text: "👍", "aria-label": "良い" });
+  good.addEventListener("click", () => sendRewrite({ type: "good", kind, before }, good, "👍 覚えました"));
+  const bad = el("button", { class: "btn", text: "👎", "aria-label": "ダメ" });
+  bad.addEventListener("click", () => {
+    const why = prompt("どこがダメでしたか？（任意。空のままでもOK）", "") ;
+    if (why === null) return;
+    sendRewrite({ type: "bad", kind, before, note: why }, bad, "👎 覚えました。こう書かないようにします");
+  });
+  return [el("div", { class: "actions learn" }, [edit, good, bad]), editor];
+}
+
+// 自動で出す前の投稿を「出さない」にする（次の候補が出る）
+async function sendSkip(name, i, btn) {
+  if (!Key.get()) { const box = btn.closest("section"); if (!box.querySelector(".info")) box.prepend(needKeyBox()); return; }
+  if (!confirm("この投稿は自動で出さないようにしますか？（代わりに次の候補が出ます）")) return;
+  btn.disabled = true;
+  try {
+    await dispatch("affiliate_mark.yml", { draft: name, index: String(i), skip: "true" });
+    btn.textContent = "⏭️ 出さないにしました（1〜2分で反映）";
+    toast("この投稿は出さないようにしました");
+  } catch (e) { btn.disabled = false; toast(e.message); }
+}
+
+function postBlock(post, extra = [], learn = true) {
   const parts = post.thread_parts || [];
   const all = [post.text, ...parts].join("\n\n――\n\n");
   let pic = null;
@@ -98,15 +148,18 @@ function postBlock(post, extra = []) {
   }
   return [el("div", { class: "text", text: all }), pic,
           post.reply_text ? el("div", { class: "muted", text: "返信（リンク）: " + post.reply_text }) : null,
-          el("div", { class: "actions" }, [el("button", { class: "btn", text: "コピー", onclick: () => copy(post.text) }), ...extra])]
+          el("div", { class: "actions" }, [el("button", { class: "btn", text: "コピー", onclick: () => copy(post.text) }), ...extra]),
+          ...(learn ? learnRow(post) : [])]
     .filter(Boolean);
 }
 
 async function showDay() {
   main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
-  const [daily, buzz, casual, posted] = await Promise.all([
+  const [daily, buzz, casual, posted, schedule, skippedList] = await Promise.all([
     draft(day + ".json"), draft(day + "-buzz.json"), draft(day + "-casual.json"),
-    loadPosted(day)]);
+    loadPosted(day), raw("_affiliate/data/schedule.json"), raw("_affiliate/data/skipped.json")]);
+  const plan = schedule && schedule.date === day ? schedule.slots : [];
+  const skipped = new Set((skippedList || []).map(x => `${x.draft}:${x.post_index}`));
   const done = posted || [];
   // 記録が反映されたら、この端末の「反映待ち」を消す
   for (const [key, v] of Object.entries(marks.all())) {
@@ -126,11 +179,12 @@ async function showDay() {
                   onclick: () => { day = addDays(day, 1); showDay(); } }),
   ]));
 
-  // 5回の投稿枠
+  // 投稿の枠（1日3回。たまに2回）
   const sched = el("section", { class: "card" }, [el("div", { class: "title", text: "投稿の予定と結果" })]);
   const box = el("div", { style: "margin-top:10px" });
   for (const s of SLOTS) {
     const hit = done.find(p => p.slot === s.n && p.date === day && !p.manual);
+    const sp = plan.find(p => p.slot === s.n);
     const right = el("div");
     if (hit) {
       const post = await postOf(hit);
@@ -138,15 +192,16 @@ async function showDay() {
         el("span", { class: "badge ok", text: "✅ 自動で投稿済み " + (hit.at ? hit.at.slice(11, 16) : "") }),
         el("span", { class: "badge" + (hit.kind === "pr" ? " pr" : ""), text: KIND[hit.kind] || hit.kind })]));
       if (hit.partial) right.append(el("div", { class: "muted", text: "⚠️ 途中までしか投稿できませんでした" }));
-      if (post) right.append(...postBlock(post, hit.permalink ? [el("a", { class: "btn", href: hit.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })] : []));
+      if (post) right.append(...postBlock(post, hit.permalink ? [el("a", { class: "btn", href: hit.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })] : [], false));
     } else {
       const passed = day < today || (day === today && nowMin >= s.end);
+      const rest = sp && sp.rest;
       right.append(el("div", { class: "row" }, [
-        el("span", { class: "badge " + (passed ? "gray" : ""), text: passed ? "— 投稿なし" : "⏳ 予定" }),
-        el("span", { class: "badge gray", text: KIND[s.plan] })]));
-      if (s.n === 5) right.append(el("div", { class: "muted", text: "PR 投稿は2日おき。PR のない日は役立つ投稿かつぶやきを出します" }));
+        el("span", { class: "badge " + (passed || rest ? "gray" : ""), text: rest ? "💤 今日はお休み" : passed ? "— 投稿なし" : "⏳ 予定" + (sp ? `（${sp.time}ごろ）` : "") }),
+        el("span", { class: "badge gray", text: s.label })]));
+      if (s.n === 2) right.append(el("div", { class: "muted", text: "PR 投稿は2日おき。PR のない日は役立つ投稿を出します" }));
     }
-    box.append(el("div", { class: "slot" }, [el("div", { class: "time", text: s.time }), right]));
+    box.append(el("div", { class: "slot" }, [el("div", { class: "time", text: hit && hit.at ? hit.at.slice(11, 16) : sp ? sp.time : s.window }), right]));
   }
   const manual = done.filter(p => p.manual && p.date === day);
   if (manual.length) {
@@ -164,6 +219,7 @@ async function showDay() {
   const any = groups.some(([d]) => d && d.posts && d.posts.length);
   nodes.push(el("h2", { text: "この日の下書き" }));
   if (!any) nodes.push(el("p", { class: "empty", text: "この日の下書きはありません（毎朝 5:15 ごろに作られます）" }));
+  else if (day === today) nodes.push(el("p", { class: "muted", style: "margin:-4px 4px 10px", text: "まだ出ていない投稿で気に入らないものは「⏭️ これは出さない」で止められます（次の候補が出ます）。「✏️ 私ならこう書く」「👍👎」で教えると、AI が覚えます。" }));
   for (const [d, name] of groups) {
     if (!d || !d.posts) continue;
     const card = el("section", { class: "card" });
@@ -184,12 +240,15 @@ async function showDay() {
       } else if (e) {
         [state, cls] = ["✅ 自動で投稿済み " + (e.at ? e.at.slice(5, 10).replace("-", "/") + " " + e.at.slice(11, 16) : ""), "ok"];
         if (e.permalink) extra = [el("a", { class: "btn", href: e.permalink, target: "_blank", rel: "noopener", text: "Threads で見る" })];
+      } else if (skipped.has(`${name}:${i}`)) {
+        [state, cls] = ["⏭️ 出さない", "gray"];
       } else {
         [state, cls] = ["未投稿", "gray"];
         extra = [el("a", { class: "btn", target: "_blank", rel: "noopener", text: "Threads で開く",
                            href: "https://www.threads.com/intent/post?text=" + encodeURIComponent(p.text) }),
                  el("button", { class: "btn primary", text: "✋ 手で投稿した", onclick: ev => sendMark(name, i, false, ev.currentTarget) })];
         if (p.image_url) extra.push(el("button", { class: "btn danger", text: "🖼️ イラストを外す", onclick: ev => sendNoImage(name, i, ev.currentTarget) }));
+        if (day === today) extra.push(el("button", { class: "btn danger", text: "⏭️ これは出さない", onclick: ev => sendSkip(name, i, ev.currentTarget) }));
       }
       card.append(el("div", { class: "row", style: "margin-top:12px" }, [
         el("span", { class: "badge" + (p.type === "pr" ? " pr" : ""), text: KIND[p.type] || p.type }),
@@ -245,11 +304,53 @@ async function showInsights() {
     ]));
   }
   main.replaceChildren(...nodes);
+  foldHelpIn(main);
 }
 
-setupTabs([["t-day", "day"], ["t-insights", "insights"]], name => {
-  Seen.mark(name === "day" ? "posts" : "insights");
-  return name === "day" ? showDay() : showInsights();
+// 📝 書き直し帳: 記録した書き直し・お手本・👍👎 の一覧。消すこともできる
+async function showRewrite() {
+  main.replaceChildren(el("p", { class: "empty", text: "読み込み中…" }));
+  const list = (await fresh("_affiliate/data/rewrites.json")) || [];
+  const TYPE = { rewrite: "✏️ 書き直し", sample: "🖊️ お手本", good: "👍 良い", bad: "👎 ダメ" };
+  const KN = { buzz: "話題", casual: "つぶやき", value: "役立つ", pr: "PR", "": "" };
+  const nodes = [el("p", { class: "note", text: "ここに記録したあなたの書き方を、AI が毎朝いちばん優先のお手本にします（新しいものから、書き直し10件・お手本5件・👍👎 各4件まで）。間違えて記録したものは消せます。" })];
+  // お手本を書く（直す前の文がなくてもOK）
+  const kindSel = el("select", { style: "font:inherit;font-size:16px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--box);width:100%" },
+    [["", "種類（任意）"], ["casual", "つぶやき"], ["value", "役立つ投稿"], ["pr", "PR 投稿"], ["buzz", "話題の投稿"]].map(([v, t]) => el("option", { value: v, text: t })));
+  const area = el("textarea", { rows: "3", placeholder: "例）ロンT1枚1590円、2枚で3180円！送料も無料。" });
+  const memo = el("input", { type: "text", placeholder: "メモ（任意）" });
+  const save = el("button", { class: "btn primary", text: "お手本として記録する" });
+  save.addEventListener("click", async () => {
+    if (!area.value.trim()) { toast("文を入れてください"); return; }
+    if (await sendRewrite({ type: "sample", kind: kindSel.value, after: area.value.trim(), note: memo.value.trim() }, save)) {
+      area.value = ""; memo.value = ""; save.disabled = false;
+    }
+  });
+  nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "🖊️ 自分で書いたお手本を足す" }),
+    el("div", { class: "muted", text: "「こういう商品ならこう書く」という文を、思いついたときに。" }),
+    el("div", { style: "display:grid;gap:8px;margin-top:10px" }, [kindSel, area, memo]), el("div", { class: "actions" }, [save])]));
+  if (!list.length) nodes.push(el("p", { class: "empty", text: "まだ記録はありません。「今日の投稿」の「✏️ 私ならこう書く」から記録できます" }));
+  for (const e of [...list].reverse()) {
+    const del = el("button", { class: "btn danger", text: "消す" });
+    del.addEventListener("click", async () => {
+      if (!confirm("この記録を消しますか？")) return;
+      if (await sendRewrite({ mode: "delete", id: String(e.id) }, del, "消しました（1〜2分で反映）")) del.closest("section").remove();
+    });
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "row between" }, [el("span", { class: "badge" + (e.type === "bad" ? " pr" : e.type === "good" ? " ok" : ""), text: TYPE[e.type] + (KN[e.kind] ? "・" + KN[e.kind] : "") }),
+        el("span", { class: "muted", text: e.date })]),
+      e.before ? el("div", { class: "text", style: e.type === "rewrite" ? "opacity:.6" : "", text: (e.type === "rewrite" ? "直す前: " : "") + e.before }) : null,
+      e.after ? el("div", { class: "text", text: (e.type === "rewrite" ? "直した後: " : "") + e.after }) : null,
+      e.note ? el("div", { class: "muted", style: "margin-top:6px", text: "メモ: " + e.note }) : null,
+      el("div", { class: "actions" }, [del])]));
+  }
+  main.replaceChildren(...nodes);
+  foldHelpIn(main);
+}
+
+setupTabs([["t-day", "day"], ["t-rewrite", "rewrite"], ["t-insights", "insights"]], name => {
+  if (name !== "rewrite") Seen.mark(name === "day" ? "posts" : "insights");
+  return ({ day: showDay, rewrite: showRewrite, insights: showInsights })[name]();
 });
 </script>
 </body>

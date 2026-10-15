@@ -39,6 +39,7 @@ import learn  # noqa: E402
 import illust  # noqa: E402
 import rulebook  # noqa: E402
 import variety  # noqa: E402
+import rewrites  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
 import sources  # noqa: E402
@@ -974,6 +975,10 @@ def main(argv=None):
     # 最近使いすぎの言い回しを避け、書き出しの形を毎日変える
     prompts.VARIETY_NOTE, checks.OVERUSED[:] = variety.setup(
         today, DATA / "posted", Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")))
+    # 投稿者本人の書き直し・お手本・👍👎（いちばん優先のお手本）
+    prompts.REWRITE_NOTE = rewrites.note(HERE / "data" / "rewrites.json")
+    if not args.dry_run:  # 今日の投稿予定（時刻はランダム）を管理画面用に保存
+        autopost.save_plan(today, DATA / "schedule.json")
     generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
     if args.analyze_reference:

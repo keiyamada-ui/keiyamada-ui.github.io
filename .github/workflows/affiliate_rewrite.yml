@@ -1,0 +1,72 @@
+name: ことり 書き直し帳
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'add = 記録する / delete = 消す'
+        type: choice
+        options: [add, delete]
+        default: add
+      type:
+        description: 'rewrite = 書き直し / sample = お手本 / good = 👍 / bad = 👎'
+        type: choice
+        options: [rewrite, sample, good, bad]
+        default: rewrite
+      kind:
+        description: '投稿の種類（buzz / casual / value / pr、わからなければ空）'
+        required: false
+        default: ''
+      before:
+        description: 'もとの投稿の文'
+        required: false
+        default: ''
+      after:
+        description: '私ならこう書く（お手本の文）'
+        required: false
+        default: ''
+      note:
+        description: 'メモ・理由（任意）'
+        required: false
+        default: ''
+      id:
+        description: '消すときの番号'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 記録する
+        env:
+          MODE: ${{ inputs.mode }}
+          TYPE: ${{ inputs.type }}
+          KIND: ${{ inputs.kind }}
+          BEFORE: ${{ inputs.before }}
+          AFTER: ${{ inputs.after }}
+          NOTE: ${{ inputs.note }}
+          ID: ${{ inputs.id }}
+        run: |
+          if [ "$MODE" = "delete" ]; then
+            python _affiliate/rewrites.py delete --id "$ID"
+          else
+            python _affiliate/rewrites.py add --type "$TYPE" --kind "$KIND" --before "$BEFORE" --after "$AFTER" --note "$NOTE"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/rewrites.json
+          git commit -m "書き直し帳を更新" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

@@ -148,7 +148,7 @@ jobs:
 
           今日の下書き: ${{ github.server_url }}/${{ github.repository }}/blob/main/$rel
 
-          このあと 7:40 集客投稿・10:10 つぶやき・12:20 役立つ投稿・15:40 つぶやき・17:40 PR 投稿 の5回、
+          このあと 昼・夕方・夜 の3回（たまに2回）、毎日ランダムな時刻に
           自動で Threads に投稿し、結果をこの Issue にコメントします。
           良くない投稿は Threads アプリで削除してください。自動投稿を止めたいときは _affiliate/config.yaml の auto_post.enabled を false に。"
 

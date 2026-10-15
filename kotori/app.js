@@ -218,19 +218,46 @@ async function enablePush(onProgress) {
   try { localStorage.setItem("kotori-push", "on"); } catch (e) {}
 }
 
+// 処理中の目印（画面の上に出る、進み具合のバー）
+const Busy = {
+  show(label) {
+    let b = document.getElementById("busy");
+    if (!b) {
+      b = el("div", { id: "busy", class: "busy", role: "status" }, [el("span", { class: "t" }), el("span", { class: "bar" }, [el("i")])]);
+      document.body.append(b);
+    }
+    b.querySelector(".t").textContent = label;
+    b.classList.add("show");
+    return b;
+  },
+  progress(ratio) { const b = document.getElementById("busy"); if (b) b.querySelector(".bar i").style.width = Math.min(96, Math.round(ratio * 100)) + "%"; },
+  done(text) {
+    const b = document.getElementById("busy");
+    if (!b) return;
+    b.querySelector(".t").textContent = text; b.querySelector(".bar i").style.width = "100%";
+    setTimeout(() => b.classList.remove("show"), 1800);
+  },
+};
+
 // ワークフローを動かして、終わるまで待つ。返り値: 成功したら true
 async function runAndWait(file, inputs, onProgress, maxMinutes = 6) {
   const started = new Date(Date.now() - 5000).toISOString().slice(0, 19);
+  Busy.show("⏳ 処理しています…（だいたい1〜2分）"); Busy.progress(0.05);
   await dispatch(file, inputs);
   for (let i = 0; i < maxMinutes * 60 / 8; i++) {
     await new Promise(r => setTimeout(r, 8000));
+    Busy.progress(Math.min(0.95, (i + 1) * 8 / 90));  // だいたい90秒で終わる見込みで進める
     if (onProgress) onProgress(i);
     try {
       const runs = await gh(`/repos/${REPO}/actions/workflows/${file}/runs?event=workflow_dispatch&per_page=3`);
       const run = runs.workflow_runs.find(r => r.created_at >= started);
-      if (run && run.status === "completed") return run.conclusion === "success";
+      if (run && run.status === "completed") {
+        Busy.done(run.conclusion === "success" ? "✅ できました" : "⚠️ うまくいきませんでした");
+        return run.conclusion === "success";
+      }
     } catch (e) { /* 次の回でもう一度見る */ }
   }
+  Busy.done("⏳ まだ処理中です。少ししてから開き直してください");
   throw new Error("時間がかかっています。少ししてからページを開き直してください");
 }
 
@@ -248,10 +275,20 @@ async function freshText(path) {
 (function dock() {
   if (document.querySelector("nav.dock") || document.body.dataset.nodock !== undefined) return;
   const here = location.pathname.split("/").pop() || "index.html";
-  const items = [["index.html", "🏠", "ホーム"], ["posts.html", "📣", "投稿"], ["comments.html", "💬", "コメント"],
-                 ["pins.html", "📌", "ピン"], ["stats.html", "📊", "成果"]];
+  const items = [["index.html", "🏠", "ホーム"], ["posts.html", "📣", "投稿"], ["stock.html#room", "🛍️", "ROOM"],
+                 ["comments.html", "💬", "コメント"], ["stats.html", "📊", "成果"]];
   const nav = el("nav", { class: "dock", "aria-label": "よく使う画面" },
-    items.map(([href, icon, label]) => el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null },
+    items.map(([href, icon, label]) => el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href.split("#")[0] ? "page" : null },
       [el("span", { class: "i", text: icon }), label, el("span", { class: "dot", id: "dock-" + href.split(".")[0] })])));
   document.body.append(nav);
 })();
+
+// 画面の上の説明文は、「？ この画面の使い方」を押したときだけ開く（いつも見えると、やることが埋もれるため）
+function foldHelpIn(root = document) {
+  for (const p of root.querySelectorAll("p.note")) {
+    if (p.dataset.keep !== undefined || p.closest("details.help")) continue;
+    const d = el("details", { class: "help" }, [el("summary", { text: "？ この画面の使い方" })]);
+    p.replaceWith(d); d.append(p);
+  }
+}
+foldHelpIn();

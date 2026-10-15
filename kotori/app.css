@@ -4,7 +4,7 @@
 :root {
   /* ベージュの紙に、やさしいパステル。文字は茶色ではなく、やわらかいグレー（少しだけ紫みのある色） */
   color-scheme: light;
-  --bg: #FBF6EF; --card: #FFFFFF; --text: #4A4453; --sub: #8F8698; --line: #EFE5D8;
+  --bg: #FBF6EF; --card: #FFFFFF; --text: #403A49; --sub: #6F6779; --line: #EFE5D8;
   --accent: #FFC75A; --accent-ink: #4A3A12; --accent-bg: #FFF4D9; --accent-deep: #F2A93B;
   --pr: #E86F7E; --pr-bg: #FFEAEE; --ok: #4AA57A; --ok-bg: #E4F6EC; --box: #F8F2EA;
   --shadow: 0 1px 0 rgba(120, 100, 140, .04), 0 6px 18px -8px rgba(140, 115, 150, .28);
@@ -29,8 +29,21 @@ header.top a.back { display: inline-flex; align-items: center; justify-content: 
                     border-radius: 50%; background: var(--card); box-shadow: var(--shadow); color: var(--text);
                     text-decoration: none; font-size: 22px; line-height: 1; padding-bottom: 2px; }
 header.top h1 { font-size: 19px; margin: 0; font-weight: 900; letter-spacing: .02em; }
-h2 { font-size: 13px; color: var(--sub); margin: 24px 6px 10px; font-weight: 700; letter-spacing: .04em; }
-.note { color: var(--sub); font-size: 12.5px; line-height: 1.7; margin: 0 2px 14px; }
+h2 { font-size: 14px; color: var(--sub); margin: 24px 6px 10px; font-weight: 700; letter-spacing: .04em; }
+.note { color: var(--sub); font-size: 14px; line-height: 1.75; margin: 0 2px 14px; }
+details.help { margin: 0 2px 12px; }
+details.help > summary { display: inline-block; list-style: none; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--sub);
+                         background: var(--box); border-radius: 999px; padding: 5px 12px; }
+details.help > summary::-webkit-details-marker { display: none; }
+details.help[open] > summary { margin-bottom: 8px; }
+details.help .note { margin: 0; }
+/* 処理中のバー */
+.busy { position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translate(-50%, -140%); z-index: 50;
+        width: min(92vw, 420px); background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+        padding: 10px 14px; font-size: 14px; font-weight: 700; transition: transform .3s ease; }
+.busy.show { transform: translate(-50%, 0); }
+.busy .bar { display: block; height: 6px; border-radius: 99px; background: var(--box); margin-top: 8px; overflow: hidden; }
+.busy .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .8s ease; }
 
 /* タブ（ぷっくりした切り替え） */
 .tabs { display: flex; gap: 4px; background: var(--box); border-radius: 999px; padding: 4px; margin-bottom: 14px; overflow-x: auto;
@@ -45,9 +58,9 @@ h2 { font-size: 13px; color: var(--sub); margin: 24px 6px 10px; font-weight: 700
         box-shadow: var(--shadow); }
 .row { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
 .row.between { justify-content: space-between; }
-.muted { color: var(--sub); font-size: 12.5px; line-height: 1.6; overflow-wrap: anywhere; min-width: 0; }
+.muted { color: var(--sub); font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; min-width: 0; }
 .title { font-weight: 700; font-size: 15.5px; line-height: 1.5; overflow-wrap: anywhere; }
-.badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+.badge { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
          background: var(--accent-bg); color: var(--text); white-space: nowrap; }
 .badge.pr, .badge.ng { background: var(--pr-bg); color: var(--pr); }
 .badge.ok { background: var(--ok-bg); color: var(--ok); }
@@ -82,7 +95,7 @@ textarea { min-height: 104px; resize: vertical; line-height: 1.6; }
 .stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .stat div { background: var(--box); border-radius: 14px; padding: 10px 6px; text-align: center; }
 .stat b { display: block; font-size: 20px; font-weight: 900; }
-.stat span { font-size: 11px; color: var(--sub); }
+.stat span { font-size: 12.5px; color: var(--sub); }
 .slot > div { min-width: 0; }
 .slot { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1.5px dashed var(--line); }
 .slot:first-child { border-top: 0; padding-top: 0; }
@@ -110,7 +123,7 @@ nav.dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc
            background: color-mix(in srgb, var(--card) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
            border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 12px 30px -12px rgba(140, 115, 150, .45); }
 nav.dock a { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; border-radius: 999px;
-             text-decoration: none; color: var(--sub); font-size: 10.5px; font-weight: 700; position: relative; }
+             text-decoration: none; color: var(--sub); font-size: 11.5px; font-weight: 700; position: relative; }
 nav.dock a .i { font-size: 20px; line-height: 1.1; transition: transform .2s; }
 nav.dock a[aria-current="page"] { background: var(--accent-bg); color: var(--text); }
 nav.dock a[aria-current="page"] .i { transform: translateY(-1px) scale(1.08); }

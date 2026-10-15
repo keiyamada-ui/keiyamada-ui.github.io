@@ -17,24 +17,28 @@
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .tile { background: var(--box); border-radius: 12px; padding: 10px 12px; min-width: 0; }
   .tile .v { font-size: 22px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
-  .tile .k { font-size: 12px; color: var(--sub); }
-  .tile .d { font-size: 12px; color: var(--sub); }
+  .tile .k { font-size: 13px; color: var(--sub); }
+  .tile .d { font-size: 13px; color: var(--sub); }
   .hero { font-size: 34px; font-weight: 800; line-height: 1.1; }
   .chart { position: relative; margin-top: 10px; }
   .chart svg { display: block; width: 100%; height: 150px; }
+  a.rank { display: grid; grid-template-columns: 26px 1fr; gap: 2px 8px; padding: 10px 0; border-top: 1px dashed var(--line); color: inherit; text-decoration: none; }
+  a.rank b { grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-bg); display: grid; place-items: center; font-size: 13px; }
+  a.rank .rt { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  a.rank .rv { font-size: 13px; color: var(--sub); }
   .chart .bar { fill: var(--accent); }
   .chart .bar:hover, .chart .bar.on { fill: var(--accent-deep); }
   .chart .axis { stroke: var(--line); stroke-width: 1; }
   .chart .lbl { fill: var(--sub); font-size: 10px; }
-  .tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 12px;
+  .tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 13px;
          padding: 4px 8px; border-radius: 8px; pointer-events: none; white-space: nowrap; display: none; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
-  th { color: var(--sub); font-weight: 600; font-size: 12px; }
+  th { color: var(--sub); font-weight: 600; font-size: 13px; }
   .scroll { overflow-x: auto; }
   .form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .form label { font-size: 12px; color: var(--sub); display: block; }
+  .form label { font-size: 13px; color: var(--sub); display: block; }
   .form input { width: 100%; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
                 background: var(--card); color: var(--text); font-family: inherit; }
   .form .wide { grid-column: 1 / -1; }
@@ -43,7 +47,7 @@
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>📊 成果の記録</h1></header>
-<p class="note">毎朝、前の日の Threads の反響（表示・いいね・リンクのクリック・フォロワー）を自動で記録しています。楽天の売上は、楽天アフィリエイトの「成果レポート」を見て月ごとに入力してください。Claude の残高の目安もここで見られます。将来の実績としてそのまま使えます。</p>
+<p class="note">毎朝、前の日の Threads の反響（表示・いいね・リンクのクリック・フォロワー）を自動で記録しています。楽天の売上は、楽天アフィリエイトの「成果レポート」を見て月ごとに入力してください。将来の実績としてそのまま使えます。</p>
 
 <div class="month">
   <button class="btn" id="prev" aria-label="前の月">‹</button>
@@ -54,7 +58,7 @@
 
 <script src="app.js"></script>
 <script>
-let daily = {}, earnings = {}, claude = {}, month = jstDate().slice(0, 7);
+let daily = {}, earnings = {}, topPosts = [], month = jstDate().slice(0, 7);
 const main = document.getElementById("main");
 const yen = n => (n || 0).toLocaleString("ja-JP") + "円";
 const num = n => (n || 0).toLocaleString("ja-JP");
@@ -108,51 +112,32 @@ function chart(rows) {
   return box;
 }
 
-function tile(k, v, d) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), d ? el("div", { class: "d", text: d }) : null]); }
-
-// 💳 Claude の残高（目安）: 入力した残高・チャージから、AI が使った分を引いた金額
-const usd = v => "$" + (v || 0).toFixed(2), usdYen = v => `約${Math.round((v || 0) * USD_YEN).toLocaleString("ja-JP")}円`;
-function claudeCard() {
-  const b = claude.balance, use = claude.usage || {};
-  const monthUse = Object.keys(use).filter(d => d.startsWith(month)).reduce((a, d) => a + use[d].usd, 0);
-  const week = [...Array(7)].map((_, i) => use[jstDate(-i)]).filter(Boolean);
-  const perDay = week.length ? week.reduce((a, r) => a + r.usd, 0) / 7 : 0;
-  const low = b && b.usd < CLAUDE_LOW_USD;
-  const note = el("div", { class: "muted", style: "margin-top:6px" });
-  const amount = el("input", { id: "c-usd", type: "text", inputmode: "decimal", placeholder: "例: 18.40" });
-  const send = async (kind, btn) => {
-    if (!Key.get()) { note.replaceChildren(needKeyBox()); return; }
-    const v = amount.value.replace(/[$＄,，\s]/g, "");
-    if (!/^\d+(\.\d{1,2})?$/.test(v) || (kind === "add" && +v === 0)) { note.textContent = "ドルの金額を数字で入力してください（例: 18.40）"; return; }
-    btn.disabled = true; note.textContent = "記録しています…（1分ほど）";
-    try {
-      if (!(await runAndWait("affiliate_claude.yml", { kind, usd: v }))) throw new Error("うまく記録できませんでした");
-      claude = (await fresh("_affiliate/data/stats/claude.json")) || claude;
-      render();
-    } catch (err) { note.textContent = "⚠️ " + err.message; btn.disabled = false; }
-  };
-  const setBtn = el("button", { class: "btn primary", text: "残高を合わせる" });
-  const addBtn = el("button", { class: "btn", text: "チャージした分を足す" });
-  setBtn.addEventListener("click", () => send("set", setBtn));
-  addBtn.addEventListener("click", () => send("add", addBtn));
-  return el("section", { class: "card", id: "claude" }, [
-    el("div", { class: "row between" }, [el("div", { class: "title", text: "💳 Claude の残高（目安）" }),
-      el("a", { class: "muted", href: "https://platform.claude.com/settings/billing", target: "_blank", rel: "noopener", text: "支払いページ →" })]),
-    b ? el("div", { class: "hero", style: "margin-top:8px" + (low ? ";color:var(--pr)" : ""), text: usd(b.usd) }) :
-        el("div", { class: "muted", style: "margin-top:8px", text: "まだ残高が入力されていません。支払いページに出ている残高（Credit balance）を下に入れてください。" }),
-    b ? el("div", { class: "muted", text: `${usdYen(b.usd)}（1ドル=${USD_YEN}円で計算）` }) : null,
-    low ? el("div", { class: "badge ng", style: "margin-top:6px", text: "⚠️ 残りわずかです。支払いページでチャージしてください" }) : null,
-    el("div", { class: "tiles" }, [
-      tile("この月に使った分", usd(monthUse), usdYen(monthUse)),
-      tile("1日あたり", usd(perDay), perDay > 0 && b ? `あと約${Math.max(0, Math.floor(b.usd / perDay))}日分` : "直近7日の平均"),
-    ]),
-    el("details", { open: b ? null : "" }, [el("summary", { text: b ? "残高を直す・チャージを記録する" : "📝 残高を入力する" }),
-      el("div", { class: "muted", style: "margin-top:6px", text: "Claude の残高は、外から読み取る仕組みがありません。そのため、ここに入れた金額から、AI が使った分を毎回自動で引いて目安を出しています。ずれてきたら、支払いページの金額を入れて「残高を合わせる」を押してください。チャージしたときは、チャージした金額を入れて「足す」を押します。" }),
-      el("div", { class: "form" }, [el("div", { class: "wide" }, [el("label", { for: "c-usd", text: "金額（ドル）" }), amount])]),
-      el("div", { class: "actions" }, [setBtn, addBtn]), note,
-      b ? el("div", { class: "muted", style: "margin-top:6px", text: `最後に合わせた日時: ${jstTime(b.at)}（${usd(b.set_usd)}）` }) : null]),
-  ]);
+// 折れ線（フォロワー数など）: [[日付, 数], ...]
+function lineChart(points) {
+  const W = 320, H = 120, pad = 18, svgNS = "http://www.w3.org/2000/svg";
+  const vals = points.map(p => p[1]), min = Math.min(...vals), max = Math.max(...vals), span = Math.max(1, max - min);
+  const xy = points.map(([, v], i) => [pad + (W - 2 * pad) * i / Math.max(1, points.length - 1), H - pad - (H - 2 * pad) * (v - min) / span]);
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `フォロワー ${points[0][1]}人 → ${points[points.length - 1][1]}人`);
+  const path = document.createElementNS(svgNS, "path");
+  path.setAttribute("d", xy.map(([x, y], i) => (i ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1)).join(" "));
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", "var(--accent-deep)"); path.setAttribute("stroke-width", "2.5");
+  path.setAttribute("stroke-linejoin", "round"); path.setAttribute("stroke-linecap", "round");
+  svg.append(path);
+  const last = xy[xy.length - 1], dot = document.createElementNS(svgNS, "circle");
+  dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]); dot.setAttribute("r", "4"); dot.setAttribute("fill", "var(--accent-deep)");
+  svg.append(dot);
+  for (const [i, anchor] of [[0, "start"], [points.length - 1, "end"]]) {
+    const t = document.createElementNS(svgNS, "text");
+    t.setAttribute("x", xy[i][0]); t.setAttribute("y", H - 2); t.setAttribute("text-anchor", anchor); t.setAttribute("class", "lbl");
+    t.textContent = `${+points[i][0].slice(5, 7)}/${+points[i][0].slice(8)}　${points[i][1]}人`;
+    svg.append(t);
+  }
+  return el("div", { class: "chart" }, [svg]);
 }
+
+function tile(k, v, d) { return el("div", { class: "tile" }, [el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), d ? el("div", { class: "d", text: d }) : null]); }
 
 function render() {
   document.getElementById("mlabel").textContent = `${month.slice(0, 4)}年${+month.slice(5)}月`;
@@ -161,8 +146,6 @@ function render() {
   const f = followersAt(month), fPrev = followersAt(shift(month, -1)) ?? (rows.find(r => r.followers != null) || {}).followers;
   const fDiff = f != null && fPrev != null ? f - fPrev : null;
   const nodes = [];
-
-  nodes.push(claudeCard());
 
   // 売上（いちばん大事な数字）
   nodes.push(el("section", { class: "card" }, [
@@ -187,6 +170,16 @@ function render() {
     rows.length ? el("div", { class: "muted", style: "margin-top:12px", text: "日ごとの表示数（棒をタップすると数字が出ます）" }) : null,
     rows.length ? chart(rows) : null,
   ]));
+
+  // フォロワーの推移（記録したすべての日）
+  const fdays = Object.keys(daily).filter(d => daily[d].followers != null).sort();
+  if (fdays.length >= 2) nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "👥 フォロワーの推移" }), lineChart(fdays.map(d => [d, daily[d].followers]))]));
+
+  // よく見られた投稿（直近30日）
+  if (topPosts.length) nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "🏅 よく見られた投稿（直近30日）" }),
+    ...topPosts.map((r, i) => el("a", { class: "rank", href: r.permalink || "#", target: "_blank", rel: "noopener" }, [
+      el("b", { text: String(i + 1) }), el("span", { class: "rt", text: r.text || "（本文を読み込めませんでした）" }),
+      el("span", { class: "rv", text: `表示 ${num(r.metrics.views)}・♡ ${num(r.metrics.likes)}` })]))]));
 
   // 売上の入力
   const val = k => e ? String(e[k] ?? "") : "";
@@ -243,11 +236,19 @@ function render() {
 document.getElementById("prev").addEventListener("click", () => { month = shift(month, -1); render(); });
 document.getElementById("next").addEventListener("click", () => { month = shift(month, 1); render(); });
 (async () => {
-  [daily, earnings, claude] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json"),
-    fresh("_affiliate/data/stats/claude.json")]);
-  daily = daily || {}; earnings = earnings || {}; claude = claude || {};
+  if (location.hash === "#claude") { location.replace("claude.html"); return; }
+  [daily, earnings] = await Promise.all([fresh("_affiliate/data/stats/daily.json"), fresh("_affiliate/data/stats/earnings.json")]);
+  daily = daily || {}; earnings = earnings || {};
   render();
-  if (location.hash === "#claude") document.getElementById("claude").scrollIntoView();
+  // よく見られた投稿（本文は下書きから読む）
+  const store = (await raw("_affiliate/data/insights/latest.json")) || {};
+  topPosts = Object.values(store).sort((a, b) => (b.metrics.views || 0) - (a.metrics.views || 0)).slice(0, 5);
+  await Promise.all(topPosts.map(async r => {
+    const d = await raw("_affiliate/drafts/" + r.draft);
+    const p = d && d.posts && d.posts[r.post_index];
+    r.text = p ? p.text.replace(/\s+/g, " ").slice(0, 60) : "";
+  }));
+  render();
 })();
 </script>
 </body>

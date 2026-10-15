@@ -11,26 +11,19 @@
 <meta name="theme-color" content="#FBF6EF">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
 <style>
-  :root {
-    --bg: #FBF6EF; --card: #FFFFFF; --text: #4A4453; --sub: #8F8698; --line: #EFE5D8;
-    --accent: #FFC75A; --accent-bg: #FFF4D9; --pr: #E86F7E; --pr-bg: #FFEAEE; --ok: #4AA57A; --box: #F8F2EA;
-  }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font-family: "Zen Maru Gothic", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
-         padding: max(12px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom)); }
+         padding: max(12px, env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom)); max-width: 640px; margin-inline: auto; }
   header { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
   header a.back { color: var(--sub); text-decoration: none; font-size: 22px; padding: 4px 6px 4px 0; }
   h1 { font-size: 19px; margin: 0; }
-  .note { color: var(--sub); font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--box); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
-  .tab { border: 0; background: transparent; color: var(--sub); border-radius: 9px; padding: 9px 0; font-size: 14px; font-weight: 700; font-family: inherit; }
-  .tab[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   .room { display: flex; gap: 10px; }
   .room img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--box); flex: none; }
   .room-name { font-size: 13px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
-  .count { color: var(--sub); font-size: 12px; margin: -4px 0 10px; }
+  .count { color: var(--sub); font-size: 13px; margin: -4px 0 10px; }
   .bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .chip { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px;
           padding: 7px 12px; font-size: 13px; font-family: inherit; }
@@ -38,18 +31,18 @@
   .set { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
   .set-head { display: flex; gap: 10px; align-items: flex-start; }
   .set-head img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--box); flex: none; }
-  .date { color: var(--sub); font-size: 12px; }
+  .date { color: var(--sub); font-size: 13px; }
   .theme { font-weight: 700; font-size: 15px; margin: 2px 0; }
-  .item { font-size: 12px; color: var(--sub); line-height: 1.4; overflow-wrap: anywhere; }
+  .item { font-size: 13px; color: var(--sub); line-height: 1.4; overflow-wrap: anywhere; }
   .item a { color: inherit; }
-  .warn { background: var(--pr-bg); color: var(--pr); border-radius: 10px; padding: 8px 10px; font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .warn { background: var(--pr-bg); color: var(--pr); border-radius: 10px; padding: 8px 10px; font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .post { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 12px; }
   .post.used { opacity: 0.45; }
   .post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--accent-bg); color: var(--text); }
+  .badge { font-size: 12.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--accent-bg); color: var(--text); }
   .badge.pr { background: var(--pr-bg); color: var(--pr); }
-  .angle { font-size: 12px; color: var(--sub); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .label { font-size: 11px; color: var(--sub); margin: 8px 0 4px; }
+  .angle { font-size: 13px; color: var(--sub); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .label { font-size: 12.5px; color: var(--sub); margin: 8px 0 4px; }
   .text { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--box); border-radius: 10px; padding: 10px; font-size: 14px; line-height: 1.6; }
   .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   button.act, a.act { flex: 1 1 auto; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
@@ -57,8 +50,8 @@
                       display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
   button.act.primary { background: var(--accent); border-color: var(--accent); color: #4A3A12; }
   button.act.done { color: var(--ok); border-color: var(--ok); }
-  .who { font-size: 12px; color: var(--sub); margin-bottom: 4px; overflow-wrap: anywhere; }
-  .quote { font-size: 12px; color: var(--sub); border-left: 3px solid var(--line); padding-left: 8px; margin: 8px 0; line-height: 1.5; overflow-wrap: anywhere; }
+  .who { font-size: 13px; color: var(--sub); margin-bottom: 4px; overflow-wrap: anywhere; }
+  .quote { font-size: 13px; color: var(--sub); border-left: 3px solid var(--line); padding-left: 8px; margin: 8px 0; line-height: 1.5; overflow-wrap: anywhere; }
   .badge.like { background: #FCE4EC; color: #C2185B; }
   .badge.ignore { background: var(--box); color: var(--sub); }
   .empty { text-align: center; color: var(--sub); padding: 40px 0; font-size: 14px; }
@@ -86,6 +79,7 @@
 <main id="list"><p class="empty">読み込み中…</p></main>
 <div id="toast"></div>
 
+<script src="app.js"></script>
 <script>
 if (location.hash === "#comments") location.replace("comments.html");
 const SRC = new URLSearchParams(location.search).get("src") ||
@@ -234,6 +228,20 @@ function render() {
           el("span", { class: "angle", text: p.angle }),
         ]),
       ]);
+      // ツリーや返信があるときは「順番にコピー」: 押すたびに、次に貼る文をコピーする
+      const steps = [[parts.length ? "本文" : "本文", p.text], ...parts.map((t, i) => [`ツリー${i + 2}（自分の投稿への返信に）`, t]),
+                     ...(isPr && p.reply_text ? [["リンクの返信（自分の投稿への返信に）", p.reply_text]] : [])];
+      if (steps.length > 1) {
+        let at = 0;
+        const stepBtn = el("button", { class: "act primary", style: "width:100%" });
+        const label = () => { stepBtn.textContent = at < steps.length ? `📋 ${at + 1}/${steps.length}：${steps[at][0]}をコピー` : "✓ 全部コピーしました（もう一度押すと最初から）"; };
+        stepBtn.addEventListener("click", () => {
+          if (at >= steps.length) { at = 0; label(); return; }
+          copy(steps[at][1]); at += 1; label();
+        });
+        label();
+        box.append(el("div", { class: "label", text: "順番にコピー（押すたびに次の文。Threads に貼ったら戻ってまた押す）" }), el("div", { class: "actions" }, [stepBtn]));
+      }
       box.append(...textBlock(parts.length ? `本文（ツリー 1/${parts.length + 1}）` : "本文", p.text, true));
       parts.forEach((t, i) => box.append(...textBlock(`ツリー ${i + 2}/${parts.length + 1}（自分の投稿への返信として）`, t, false)));
       if (isPr && p.reply_text) box.append(...textBlock("返信（自分の投稿への返信に貼る・リンク入り）", p.reply_text, false));
