@@ -54,6 +54,7 @@ REFERENCE_SCHEMA = obj(
     summary=STR, hook_type=STR, structure=STRS, why_it_worked=STRS,
     reusable_pattern=STR, avoid=STRS,
     theme=obj(who=STR, scene=STR, keyword=STR, source=SOURCE, persona=STR),
+    comment_insights=STRS, reader_questions=STRS,
 )
 
 
@@ -214,7 +215,8 @@ JSON だけを返す。"""
         lines += ["", context]
     if patterns:
         lines += ["", "勝ちパターン（型だけ参考にする）:"]
-        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" for p in [x for x in patterns if x.get("kind") != "tips"][:5]]
+        lines += [f"- {p['hook_type']}: {p['reusable_pattern']}" + (f"（読者の反応: {p['comment_insights'][0]}）" if p.get("comment_insights") else "")
+                  for p in [x for x in patterns if x.get("kind") != "tips"][:5]]
     if feedback:
         lines += ["", "前回の下書きは次のチェックに引っかかりました。すべて直して書き直してください:"]
         lines += [f"- {e}" for e in feedback]
@@ -234,10 +236,15 @@ def reference_messages(account, post_text, likes, memo, has_images=False):
 - avoid: 真似してはいけない点（煽り・収入アピール・誇大表現・著作権の問題など）
 - theme: この投稿から考えられる、子育て家族向けの商品テーマ。商品紹介でなければ keyword を空文字に。
   source は ichiba / books / travel のどれか。
+- comment_insights: コメント欄（返信）も渡されたときだけ。読んだ人がどこに反応したか・共感したか・反対したか、
+  どんな言葉を使っていたかを2〜5個。コメント欄がなければ空の配列。
+- reader_questions: コメントで読者が聞いていたこと・不安に思っていたこと（次の投稿や商品紹介のネタになるもの）を0〜5個。
+  なければ空の配列。コメントした人の名前やアイコンなど、個人を特定できることは書かない。
 
 JSON だけを返す。"""
     if has_images:
-        system += ("\n\n投稿はスクリーンショット（画像）で渡します。まず画像から本文・いいね数・返信数などを正確に読み取り、"
+        system += ("\n\n投稿はスクリーンショット（画像）で渡します。コメント欄のスクリーンショットが含まれることもあります。"
+                   "まず画像から本文・いいね数・返信数・コメントの内容などを正確に読み取り、"
                    "そのうえで分析してください。画像の中の名前やアイコンなど、投稿者を特定できる情報は結果に書かない。")
     user = (f"いいね数: {likes or '不明（画像にあれば読み取る）'}\n投稿者のメモ: {memo or 'なし'}\n\n"
             f"投稿:\n{post_text or '（スクリーンショットを見てください）'}")
