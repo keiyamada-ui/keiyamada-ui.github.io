@@ -80,7 +80,7 @@ def test_events_calendar():
     import events
     names = lambda d: [e["name"] for e in events.active(datetime.date.fromisoformat(d))]  # noqa: E731
     assert "クリスマス" in names("2026-11-25") and "クリスマス" not in names("2026-10-01")
-    assert "入学準備" in names("2027-01-10")  # 年をまたぐ行事
+    assert "受験シーズン" in names("2027-01-10")  # 年をまたぐ行事
     assert "ハロウィン" in names("2026-10-16")
     assert "あと" in events.note(datetime.date(2026, 10, 16))
     ts = events.themes(datetime.date(2026, 12, 1))
