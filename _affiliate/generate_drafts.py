@@ -495,6 +495,15 @@ def stock_names(today, path=None):
     return [s["item"]["name"] for s in sets if s.get("date", "") >= since and (s.get("item") or {}).get("name")]
 
 
+# ROOM のランキング上位は「クーポン・○%OFF・送料無料・○個で○円」のお得な商品が多いので、商品名にお得さがあるものを先にする
+DEAL_WORDS = ["クーポン", "OFF", "ＯＦＦ", "半額", "送料無料", "先着", "ポイント", "まとめ買い", "セット"]
+
+
+def deal_bonus(name):
+    """商品名にお得さが書いてあるほど点を足す（最大20点）。"""
+    return min(20, 7 * sum(1 for w in DEAL_WORDS if w in (name or "")))
+
+
 def build_room_list(config, today, picked, extras, generate, avoid=()):
     """ROOM 用の一覧に今日の分を追加する。picked = すでにコメントがある (商品, コメント)、extras = 追加候補。
     楽天市場の商品を優先し、本（投稿のたびに検索の手間がかかる）は1日 max_books 件までにする。
@@ -520,7 +529,8 @@ def build_room_list(config, today, picked, extras, generate, avoid=()):
             seen.add(item["id"])
     # 同じテーマの商品ばかりにならないよう、テーマごとに順番に1つずつ取る（テーマの中では点数の高い順）
     by_group = {}
-    for i in sorted((i for i in extras if i["source"] in ROOM_SOURCES and i["id"] not in seen), key=lambda i: -i.get("score", 0)):
+    for i in sorted((i for i in extras if i["source"] in ROOM_SOURCES and i["id"] not in seen),
+                    key=lambda i: -(i.get("score", 0) + deal_bonus(i.get("name")))):
         by_group.setdefault(i.get("_group", ""), []).append(i)
     pool = []
     for rank in range(max((len(v) for v in by_group.values()), default=0)):
