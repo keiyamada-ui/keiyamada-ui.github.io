@@ -57,6 +57,10 @@ img { max-width: 100%; height: auto; }
 .good { font-size: 14px; background: var(--box); border-radius: 12px; padding: 8px 12px; margin: -6px 0 18px; }
 @media (max-width: 480px) { .item { grid-template-columns: 96px 1fr; } .item img { width: 96px; height: 96px; } }
 
+/* 広告（スポンサーリンク）。商品カードと見分けがつくように、ラベルを付けて余白をとる */
+.ad { margin: 26px 0; padding-top: 6px; border-top: 1px dashed var(--line); min-height: 60px; }
+.ad-label { display: block; font-size: 11.5px; color: var(--sub); text-align: center; margin-bottom: 4px; letter-spacing: .1em; }
+
 .author { display: flex; gap: 12px; align-items: flex-start; margin: 28px 0 10px; padding: 14px; background: var(--box); border-radius: 18px; font-size: 14px; }
 .author img { border-radius: 50%; background: #F7F3E8; flex: none; }
 

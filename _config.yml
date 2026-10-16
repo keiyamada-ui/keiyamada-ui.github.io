@@ -7,6 +7,11 @@ timezone: Asia/Tokyo
 future: false
 author: ことり
 threads: kotori.family
+# Google AdSense のサイト運営者 ID（「ca-pub-」で始まる番号。公開しても大丈夫な番号）。
+# 入れると、全ページに広告の読み込みと ads.txt が自動で付く。空のままなら広告は出ない
+google_adsense: ""
+# 記事の中に広告を置く「広告ユニット」の番号（AdSense の「広告ユニット」で作る。空なら自動広告だけ）
+google_adsense_slot: ""
 permalink: /:year/:month/:title/
 plugins:
   - jekyll-feed
