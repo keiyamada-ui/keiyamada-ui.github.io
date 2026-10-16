@@ -548,3 +548,11 @@ def test_room_skips_manual_stock_items(out_dir, monkeypatch):
         {"date": TODAY.isoformat(), "item": {"name": stock["name"]}},
         {"date": "2020-01-01", "item": {"name": "古い商品"}}]}, ensure_ascii=False), encoding="utf-8")
     assert generate_drafts.stock_names(TODAY) == [stock["name"]]
+
+
+def test_room_prefers_deal_items():
+    assert generate_drafts.deal_bonus("【88%OFFクーポン】スポンジ 4個以上送料無料") == 20
+    assert generate_drafts.deal_bonus("キッチンバサミ ステンレス") == 0
+    assert "1行目" in prompts.ROOM_STYLE and "#PR" in prompts.ROOM_STYLE
+    system, _ = prompts.room_messages({"name": "ことり", "persona": "親"}, TODAY, [])
+    assert "ランキング上位" in system
