@@ -6,8 +6,13 @@ layout: default
   {% if page.event %}<span class="chip">{{ page.event }}</span>{% endif %}
   <h1>{{ page.title }}</h1>
   <p class="meta"><time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y年%-m月%-d日" }}</time>　価格・在庫は{{ page.date | date: "%-m月%-d日" }}時点のものです</p>
+  {% assign parts = content | split: '<h2' %}
   <div class="content">
-    {{ content }}
+    {%- for part in parts -%}
+      {%- if forloop.first -%}{{ part }}{% include ad.html %}{%- else -%}
+        {%- if forloop.last and parts.size > 2 -%}{% include ad.html %}{%- endif -%}<h2{{ part }}
+      {%- endif -%}
+    {%- endfor -%}
   </div>
   <aside class="author">
     <img src="{{ '/kotori/avatar.png' | relative_url }}" alt="" width="56" height="56">

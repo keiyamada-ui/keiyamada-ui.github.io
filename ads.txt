@@ -1,0 +1,5 @@
+---
+layout: null
+permalink: /ads.txt
+---
+{% if site.google_adsense != "" %}google.com, {{ site.google_adsense | remove: "ca-" }}, DIRECT, f08c47fec0942fa0{% endif %}
