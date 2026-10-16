@@ -145,7 +145,13 @@ function roomButtons(r) {
       copy(r.comment);  // 待たずに開く（待つとスマホのブラウザに新しい画面を止められることがある）
       window.open(url, "_blank", "noopener");
     } }),
-      el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" })];
+      el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" }),
+      // ① で開けないとき（ROOM アプリが開いて止まる・「ページがありません」など）は、ROOM で商品名を探して開く
+      el("button", { class: "act", text: "開けないとき: ROOM で探す", onclick: () => {
+        copy(r.comment);
+        const words = (r.name || "").replace(/[【\[（(＜<《].*?[】\]）)＞>》]/g, " ").replace(/\s+/g, " ").trim().slice(0, 30);
+        window.open("https://room.rakuten.co.jp/search/item?keyword=" + encodeURIComponent(words), "_blank", "noopener");
+      } })];
   }
   return [el("button", { class: "act primary", text: "① 書名をコピー", onclick: () => copy(r.name) }),
           el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
