@@ -31,6 +31,10 @@ def format_comment(analysis):
     lines += ["", "**伸びた理由**"] + [f"- {s}" for s in analysis["why_it_worked"]]
     lines += ["", f"**ことり用に言い換えた型**: {analysis['reusable_pattern']}", "", "**真似しないこと**"]
     lines += [f"- {s}" for s in analysis["avoid"]]
+    if analysis.get("comment_insights"):
+        lines += ["", "**コメント欄からわかったこと**"] + [f"- {s}" for s in analysis["comment_insights"]]
+    if analysis.get("reader_questions"):
+        lines += ["", "**読者が知りたがっていること（ネタ候補）**"] + [f"- {s}" for s in analysis["reader_questions"]]
     theme = analysis.get("theme") or {}
     if theme.get("keyword"):
         lines += ["", f"**テーマ候補**: {theme.get('persona', '')}（楽天で「{theme['keyword']}」を検索）"]

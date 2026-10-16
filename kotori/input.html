@@ -111,7 +111,7 @@ function showReference() {
     kind = k;
     kPost.className = "btn" + (k === "post" ? " primary" : ""); kTips.className = "btn" + (k === "tips" ? " primary" : "");
     kindNote.textContent = k === "post"
-      ? "実際に伸びている投稿から、書き出しや構成の「型」を学びます。"
+      ? "実際に伸びている投稿から、書き出しや構成の「型」を学びます。コメント欄のスクショも入れると、読者がどこに反応したか・何を知りたがっているかも分析します。"
       : "「バズる投稿の作り方」などの解説（投稿・記事・メモ）から、ことり で使える具体的なルールと例文を作ります。毎日の文章作りすべてに使われます。";
     text.placeholder = k === "post" ? "伸びている投稿の文章を貼り付け（ツリーは続けてOK）" : "考え方・コツの内容を貼り付け（解説の投稿・記事の要点・自分のメモなど）";
   };
@@ -119,15 +119,15 @@ function showReference() {
   kTips.addEventListener("click", () => setKind("tips"));
   setKind("post");
   const shots = el("input", { type: "file", accept: "image/*", multiple: "" , style: "display:none" });
-  const pick = el("button", { class: "btn", text: "📷 スクショを選ぶ（3枚まで）" });
+  const pick = el("button", { class: "btn", text: "📷 スクショを選ぶ（6枚まで・コメント欄もOK）" });
   const previews = el("div", { class: "row", style: "margin-top:8px;gap:8px" });
   let files = [];
   pick.addEventListener("click", () => shots.click());
   shots.addEventListener("change", () => {
-    files = [...shots.files].slice(0, 3);
+    files = [...shots.files].slice(0, 6);
     previews.replaceChildren(...files.map(f => el("img", { src: URL.createObjectURL(f), alt: "スクショ",
       style: "width:84px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line)" })));
-    if (shots.files.length > 3) toast("スクショは3枚までです");
+    if (shots.files.length > 6) toast("スクショは6枚までです");
   });
   const status = el("div", { class: "muted", style: "margin-top:6px" });
   const btn = el("button", { class: "btn primary", text: "型を分析してもらう" });
