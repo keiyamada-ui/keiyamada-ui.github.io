@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-17",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-17",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の朝6時に「今日お弁当いる日だった」ってサラッと言われるの、本当に心臓に悪い。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "脱いだパーカーをハンガーにかけるまであと3歩なのに、なぜ床に置くのか。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "リビングのテーブルで宿題広げたまま別のこと始めるの、視界に入るだけで落ち着かない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
