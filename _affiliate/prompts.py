@@ -69,6 +69,8 @@ REWRITE_NOTE = ""  # 投稿者本人の書き直し・お手本・👍👎（rew
 
 def _persona(account):
     base = f"アカウント「{account['name']}」の人物像: {account['persona']}"
+    if account.get("persona_rules"):
+        base += f"\n人物像の使い方: {account['persona_rules']}"
     return base + "".join(f"\n\n{n}" for n in (SEASON_NOTE, RULEBOOK_NOTE, LEARNED_NOTE, TIPS_NOTE, VARIETY_NOTE, REWRITE_NOTE) if n)
 
 
