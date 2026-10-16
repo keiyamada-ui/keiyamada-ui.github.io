@@ -240,7 +240,7 @@ function renderTodo(c) {
   items.push(["comments", c.comments ? `コメントに返信する（${c.comments}件）` : "コメントに返信する",
     c.comments ? "1時間以内に返すと、投稿が広がりやすくなります" : "いまは返すコメントはありません", "comments.html", !c.comments, c.comments ? "急ぎ" : ""]);
   items.push(["room", c.room ? `楽天ROOM に投稿する（${c.room}件）` : "楽天ROOM に投稿する",
-    "コメントをコピーして ROOM で開くだけ", "stock.html#room", !c.room, ""]);
+    "商品名をコピー → ROOM で探す → コメントを貼る", "stock.html#room", !c.room, ""]);
   items.push(["posts", "今日の投稿をチェックする", "気になる投稿は「私ならこう書く」で直すと、AI が覚えます", "posts.html", c.postsSeen, ""]);
   items.push(["talk", "似た投稿に3件コメントする", "フォロワーを増やす一番の近道（自分の言葉で。5分でOK）",
     "https://www.threads.com/search?q=" + encodeURIComponent("子育て"), !!checks.talk, "", true]);

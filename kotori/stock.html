@@ -137,25 +137,32 @@ function textBlock(label, text, withOpen) {
 
 // 楽天市場の商品は、ROOM の投稿画面を商品を選んだ状態で開ける（商品コード「お店:商品」を使う）。
 // 本は ROOM の投稿画面を直接開けないので、書名をコピーして ROOM アプリの「商品キーワード検索から投稿」で探す
+// ROOM で探しやすい短い商品名（【】や宣伝文句を外して、頭の20文字くらい）
+function roomKeyword(name) {
+  return (name || "").replace(/[【\[（(＜<《★☆].*?[】\]）)＞>》★☆]/g, " ")
+    .replace(/(送料無料|クーポン|ポイント\d*倍|\d+%OFF|半額|先着\S*|公式|楽天\S*位)/g, " ")
+    .split(/\s+/).filter(Boolean).reduce((a, w) => (a + " " + w).trim().length <= 22 || !a ? (a + " " + w).trim() : a, "");
+}
+
+// iPhone に ROOM アプリが入っていると、商品を選んだ状態の画面は開けず、アプリのホームになってしまう。
+// そのため「商品名をコピー → ROOM の検索に貼る → コメントを貼る」の順で投稿する（本と同じ流れ）
 function roomButtons(r) {
   const ichiba = r.source === "ichiba" && String(r.id || "").includes(":");
-  if (ichiba) {
-    const url = "https://room.rakuten.co.jp/mix?itemcode=" + encodeURIComponent(r.id) + "&scid=we_room_upc60";
-    return [el("button", { class: "act primary", text: "① コメントをコピーして ROOM で開く", onclick: () => {
-      copy(r.comment);  // 待たずに開く（待つとスマホのブラウザに新しい画面を止められることがある）
-      window.open(url, "_blank", "noopener");
+  const key = ichiba ? roomKeyword(r.name) : r.name;
+  const btns = [
+    el("button", { class: "act primary", text: "① 商品名をコピーして ROOM を開く", onclick: () => {
+      copy(key);  // 待たずに開く（待つとスマホのブラウザに新しい画面を止められることがある）
+      window.open("https://room.rakuten.co.jp/", "_blank", "noopener");
     } }),
-      el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" }),
-      // ① で開けないとき（ROOM アプリが開いて止まる・「ページがありません」など）は、ROOM で商品名を探して開く
-      el("button", { class: "act", text: "開けないとき: ROOM で探す", onclick: () => {
-        copy(r.comment);
-        const words = (r.name || "").replace(/[【\[（(＜<《].*?[】\]）)＞>》]/g, " ").replace(/\s+/g, " ").trim().slice(0, 30);
-        window.open("https://room.rakuten.co.jp/search/item?keyword=" + encodeURIComponent(words), "_blank", "noopener");
-      } })];
+    el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
+    el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" }),
+  ];
+  if (ichiba) {
+    // ROOM アプリが入っていないとき（パソコンなど）は、こちらで商品を選んだ状態の画面が開く
+    btns.push(el("a", { class: "act", text: "パソコンで: ROOM の投稿画面", target: "_blank", rel: "noopener",
+      href: "https://room.rakuten.co.jp/mix?itemcode=" + encodeURIComponent(r.id) + "&scid=we_room_upc60" }));
   }
-  return [el("button", { class: "act primary", text: "① 書名をコピー", onclick: () => copy(r.name) }),
-          el("button", { class: "act primary", text: "② コメントをコピー", onclick: () => copy(r.comment) }),
-          el("a", { class: "act", text: "商品ページ", href: r.url, target: "_blank", rel: "noopener" })];
+  return btns;
 }
 
 function renderRoom() {
@@ -163,7 +170,7 @@ function renderRoom() {
   list.replaceChildren();
   const items = room.filter(r => !filters.unused || !used["room:" + r.key]);
   const left = room.filter(r => !used["room:" + r.key]).length;
-  list.append(el("p", { class: "count", text: `未投稿 ${left} 件 ／ 楽天市場の商品:「コメントをコピーして ROOM で開く」→ コメント欄に貼って投稿。本: ROOM アプリの投稿ボタン →「商品キーワード検索から投稿」で書名を貼って探す → コメントを貼って投稿` }));
+  list.append(el("p", { class: "count", text: `未投稿 ${left} 件 ／ ①を押す → ROOM の上の検索に貼って商品を探す →「コレ！」→ ②でコメントをコピーして貼って投稿` }));
   for (const r of items) {
     const key = "room:" + r.key;
     const done = !!used[key];
