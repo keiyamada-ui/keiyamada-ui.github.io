@@ -1,0 +1,42 @@
+---
+layout: default
+title: 紹介した物の一覧
+description: ことりが Threads で紹介した物を、番号つきでまとめています。投稿で見た番号や、商品の名前で探せます。
+permalink: /picks/
+---
+{% assign picks = site.data.picks | reverse %}
+<section class="picks-head">
+  <h1>紹介した物の一覧</h1>
+  <p>Threads で紹介した物を、番号つきで並べています。投稿で見た【番号】や、物の名前で探してください。</p>
+  <input id="q" type="search" placeholder="番号や名前で探す（例: 12、ラック）" aria-label="一覧の中を探す" autocomplete="off">
+</section>
+<p class="pr-note">※ 楽天アフィリエイトのリンクです。価格や在庫は、リンク先で確かめてください。</p>
+<ul class="picks" id="picks">
+{% for p in picks %}
+  <li data-q="{{ p.no }} {{ p.name | escape }}">
+    <a class="pick" href="{{ p.url }}" target="_blank" rel="sponsored noopener">
+      {% if p.image != "" %}<img src="{{ p.image }}" alt="" loading="lazy" width="72" height="72">{% else %}<span class="noimg" aria-hidden="true">🐤</span>{% endif %}
+      <span class="txt"><b>【{{ p.no }}】</b>{{ p.name | escape }}<small>{{ p.date | date: "%-m月%-d日" }}に紹介</small></span>
+      <span class="go" aria-hidden="true">›</span>
+    </a>
+    {% if p.threads != "" %}<a class="post-link" href="{{ p.threads }}" target="_blank" rel="noopener">紹介した投稿を見る</a>{% endif %}
+  </li>
+{% endfor %}
+</ul>
+<p class="empty" id="none" {% if picks.size > 0 %}hidden{% endif %}>{% if picks.size > 0 %}見つかりませんでした。番号や、名前の一部で探してみてください。{% else %}まだありません。{% endif %}</p>
+<script>
+(function () {
+  var q = document.getElementById("q"), items = document.querySelectorAll("#picks li"), none = document.getElementById("none");
+  if (!items.length) return;
+  q.addEventListener("input", function () {
+    var w = q.value.replace(/[【】\s]/g, "").replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).toLowerCase();
+    var shown = 0;
+    items.forEach(function (li) {
+      var no = li.getAttribute("data-q").split(" ")[0];
+      var hit = !w || (/^\d+$/.test(w) ? no === w : li.getAttribute("data-q").toLowerCase().replace(/\s/g, "").indexOf(w) >= 0);
+      li.hidden = !hit; if (hit) shown++;
+    });
+    none.hidden = shown > 0;
+  });
+})();
+</script>

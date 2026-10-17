@@ -67,3 +67,22 @@ img { max-width: 100%; height: auto; }
 .site-foot { text-align: center; color: var(--sub); font-size: 13px; padding: 24px 16px 40px; }
 .site-foot nav { display: flex; gap: 6px 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
 .site-foot p { margin: 4px 0; }
+
+/* 紹介した物の一覧（/picks/） */
+.picks-head { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px 18px 16px; margin-top: 10px; box-shadow: var(--shadow); }
+.picks-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+.picks-head p { margin: 0 0 12px; color: var(--sub); font-size: 14px; }
+.picks-head input { width: 100%; font: inherit; font-size: 16px; padding: 11px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--box); color: var(--text); }
+.pr-note { font-size: 12.5px; color: var(--sub); margin: 12px 6px; }
+.picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.picks li { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.pick { display: flex; align-items: center; gap: 12px; padding: 10px 12px; text-decoration: none; }
+.pick img, .pick .noimg { flex: none; width: 72px; height: 72px; border-radius: 12px; object-fit: contain; background: #fff; }
+.pick .noimg { display: grid; place-items: center; font-size: 30px; background: var(--accent-bg); }
+.pick .txt { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; line-height: 1.5; }
+.pick .txt b { margin-right: 4px; }
+.pick small { display: block; font-size: 12px; font-weight: 500; color: var(--sub); }
+.pick .go { flex: none; font-size: 22px; color: var(--sub); }
+.post-link { display: block; font-size: 12.5px; color: var(--sub); padding: 0 14px 10px 96px; }
+.picks-banner { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 8px; padding: 14px 18px; border-radius: 18px;
+                background: var(--accent-bg); border: 1px solid var(--line); text-decoration: none; font-weight: 900; font-size: 15px; }
