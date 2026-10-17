@@ -8,6 +8,7 @@ layout: default
     <p>{{ site.description }}</p>
   </div>
 </section>
+{% if site.data.picks.size > 0 %}<a class="picks-banner" href="{{ '/picks/' | relative_url }}">🐤 Threads で紹介した物の一覧（{{ site.data.picks.size }}件）<span aria-hidden="true">›</span></a>{% endif %}
 {{ content }}
 {% assign posts = site.posts %}
 {% if posts.size > 0 %}

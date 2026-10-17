@@ -23,6 +23,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import picks  # noqa: E402
 from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
@@ -218,6 +219,15 @@ def publish(client, post, ids):
     return client.permalink(first)
 
 
+def update_picks(posted_dir, drafts_dir):
+    """PR で紹介した物の一覧（サイトの /picks/）を作り直す。失敗しても投稿は止めない。"""
+    real = Path(posted_dir).resolve() == picks.POSTED.resolve()
+    try:  # お試し（テスト）のときは、サイトの一覧を書き換えない
+        picks.build(posted_dir, drafts_dir, out=picks.OUT if real else Path(posted_dir).parent / "picks.json")
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 紹介した物の一覧を更新できませんでした: {str(e)[:150]}")
+
+
 KIND_NAMES = {"buzz": "集客投稿", "casual": "つぶやき", "value": "役立つ投稿", "pr": "PR 投稿"}
 
 
@@ -239,6 +249,8 @@ def run(slot, today, config, drafts_dir, posted_dir, client=None, dry_run=False)
     if dry_run:
         lines.append(f"🧪 お試し: 「{preview}…」を投稿する予定（{name}）")
         return "\n".join(lines) + "\n", False
+    if post["type"] == "pr" and draft.get("chosen", {}).get("id"):
+        post["reply_text"] = picks.with_number(post.get("reply_text", ""), draft["chosen"]["id"])
     ids = []
     entry = {"date": today.isoformat(), "slot": slot, "draft": name, "post_index": index, "kind": post["type"],
              "ids": ids, "permalink": "", "at": datetime.datetime.now(JST).isoformat(timespec="minutes")}
@@ -253,6 +265,8 @@ def run(slot, today, config, drafts_dir, posted_dir, client=None, dry_run=False)
     if post.pop("_with_image", False):
         entry["image"] = True
     record_posted(posted_dir, today, entry)
+    if post["type"] == "pr":
+        update_picks(posted_dir, drafts_dir)
     extra = f"（ツリー {len(post['thread_parts']) + 1} 件）" if post.get("thread_parts") else ""
     extra += "（返信にリンク）" if post["type"] == "pr" else ""
     extra += f"（{KIND_NAMES.get(post['type'], '')}）" if slot_kind_changed(slot, post["type"]) else ""
@@ -344,6 +358,7 @@ def mark_manual(drafts_dir, posted_dir, draft_name, index, now, undo=False):
             kept = [e for e in entries if not (e.get("manual") and e["draft"] == draft_name and e["post_index"] == index)]
             if len(kept) != len(entries):
                 path.write_text(json.dumps(kept, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        update_picks(posted_dir, drafts_dir)
         print(f"↩️ 「投稿済み」を取り消しました: {draft_name} の {index} 番")
         return 0
     if any(p["draft"] == draft_name and p["post_index"] == index for p in load_posted(posted_dir)):
@@ -353,6 +368,7 @@ def mark_manual(drafts_dir, posted_dir, draft_name, index, now, undo=False):
         "date": now.date().isoformat(), "slot": 0, "draft": draft_name, "post_index": index,
         "kind": draft["posts"][index]["type"], "ids": [], "permalink": "", "manual": True,
         "at": now.isoformat(timespec="minutes")})
+    update_picks(posted_dir, drafts_dir)
     print(f"✋ 手で投稿した記録を付けました: {draft_name} の {index} 番")
     return 0
 

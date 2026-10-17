@@ -377,7 +377,7 @@ def save_post_data(md_path, title, kind, today, result, errors, warnings, chosen
     data = {
         "date": today.isoformat(), "title": title, "kind": kind, "followup": followup,
         "errors": errors, "warnings": warnings,
-        "chosen": {k: chosen.get(k) for k in ("source", "id", "name", "url", "is_hidden_gem")},
+        "chosen": {k: chosen.get(k) for k in ("source", "id", "name", "url", "image", "is_hidden_gem")},
         "posts": [{"type": p["type"], "angle": p["angle"], "text": p["text"],
                    "thread_parts": p.get("thread_parts") or [],
                    "reply_text": p.get("reply_text_with_link", "")} for p in result["posts"]],
