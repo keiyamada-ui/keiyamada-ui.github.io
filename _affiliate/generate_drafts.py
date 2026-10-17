@@ -41,6 +41,7 @@ import illust  # noqa: E402
 import rulebook  # noqa: E402
 import variety  # noqa: E402
 import events  # noqa: E402
+import experiences  # noqa: E402
 import rewrites  # noqa: E402
 import prompts  # noqa: E402
 import selector  # noqa: E402
@@ -223,14 +224,20 @@ def analyze(config, theme, candidates, today, generate, owner_note=None, tier="i
 
 
 def write_posts(config, theme, chosen, analysis, pats, today, generate, owner_note=None, tier="important",
-                context=None):
-    """AI に書かせて自動チェック。引っかかったら理由を伝えて書き直させる。"""
+                context=None, memos=None):
+    """AI に書かせて自動チェック。引っかかったら理由を伝えて書き直させる。
+    memos は体験メモ（experiences.py）の候補。使ったものの番号は result["experience_ids"] に入る。"""
     feedback = None
+    memos = memos or []
     for attempt in range(1, MAX_ATTEMPTS + 1):
         system, user = prompts.write_messages(config["account"], theme, chosen, analysis, pats,
-                                              today, owner_note, feedback, context)
+                                              today, owner_note, feedback, context, experiences.lines(memos))
         result = generate(system, user, prompts.WRITE_SCHEMA, tier=tier)
-        errors, warnings = checks.check_posts(result["posts"], result["room_comment"], owner_note)
+        valid = {e["id"]: e for e in memos}
+        result["experience_ids"] = [i for i in result.get("experience_ids") or [] if i in valid][:1]
+        used_note = " ".join(valid[i]["text"] for i in result["experience_ids"])
+        errors, warnings = checks.check_posts(result["posts"], result["room_comment"],
+                                              " ".join(x for x in (owner_note, used_note) if x) or None)
         if attempt == MAX_ATTEMPTS:  # 言い回しのくり返しが直りきらなくても、投稿は止めない
             errors, soft = checks.soften(errors)
             warnings += soft
@@ -644,15 +651,20 @@ def make_extras(config, today, generate, pats, args):
             notes.append(f"集客投稿を作れませんでした（朝の枠は役立つ投稿で代わりに出します）: {str(e)[:150]}")
     if config.get("casual", {}).get("enabled", True):
         try:
-            repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
-            neta = [] if args.dry_run else extras.fetch_neta(repo, token)
-            casual = extras.make_casual(config, today, generate, drafts_dir, neta)
+            exp_path = DATA / "experiences.json"
+            entries = experiences.load(exp_path)
+            if not args.dry_run:  # 前の「ネタ帳」に書かれたメモは、体験メモに移す
+                repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
+                for number, memo in extras.fetch_neta(repo, token, limit=20):
+                    experiences.add(memo, path=exp_path, today=today)
+                    extras.close_neta(repo, token, number, memo, moved=True)
+                entries = experiences.load(exp_path)
+            pool = experiences.candidates(entries, today)
+            casual = extras.make_casual(config, today, generate, drafts_dir, [(e["id"], e["text"]) for e in pool])
             extras.save_json(drafts_dir, f"{today.isoformat()}-casual.json", casual)
             sections.append(extras.render_casual(casual))
-            if not args.dry_run:
-                for number in casual["neta_used"]:
-                    text = next(m for n, m in neta if n == number)
-                    extras.close_neta(repo, token, number, text)
+            if casual["neta_used"] and not args.dry_run:
+                experiences.save(experiences.mark_used(entries, casual["neta_used"], today), exp_path)
         except Exception as e:  # noqa: BLE001
             notes.append(f"つぶやきを作れませんでした: {str(e)[:150]}")
     return "\n".join(sections), notes
@@ -708,6 +720,13 @@ def run_daily(config, today, client, generate, args):
             ordered = event_ordered[:2] + [t for t in ordered if t["id"] not in {e["id"] for e in event_ordered[:2]}]
         else:
             ordered = ordered + event_ordered
+    # 体験メモに商品名があれば、その商品を PR の候補にする（1日1つ・一度だけ）
+    exp_path = DATA / "experiences.json"
+    exp_entries = experiences.load(exp_path)
+    exp_theme = None if args.keyword else next(iter(experiences.item_themes(exp_entries, today, themes_mod._make)), None)
+    if exp_theme:
+        print(f"📝 体験メモの商品を探します: {exp_theme[0]['item']}")
+        ordered = [exp_theme[1]] + ordered
     followup = None if args.keyword else find_followup(config, today, store, drafts_dir)
     if followup:
         print(f"🔥 反響のあった集客投稿（いいね{followup['likes']}件）の話題で商品を探します: {followup['topic']}")
@@ -729,8 +748,25 @@ def run_daily(config, today, client, generate, args):
         if lines:
             notes.append("この1週間の反響: " + " ".join(x.lstrip("- ") for x in lines))
     analysis, chosen, warn1 = analyze(config, theme, candidates, today, generate)
+    # その日の話題に近い体験メモを AI に渡す（合わなければ AI は使わない）
+    topic = " ".join(str(x) for x in (theme["keyword"], theme.get("category"), theme.get("scene"), chosen["name"],
+                                       analysis.get("reader_persona")) if x)
+    memos = experiences.candidates(exp_entries, today, topic)
+    if exp_theme and theme["id"] == exp_theme[1]["id"]:
+        exp_theme[0]["themed"] = today.isoformat()
+        memos = [exp_theme[0]] + [m for m in memos if m["id"] != exp_theme[0]["id"]]
+        notes.append(f"📝 体験メモ（{exp_theme[0]['item']}）の商品を選びました")
+    elif exp_theme and not is_followup:
+        exp_theme[0]["themed"] = today.isoformat()  # 楽天で見つからなかった。毎日探し直さない
+        notes.append(f"📝 体験メモの商品（{exp_theme[0]['item']}）は楽天で見つかりませんでした。商品名を変えると探し直します")
     result, errors, warnings = write_posts(config, theme, chosen, analysis, pats, today, generate,
-                                           context=followup["context"] if is_followup else None)
+                                           context=followup["context"] if is_followup else None, memos=memos)
+    if result["experience_ids"]:
+        experiences.mark_used(exp_entries, result["experience_ids"], today)
+        notes.append("📝 体験メモを使いました: " + " / ".join(f"[{e['id']}] {e['text'][:30]}" for e in exp_entries
+                                                     if e["id"] in result["experience_ids"]))
+    if not args.dry_run and (result["experience_ids"] or exp_theme):
+        experiences.save(exp_entries, exp_path)
     if bank_created:
         notes.append(f"今月のテーマを{len(json.loads(bank_created.read_text(encoding='utf-8')))}個作りました"
                      "（data/themes）。Merge すると保存されます")

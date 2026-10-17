@@ -14,7 +14,7 @@
 <body>
 <header class="top"><a class="back" href="./" aria-label="管理画面に戻る">‹</a><h1>✏️ 入力・操作</h1></header>
 <div class="tabs" role="tablist">
-  <button class="tab" id="t-neta" role="tab">ネタ帳</button>
+  <button class="tab" id="t-neta" role="tab">体験メモ</button>
   <button class="tab" id="t-recommend" role="tab">推し商品</button>
   <button class="tab" id="t-reference" role="tab">参考投稿</button>
   <button class="tab" id="t-actions" role="tab">操作</button>
@@ -40,19 +40,67 @@ async function createIssue(title, body, labels, btn, done) {
   finally { btn.disabled = false; }
 }
 
-function showNeta() {
-  const text = el("textarea", { placeholder: "例）朝、体操服を忘れたことに家を出てから気づいて走って取りに帰った" });
-  const btn = el("button", { class: "btn primary", text: "ネタ帳に入れる" });
+// 📝 体験メモ: 本人に実際にあったこと・使ってみた感想。投稿に本人の体験として入る（experiences.py）
+async function sendExp(inputs, btn, done) {
+  if (!Key.get()) { toast("送るには合い鍵が必要です（上の案内から登録してください）"); window.scrollTo(0, 0); return false; }
+  btn.disabled = true;
+  try {
+    await dispatch("affiliate_experience.yml", Object.assign({ mode: "add", text: "", item: "", id: "" }, inputs));
+    toast(done); return true;
+  } catch (e) { toast(e.message); return false; }
+  finally { btn.disabled = false; }
+}
+
+async function showNeta() {
+  let editing = null;
+  const text = el("textarea", { rows: "4", placeholder: "例）中2の水筒を2wayのに替えたら、パッキンが1個少なくて洗うのがすごく楽になった" });
+  const item = el("input", { type: "text", placeholder: "使っている物（分かれば）例）水筒 2way 800ml" });
+  const btn = el("button", { class: "btn primary", text: "体験メモに入れる" });
+  const cancel = el("button", { class: "btn", text: "やめる", style: "display:none" });
+  const head = el("div", { class: "title", text: "📝 体験メモ" });
+  const reset = () => { editing = null; text.value = ""; item.value = ""; btn.textContent = "体験メモに入れる"; cancel.style.display = "none"; head.textContent = "📝 体験メモ"; };
+  cancel.addEventListener("click", reset);
   btn.addEventListener("click", async () => {
     const t = text.value.trim();
-    if (!t) { toast("あったことを書いてください"); return; }
-    if (await createIssue("[ネタ帳] " + t.slice(0, 24), "### あったこと\n\n" + t, ["ネタ帳"], btn,
-                          "入れました。翌朝のつぶやきに使います")) text.value = "";
+    if (!t) { toast("あったこと・感想を書いてください"); return; }
+    const ok = editing
+      ? await sendExp({ mode: "edit", id: String(editing), text: t, item: item.value.trim() }, btn, "直しました（1〜2分で反映）")
+      : await sendExp({ text: t, item: item.value.trim() }, btn, "入れました。翌朝の投稿から使います");
+    if (ok) reset();
   });
-  main.replaceChildren(el("section", { class: "card" }, [
-    el("div", { class: "title", text: "📝 今日あったこと" }),
-    el("p", { class: "note", style: "margin-top:6px", text: "子どもの一言、朝のバタバタ、習い事でのこと など、短くてOK。翌朝 5時ごろに、つぶやき（短い投稿）にします。あなたの体験として書けるのは、ここに書いたことだけです。名前・学校名など個人が分かることは書かないでください。" }),
-    text, el("div", { class: "actions" }, [btn])]));
+  const form = el("section", { class: "card" }, [head,
+    el("p", { class: "note", style: "margin-top:6px", text: "実際にあったこと・使ってみた感想を、一言でOK。PR 投稿・役立つ投稿・つぶやきに、話題が合うときだけ「あなたの体験」として入ります。AI はここに書いたこと以外の体験を足しません。" }),
+    el("ul", { class: "note", style: "margin:4px 0 8px;padding-left:1.2em" }, [
+      el("li", { text: "「使っている物」を書くと、楽天で探して PR 投稿の候補にします（一度だけ）" }),
+      el("li", { text: "同じメモは2週間あけて3回まで使います" }),
+      el("li", { text: "子どもの名前・学校名・地域は書かないでください（書いても投稿には出しません）" })]),
+    el("div", { style: "display:grid;gap:8px" }, [text, item]), el("div", { class: "actions" }, [btn, cancel])]);
+  main.replaceChildren(form, el("p", { class: "empty", text: "読み込み中…" }));
+  const list = (await fresh("_affiliate/data/experiences.json")) || [];
+  const nodes = [form];
+  if (!list.length) nodes.push(el("p", { class: "empty", text: "まだメモはありません" }));
+  for (const e of [...list].reverse()) {
+    const uses = (e.uses || []).length;
+    const fix = el("button", { class: "btn", text: "直す" });
+    fix.addEventListener("click", () => {
+      editing = e.id; text.value = e.text; item.value = e.item || "";
+      btn.textContent = "直して保存する"; cancel.style.display = ""; head.textContent = `✏️ ${e.id}番のメモを直す`;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    const del = el("button", { class: "btn danger", text: "消す" });
+    del.addEventListener("click", async () => {
+      if (!confirm("このメモを消しますか？")) return;
+      if (await sendExp({ mode: "delete", id: String(e.id) }, del, "消しました（1〜2分で反映）")) del.closest("section").remove();
+    });
+    nodes.push(el("section", { class: "card" }, [
+      el("div", { class: "row between" }, [
+        el("span", { class: "badge" + (uses ? " ok" : ""), text: uses ? `使った回数 ${uses}/3` : "まだ使っていない" }),
+        el("span", { class: "muted", text: e.date.slice(5).replace("-", "/") })]),
+      el("p", { style: "margin:8px 0 4px;white-space:pre-wrap", text: e.text }),
+      e.item ? el("div", { class: "muted", text: "使っている物: " + e.item + (e.themed ? "（PR の候補に入れました）" : "（翌朝、楽天で探します）") }) : null,
+      el("div", { class: "actions" }, [fix, del])]));
+  }
+  main.replaceChildren(...nodes);
 }
 
 function showRecommend() {

@@ -46,6 +46,7 @@ WRITE_SCHEMA = obj(
     )},
     room_comment=STR,
     hook_alternatives=STRS,
+    experience_ids={"type": "array", "items": INT},
 )
 
 ROOM_SCHEMA = obj(comments={"type": "array", "items": obj(id=STR, comment=STR)})
@@ -101,7 +102,7 @@ HUMAN_STYLE = """# 人間らしい文章にする（AI が書いたと思われ�
   「様々な」「徹底解説」「必見」「〜に最適」「〜を実現」「〜な方へ」「〜な方必見」。
 - 見出し記号（■◆【】）、①②③の番号、文末ごとの絵文字は使わない（絵文字は0〜1個。PR 表記の【PR】だけは例外）。
 - 体験していない出来事を事実のように作らない（「うちの子が昨日〜した」は書かない）。
-  多くの家庭で起きることとして書く。投稿者本人のメモ（ネタ帳）にある出来事だけは、本人の体験として書いてよい。
+  多くの家庭で起きることとして書く。投稿者本人の体験メモにある出来事だけは、本人の体験として書いてよい。
 - 「投稿者本人の書き方」のお手本があれば、それを一番に参考にする。
 - 書いたあとに「AI が書いた感じがしないか」「長すぎないか」を見直し、直してから返す。
 """
@@ -168,7 +169,18 @@ JSON だけを返す。"""
     return system, "\n".join(lines)
 
 
-def write_messages(account, theme, chosen, analysis, patterns, today, owner_note=None, feedback=None, context=None):
+EXPERIENCE_RULE = """# 投稿者本人の体験メモ（いちばん信用される材料）
+- 体験メモが渡されたら、その日の話題や商品に本当に合うものがあれば、1つだけ使って本人の体験として書く（1〜2文）。
+  合うものがなければ使わない。無理に話題を寄せない。
+- メモに書いてあることだけを使う。書いていない感想・結果・数字・期間・家族の様子を足さない。言い回しは自然に直してよい。
+- メモが商品そのものの体験なら pr 投稿に、そうでなければ value 投稿に入れる。
+- 子どもの名前・学校名・地域がメモにあっても、投稿には書かない。
+- 使ったメモの番号を experience_ids に入れる（使わなければ空の配列）。
+"""
+
+
+def write_messages(account, theme, chosen, analysis, patterns, today, owner_note=None, feedback=None, context=None,
+                   experiences=None):
     angle = analysis["angles"][analysis["best_angle_index"]] if analysis["angles"] else {"name": "", "hook": ""}
     system = f"""あなたは Threads アカウント「{account['name']}」の投稿を書くライターです。{_persona(account)}
 
@@ -198,7 +210,7 @@ def write_messages(account, theme, chosen, analysis, patterns, today, owner_note
 - room_comment は楽天ROOMに商品を載せるときのコメント。Threads の投稿とは書き方を変え、次の形にする:
 {ROOM_STYLE}
 - hook_alternatives は pr 投稿の別の書き出し案を3つ。
-
+{EXPERIENCE_RULE}
 JSON だけを返す。"""
     lines = [
         f"今日の日付: {today.isoformat()}",
@@ -212,6 +224,8 @@ JSON だけを返す。"""
         lines.append(f"困っている場面: {theme['scene']}")
     if owner_note:
         lines.append(f"投稿者本人のメモ（事実として扱ってよい・体験として書いてよい）: {owner_note}")
+    if experiences:
+        lines += ["", "投稿者本人の体験メモ（合うものがあれば1つだけ使う）:"] + [f"- {x}" for x in experiences]
     if context:
         lines += ["", context]
     if patterns:
@@ -371,14 +385,15 @@ def casual_messages(account, today, count, memos, recent_texts, feedback=None):
 - 朝の支度・学校の持ち物・習い事の送迎・週末・夕飯の献立・きょうだい・片付けなど、日常の話題（季節や天気の話はたまにだけ）。
 - {count}本とも話題と言い回しを変える。問いかけは多くても1本まで。
 - 商品名・リンク・ハッシュタグは書かない。絵文字は0〜1個。
-- 投稿者のメモ（ネタ帳）が渡されたら、そのうち1つを使って本人の出来事として書き、memo_used にそのメモをそのまま書く。
+- 投稿者の体験メモが渡されたら、そのうち1つを使って本人の出来事として書き、memo_used にそのメモをそのまま書く。
+  メモに書いていないこと（感想・結果）は足さない。
   メモを使わない投稿の memo_used は空文字。
 {SHARED_RULES}
 {HUMAN_STYLE}
 JSON だけを返す。"""
     lines = [f"今日の日付: {today.isoformat()}（{'月火水木金土日'[today.weekday()]}曜日）"]
     if memos:
-        lines += ["", "投稿者のメモ（ネタ帳。本人に実際にあったこと）:"] + [f"- {m}" for m in memos]
+        lines += ["", "投稿者の体験メモ（本人に実際にあったこと）:"] + [f"- {m}" for m in memos]
     if recent_texts:
         lines += ["", "最近のつぶやき（似た内容・言い回しを避ける）:"] + [f"- {t}" for t in recent_texts[-10:]]
     if feedback:
