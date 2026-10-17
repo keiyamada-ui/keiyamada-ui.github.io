@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-18",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-18",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夜、ランドセルの底から出てくる「先週配布」のプリント。今出されても困る。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "家族でスーパーに行くと、カゴの中にいつの間にか増えてる菓子パン。誰が入れたの。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "洗面所の棚の扉、数センチだけ開いたままになってるのが気になって一日何回も閉めてる。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
