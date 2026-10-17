@@ -1,0 +1,123 @@
+{
+ "updated": "2026-10-17",
+ "min_posts": 3,
+ "slots": [
+  {
+   "slot": 1,
+   "name": "昼（短い投稿）",
+   "posts": 0,
+   "views": null,
+   "buckets": [
+    {
+     "from": 690,
+     "to": 720,
+     "label": "11:30〜12:00",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 720,
+     "to": 750,
+     "label": "12:00〜12:30",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 750,
+     "to": 780,
+     "label": "12:30〜13:00",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    }
+   ],
+   "prefer": null
+  },
+  {
+   "slot": 2,
+   "name": "夕方（役立つ投稿・PR 投稿）",
+   "posts": 1,
+   "views": 6,
+   "buckets": [
+    {
+     "from": 1020,
+     "to": 1050,
+     "label": "17:00〜17:30",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 1050,
+     "to": 1080,
+     "label": "17:30〜18:00",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 1080,
+     "to": 1110,
+     "label": "18:00〜18:30",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 1110,
+     "to": 1140,
+     "label": "18:30〜19:00",
+     "posts": 1,
+     "views": 6,
+     "likes": 0.0,
+     "best": false
+    }
+   ],
+   "prefer": null
+  },
+  {
+   "slot": 3,
+   "name": "夜（短い投稿）",
+   "posts": 1,
+   "views": 111,
+   "buckets": [
+    {
+     "from": 1230,
+     "to": 1260,
+     "label": "20:30〜21:00",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    },
+    {
+     "from": 1260,
+     "to": 1290,
+     "label": "21:00〜21:30",
+     "posts": 1,
+     "views": 111,
+     "likes": 0.0,
+     "best": false
+    },
+    {
+     "from": 1290,
+     "to": 1320,
+     "label": "21:30〜22:00",
+     "posts": 0,
+     "views": null,
+     "likes": null,
+     "best": false
+    }
+   ],
+   "prefer": null
+  }
+ ]
+}
