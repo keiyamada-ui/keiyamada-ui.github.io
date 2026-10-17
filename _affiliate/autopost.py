@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import picks  # noqa: E402
+import timing  # noqa: E402
 from threads import ThreadsClient  # noqa: E402
 
 JST = datetime.timezone(datetime.timedelta(hours=9))
@@ -48,10 +49,16 @@ def _hhmm(minutes):
     return f"{minutes // 60}:{minutes % 60:02d}"
 
 
-def day_plan(day):
-    """その日の投稿予定。日付から決まるので、何度呼んでも同じ予定になる。"""
+def day_plan(day, prefer=None):
+    """その日の投稿予定。日付から決まるので、何度呼んでも同じ予定になる。
+    よく見られる時間帯が分かっている枠は、6割くらいの日はその30分の中から選ぶ（timing.py）。"""
+    prefer = timing.prefs() if prefer is None else prefer
     rng = random.Random(f"kotori-{day.isoformat()}")
     times = {s: rng.randint(a, b) for s, (a, b) in SLOT_WINDOW.items()}
+    lean = random.Random(f"kotori-lean-{day.isoformat()}")  # 上の時刻の決まり方を変えないよう、別に引く
+    for s, (a, b) in sorted(prefer.items()):
+        if s in times and lean.random() < timing.LEAN:
+            times[s] = lean.randint(a, b)
     rest = rng.choice([1, 3]) if rng.random() < TWO_POST_RATE else None
     return [{"slot": s, "name": SLOT_NAMES[s], "minute": times[s], "time": _hhmm(times[s]),
              "window": f"{_hhmm(SLOT_WINDOW[s][0])}〜{_hhmm(SLOT_WINDOW[s][1])}", "rest": s == rest}

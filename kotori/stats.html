@@ -26,6 +26,14 @@
   a.rank b { grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-bg); display: grid; place-items: center; font-size: 13px; }
   a.rank .rt { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
   a.rank .rv { font-size: 13px; color: var(--sub); }
+  .tslot { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .tname { font-weight: 900; font-size: 14px; margin-bottom: 4px; }
+  .trow { display: grid; grid-template-columns: 112px 1fr; gap: 0 8px; align-items: center; font-size: 13px; padding: 3px 0; }
+  .trow .tl { font-variant-numeric: tabular-nums; }
+  .trow .tbar { height: 8px; border-radius: 99px; background: var(--box, #F6EFE6); overflow: hidden; }
+  .trow .tbar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+  .trow .tv { grid-column: 2; color: var(--sub); font-size: 12px; }
+  .trow.best .tl { font-weight: 900; }
   .chart .bar { fill: var(--accent); }
   .chart .bar:hover, .chart .bar.on { fill: var(--accent-deep); }
   .chart .axis { stroke: var(--line); stroke-width: 1; }
@@ -58,7 +66,7 @@
 
 <script src="app.js"></script>
 <script>
-let daily = {}, earnings = {}, topPosts = [], weekly = null, month = jstDate().slice(0, 7);
+let daily = {}, earnings = {}, topPosts = [], weekly = null, timing = null, month = jstDate().slice(0, 7);
 const main = document.getElementById("main");
 const yen = n => (n || 0).toLocaleString("ja-JP") + "円";
 const num = n => (n || 0).toLocaleString("ja-JP");
@@ -187,6 +195,19 @@ function render() {
       el("b", { text: String(i + 1) }), el("span", { class: "rt", text: r.text || "（本文を読み込めませんでした）" }),
       el("span", { class: "rv", text: `表示 ${num(r.metrics.views)}・♡ ${num(r.metrics.likes)}` })]))]));
 
+  // 時間帯ごとの成績（30分ごと）
+  if (timing && timing.slots) nodes.push(el("section", { class: "card" }, [el("div", { class: "title", text: "⏰ 時間帯ごとの成績（直近60日）" }),
+    el("div", { class: "muted", style: "margin-top:4px", text: `投稿の時刻は毎日ランダムなので、続けるうちに見られやすい時間が分かってきます。1つの時間帯に${timing.min_posts}本たまったら比べ、よい時間には自動で少し寄せます（⭐）。` }),
+    ...timing.slots.map(s => el("div", { class: "tslot" }, [
+      el("div", { class: "tname", text: s.name.replace(/（.*）/, "") + (s.prefer ? "　⭐に寄せています" : "") }),
+      ...s.buckets.map(c => {
+        const max = Math.max(1, ...s.buckets.map(x => x.views || 0));
+        return el("div", { class: "trow" + (c.best ? " best" : "") }, [
+          el("span", { class: "tl", text: (c.best ? "⭐ " : "") + c.label }),
+          el("span", { class: "tbar" }, [el("i", { style: `width:${c.views ? Math.max(4, c.views / max * 100) : 0}%` })]),
+          el("span", { class: "tv", text: c.posts ? `表示 ${num(c.views)}・♡ ${c.likes}（${c.posts}本）` : "まだなし" })]);
+      })]))]));
+
   // 売上の入力
   const val = k => e ? String(e[k] ?? "") : "";
   const inp = (id, label, v, wide) => el("div", { class: wide ? "wide" : "" }, [el("label", { for: id, text: label }),
@@ -251,6 +272,7 @@ document.getElementById("next").addEventListener("click", () => { month = shift(
     const d = addDays(jstDate(), -i);
     if (new Date(d + "T00:00:00Z").getUTCDay() === 0) weekly = await raw(`_affiliate/data/weekly/${d}.json`);
   }
+  timing = await raw("_affiliate/data/stats/timing.json");
   // よく見られた投稿（本文は下書きから読む）
   const store = (await raw("_affiliate/data/insights/latest.json")) || {};
   topPosts = Object.values(store).sort((a, b) => (b.metrics.views || 0) - (a.metrics.views || 0)).slice(0, 5);

@@ -30,6 +30,7 @@ import autopost  # noqa: E402
 import checks  # noqa: E402
 import extras  # noqa: E402
 import insights  # noqa: E402
+import timing  # noqa: E402
 import issue_forms  # noqa: E402
 import llm  # noqa: E402
 import patterns as patterns_mod  # noqa: E402
@@ -995,7 +996,12 @@ def main(argv=None):
         today, DATA / "posted", Path(os.environ.get("KOTORI_DRAFTS_DIR", HERE / "drafts")))
     # 投稿者本人の書き直し・お手本・👍👎（いちばん優先のお手本）
     prompts.REWRITE_NOTE = rewrites.note(HERE / "data" / "rewrites.json")
-    if not args.dry_run:  # 今日の投稿予定（時刻はランダム）を管理画面用に保存
+    if not args.dry_run:  # 時間帯ごとの成績を出し直してから、今日の投稿予定（時刻はランダム）を管理画面用に保存
+        try:
+            timing.update(autopost.load_posted(DATA / "posted"), timing._load(DATA / "insights" / "latest.json", {}),
+                          today, autopost.SLOT_WINDOW, autopost.SLOT_NAMES, DATA / "stats" / "timing.json")
+        except Exception as e:  # noqa: BLE001 - 補助なので、失敗しても下書きは作る
+            print(f"⚠️ 時間帯ごとの成績を出せませんでした: {str(e)[:150]}")
         autopost.save_plan(today, DATA / "schedule.json")
     generate = FakeGenerator() if args.dry_run else llm.Generator(config.get("ai"))
 
