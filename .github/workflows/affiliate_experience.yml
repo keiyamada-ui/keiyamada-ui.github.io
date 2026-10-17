@@ -1,0 +1,58 @@
+name: ことり 体験メモ
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'add = 入れる / edit = 直す / delete = 消す'
+        type: choice
+        options: [add, edit, delete]
+        default: add
+      text:
+        description: 'あったこと・使ってみた感想'
+        required: false
+        default: ''
+      item:
+        description: '使っている物（分かれば。楽天で探して PR の候補にします）'
+        required: false
+        default: ''
+      id:
+        description: '直す・消すときの番号'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: affiliate-main
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 記録する
+        env:
+          MODE: ${{ inputs.mode }}
+          TEXT: ${{ inputs.text }}
+          ITEM: ${{ inputs.item }}
+          ID: ${{ inputs.id }}
+        run: |
+          if [ "$MODE" = "delete" ]; then
+            python _affiliate/experiences.py delete --id "$ID"
+          elif [ "$MODE" = "edit" ]; then
+            python _affiliate/experiences.py edit --id "$ID" --text "$TEXT" --item "$ITEM"
+          else
+            python _affiliate/experiences.py add --text "$TEXT" --item "$ITEM"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _affiliate/data/experiences.json
+          git commit -m "体験メモを更新" || exit 0
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done

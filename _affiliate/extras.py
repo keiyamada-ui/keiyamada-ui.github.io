@@ -135,12 +135,14 @@ def fetch_neta(repo, token, session=None, limit=5):
         return []
 
 
-def close_neta(repo, token, number, text, session=None):
+def close_neta(repo, token, number, text, session=None, moved=False):
     http = session or requests
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    body = (f"📝 体験メモに移しました（管理画面の「入力 → 体験メモ」で見られます）:\n\n> {text}" if moved
+            else f"✅ このネタでつぶやきを作りました（今日の投稿枠で自動投稿されます）:\n\n> {text}")
     try:
         http.post(f"https://api.github.com/repos/{repo}/issues/{number}/comments", headers=headers, timeout=30,
-                  json={"body": f"✅ このネタでつぶやきを作りました（今日の投稿枠で自動投稿されます）:\n\n> {text}"})
+                  json={"body": body})
         http.patch(f"https://api.github.com/repos/{repo}/issues/{number}", headers=headers, timeout=30,
                    json={"state": "closed", "state_reason": "completed"})
     except Exception as e:  # noqa: BLE001
@@ -188,7 +190,7 @@ def render_casual(data):
     if not data["posts"]:
         out += ["❌ 今日は作れませんでした。"] + [f"- {e}" for e in data["errors"]] + [""]
     for n, post in enumerate(data["posts"], 1):
-        mark = "（📝 ネタ帳から）" if post["angle"] == "ネタ帳" else ""
+        mark = "（📝 体験メモから）" if post["angle"] == "ネタ帳" else ""
         out += [f"**つぶやき{n}**{mark}", "```text", post["text"].strip(), "```", ""]
     return "\n".join(out)
 
