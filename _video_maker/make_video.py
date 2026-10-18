@@ -443,8 +443,11 @@ def draw_subtitle(c, chunks, t, speech):
 # ---------- Gemini TTS ----------
 
 def api(path, key, body=None):
+    headers = {"Content-Type": "application/json"}
+    if key:  # キーが無いときは、クラウド環境の「ネットワークシークレット」がプロキシで付けてくれる
+        headers["x-goog-api-key"] = key
     req = urllib.request.Request(f"{API}/{path}", data=json.dumps(body).encode() if body else None,
-                                 headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+                                 headers=headers)
     with urllib.request.urlopen(req, timeout=180) as r:
         return json.load(r)
 
@@ -541,7 +544,7 @@ def build(args):
     else:
         key = os.environ.get("GEMINI_API_KEY")
         if not key:
-            sys.exit("GEMINI_API_KEY が設定されていません（--preview なら無音で映像だけ作れます）。")
+            print("GEMINI_API_KEY が無いので、ネットワークシークレットのキーで接続します。")
         audio = make_narration(key, args.voice, args.model)
         rate = audio[0][1]
         speeches = [len(pcm) / 2 / r for pcm, r in audio]

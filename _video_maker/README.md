@@ -6,7 +6,7 @@ Gemini TTS で日本語ナレーションを作り、図解アニメとテロッ
 ## 使い方
 
 ```bash
-python3 make_video.py              # GEMINI_API_KEY を使って本番生成 → out/buri_short.mp4
+python3 make_video.py              # 本番生成 → out/buri_short.mp4（キーは環境変数 GEMINI_API_KEY か、ネットワークシークレット）
 python3 make_video.py --voice Puck # 声を変える（Kore, Puck, Charon, Aoede など）
 python3 make_video.py --preview    # キーなし・無音で映像だけ確認 → out/preview.mp4
 ```
