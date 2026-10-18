@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-19",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-19",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "両手に大荷物持ってるのにポケットに手をつっこんで歩くの、見ててヒヤヒヤする。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "シャーペンの芯、何本も一気に押し込もうとして全部折るのなんで。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "月曜日が終わっただけなのに、すでに今週の晩ごはん何作ればいいか分からない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
