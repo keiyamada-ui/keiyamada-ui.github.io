@@ -24,3 +24,7 @@ python3 make_video.py --preview    # キーなし・無音で映像だけ確認 
 - 番号が分かっていれば「#005 をシーン1の見出しに使って」だけでも OK
 - 見本は Canvas 2D の JS なので、このスクリプトでは Pillow の描画に移し替えて使います（時間・イージングの数値はそのまま）
 - クラウドのセッションではブラウザを開けないため、`pick` コマンドより「コピーして貼り付け」か番号指定が確実です
+
+いま使っている見本:
+- タイトル（各シーン上部）: [#005 マスクリビール](https://showheyohtaki.github.io/motion-prompt/#005) — `draw_title`
+- 字幕と図解の中の文字: [#008 キネティックタイポグラフィ](https://showheyohtaki.github.io/motion-prompt/#008) — `kinetic`（のびる／はねる／まわる／ドン）

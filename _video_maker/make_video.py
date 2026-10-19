@@ -109,27 +109,6 @@ class Canvas:
                               align="center", spacing=int(size * SS * 0.25),
                               stroke_width=sw, stroke_fill=stroke_fill or fill)
 
-    def pop_text(self, x, y, s, size, scale, fill=WHITE, stroke=0, stroke_fill=None):
-        """拡大縮小しながら出るテキスト。"""
-        if scale <= 0.01:
-            return
-        im = _text_image(s, size, fill, stroke, stroke_fill)
-        w, h = max(1, int(im.width * scale)), max(1, int(im.height * scale))
-        im = im.resize((w, h), Image.BILINEAR)
-        self.img.paste(im, (int(x * SS - w / 2), int(y * SS - h / 2)), im)
-
-
-@lru_cache(maxsize=None)
-def _text_image(s, size, fill, stroke, stroke_fill):
-    f = font(size)
-    sw = int(stroke * SS) if stroke else max(1, int(size * SS * 0.03))
-    tmp = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
-    box = tmp.multiline_textbbox((0, 0), s, font=f, stroke_width=sw, align="center")
-    im = Image.new("RGBA", (box[2] - box[0] + 8, box[3] - box[1] + 8), (0, 0, 0, 0))
-    ImageDraw.Draw(im).multiline_text((4 - box[0], 4 - box[1]), s, font=f, fill=fill, align="center",
-                                      stroke_width=sw, stroke_fill=stroke_fill or fill)
-    return im
-
 
 def fish(c, cx, cy, L, body=(40, 90, 160), stripe=YELLOW, belly=(226, 236, 242), flip=False, tail_wag=0.0):
     """右向きの魚。flip=True で左向き。"""
@@ -182,12 +161,235 @@ def check(c, x, y, s, t, color=YELLOW):
         c.line([pts[0], pts[1], (lerp(pts[1][0], pts[2][0], k), lerp(pts[1][1], pts[2][1], k))], color, s * 0.16)
 
 
-def label(c, x, y, s, size=46, fg=INK, bg=YELLOW, anchor_x="c"):
-    w = font(size).getlength(s) / SS + size * 0.9
-    h = size * 1.5
-    x0 = x - w / 2 if anchor_x == "c" else x
-    c.rrect(x0, y - h / 2, x0 + w, y + h / 2, h / 2, fill=bg)
-    c.text(x0 + w / 2, y, s, size, fill=fg)
+def text_w(s, size):
+    return font(size).getlength(s) / SS
+
+
+def fit(s, size, max_w):
+    while size > 20 and text_w(s, size) > max_w:
+        size -= 2
+    return size
+
+
+# ---------- motion-prompt の動き（Canvas の見本を Pillow に移植。時間・距離・イージングの数値は見本のまま） ----------
+# Motion Prompt #001-024 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+# ↑ kit "motion" のイージングと補助関数
+
+CORAL = (255, 107, 92)
+
+
+def P(t, a, b):
+    return clamp((t - a) / (b - a))
+
+
+def e_io(x):
+    return 4 * x ** 3 if x < 0.5 else 1 - (-2 * x + 2) ** 3 / 2
+
+
+def e_out(x):
+    return 1 - (1 - x) ** 3
+
+
+def e_out5(x):
+    return 1 - (1 - x) ** 5
+
+
+def e_in(x):
+    return x ** 3
+
+
+def back_out(x, s=1.70158):
+    return 1 + (s + 1) * (x - 1) ** 3 + s * (x - 1) ** 2
+
+
+def back_in(x, s=1.70158):
+    return (s + 1) * x ** 3 - s * x ** 2
+
+
+def spring(t, w=14, d=7):
+    return 0.0 if t <= 0 else 1 - math.exp(-d * t) * math.cos(w * t)
+
+
+@lru_cache(maxsize=None)
+def _text_img(s, size, fill, sw, stroke_fill):
+    """文字の画像と、c.text と同じ基準点（anchor="mm"）の位置を返す。座標は SS 倍。"""
+    f = font(size)
+    kw = dict(font=f, anchor="mm", align="center", spacing=int(size * SS * 0.25), stroke_width=sw)
+    box = [round(v) for v in ImageDraw.Draw(Image.new("RGBA", (1, 1))).multiline_textbbox((0, 0), s, **kw)]
+    pad = 4
+    im = Image.new("RGBA", (box[2] - box[0] + 2 * pad, box[3] - box[1] + 2 * pad), stroke_fill + (0,))
+    ox, oy = pad - box[0], pad - box[1]
+    ImageDraw.Draw(im).multiline_text((ox, oy), s, fill=fill, stroke_fill=stroke_fill, **kw)
+    return im, ox, oy
+
+
+@lru_cache(maxsize=None)
+def _label_img(s, size, fg, bg, with_text=True):
+    w, h = (text_w(s, size) + size * 0.9) * SS, size * 1.5 * SS
+    im = Image.new("RGBA", (int(w) + 4, int(h) + 4), bg + (0,))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([2, 2, 2 + w, 2 + h], radius=h / 2, fill=bg)
+    if with_text:
+        d.text((2 + w / 2, 2 + h / 2), s, font=font(size), fill=fg, anchor="mm",
+               stroke_width=max(1, int(size * SS * 0.03)), stroke_fill=fg)
+    return im, 2 + w / 2, 2 + h / 2
+
+
+def blit(img, src, ax, ay, ox, oy, m=(1, 0, 0, 1), alpha=1.0):
+    """src の点 (ox, oy) を img の (ax, ay) に合わせ、行列 m=(a, b, c, d) で変形して重ねる（座標は SS 倍）。"""
+    a, b, cc, d = m
+    det = a * d - b * cc
+    if alpha <= 0.004 or abs(det) < 1e-6:
+        return
+    if m == (1, 0, 0, 1) and alpha >= 0.999:
+        img.paste(src, (round(ax - ox), round(ay - oy)), src)
+        return
+    pts = [(ax + a * (x - ox) + b * (y - oy), ay + cc * (x - ox) + d * (y - oy))
+           for x in (0, src.width) for y in (0, src.height)]
+    x0, y0 = math.floor(min(p[0] for p in pts)), math.floor(min(p[1] for p in pts))
+    x1, y1 = math.ceil(max(p[0] for p in pts)), math.ceil(max(p[1] for p in pts))
+    if x1 <= x0 or y1 <= y0:
+        return
+    dx, dy = x0 - ax, y0 - ay
+    coef = (d / det, -b / det, ox + (d * dx - b * dy) / det,
+            -cc / det, a / det, oy + (-cc * dx + a * dy) / det)
+    out = src.transform((x1 - x0, y1 - y0), Image.AFFINE, coef, resample=Image.BILINEAR)
+    if alpha < 0.999:
+        out.putalpha(out.getchannel("A").point(lambda v: int(v * alpha)))
+    img.paste(out, (x0, y0), out)
+
+
+# Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
+# マスクリビール：1本の線を境に、見えない枠の向こうから見出しがせり上がる。
+
+def _clip_text(c, s, size, fill, y, anchor, y0, y1):
+    Y0, Y1 = int(y0 * SS), int(y1 * SS)
+    layer = Image.new("RGBA", (W * SS, Y1 - Y0), fill + (0,))
+    ImageDraw.Draw(layer).text((W / 2 * SS, y * SS - Y0), s, font=font(size), fill=fill, anchor=anchor,
+                               stroke_width=max(1, int(size * SS * 0.03)), stroke_fill=fill)
+    c.img.paste(layer, (0, Y0), layer)
+
+
+def draw_title(c, text, t, dur, LY=300):
+    """登場して止まり（u=1.7 で静止）、シーンの最後 0.6 秒で退場（u=1.7→2.3）する。"""
+    ex = max(dur - 0.6, 1.7)
+    u = min(t, 1.7) if t < ex else min(1.7 + (t - ex), 2.34)
+    top, _, sub = text.partition("\n")
+    s = W / 539  # 線の長さは見本のカード幅に対する比率のまま
+    size1 = fit(top, 88, W - 120)
+    k1 = size1 / 98  # 上の文字（見本 98px）に対する倍率
+    lg = e_io(P(u, 0.1, 0.5)) * (1 - e_io(P(u, 2.05, 2.3)))
+    up = (1 - e_out5(P(u, 0.35, 1.0))) * 120 * k1 + back_in(P(u, 1.7, 2.05), 1.2) * -150 * k1
+    _clip_text(c, top, size1, WHITE, LY - 14 * k1 + up, "md", LY - 5 * k1 - size1 * 1.3, LY - 5 * k1)
+    if sub:
+        size2 = fit(sub, 56, W - 120)
+        k2 = size2 / 32  # 下の文字（見本 32px）に対する倍率
+        dn = (1 - e_out5(P(u, 0.55, 1.15))) * -60 * k2 + e_in(P(u, 1.75, 2.05)) * 70 * k2
+        _clip_text(c, sub, size2, YELLOW, LY + 16 * k2 + dn, "ma", LY + 5 * k1, LY + 60 * k2)
+    if lg > 0.005:
+        c.rrect(W / 2 - 190 * s * lg, LY - 6 * k1, W / 2 + 190 * s * lg, LY + 6 * k1, 6 * k1, fill=CORAL)
+
+
+# Motion Prompt #008 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#008
+# キネティックタイポグラフィ：言葉の意味に合わせて文字が動く（のびる stretch／はねる bounce／まわる spin／ドン! slam）。
+# lu は登場からの秒。out（0→1）で最後に上へ消える。数値は見本の 88px の文字に対する値を size/88 倍して使う。
+
+def kinetic(c, x, y, s, size, lu, mode, fill=WHITE, stroke=0, stroke_fill=None, bold=True, bg=None, out=0.0):
+    if lu < 0:
+        return
+    k = size / 88
+    oa = 1 - out
+    X, Y = x * SS, (y - 46 * k * e_in(out)) * SS
+    sw = int(stroke * SS) if stroke else (max(1, int(size * SS * 0.03)) if bold else 0)
+    sf = stroke_fill or fill
+    if bg is not None:
+        whole = _label_img(s, size, fill, bg)
+    else:
+        whole = _text_img(s, size, fill, sw, sf)
+
+    if mode == "stretch":
+        sp = spring(lu - 0.05, 12, 4.2)
+        sx = 0.3 + 0.7 * sp
+        sy = 1 / math.sqrt(max(0.75, sx))
+        m = (1, 0, 0, 1) if lu > 1.6 else (sx, 0, 0, sy)
+        im, ox, oy = whole
+        blit(c.img, im, X, Y, ox, oy, m, oa * P(lu, 0.03, 0.12))
+        return
+
+    if mode == "slam":
+        hit = 0.2
+        tt = lu - hit
+        sc = lerp(3.4, 1, e_in(P(lu, 0.02, hit))) if tt < 0 else 1
+        dx = 10 * k * math.exp(-9 * tt) * math.sin(38 * tt) if tt > 0 else 0
+        sy = 1 - 0.2 * math.exp(-11 * tt) if tt > 0 else 1
+        a = oa * P(lu, 0.02, 0.1)
+        if 0 < tt < 0.4:
+            q = e_out(tt / 0.4)
+            im = whole[0]
+            rx = 1.35 * max(k, im.width / SS / 2 / 125)  # 放射の線は文字の幅に合わせて広げる
+            ry = 0.5 * max(k, im.height / SS / 2 / 50)
+            ray = YELLOW if fill != YELLOW else WHITE
+            for i in range(8):
+                ang = i / 8 * 2 * math.pi + 0.2
+                r0 = 120 + 50 * q
+                r1 = r0 + 26
+                if q < 0.97:
+                    c.line([(x + math.cos(ang) * r0 * rx, Y / SS + math.sin(ang) * r0 * ry),
+                            (x + math.cos(ang) * r1 * rx, Y / SS + math.sin(ang) * r1 * ry)], ray, 7 * k * (1 - q))
+        sxx, syy = sc * (2 - sy), sc * sy
+        im, ox, oy = whole
+        blit(c.img, im, X + dx * SS, Y + 44 * k * SS, ox, oy + 44 * k * SS, (sxx, -0.14 * sxx, 0, syy), a)
+        return
+
+    # bounce / spin は1文字ずつ
+    if bg is not None:
+        im, ox, oy = _label_img(s, size, fill, bg, with_text=False)
+        blit(c.img, im, X, Y, ox, oy, alpha=oa * P(lu, 0.03, 0.12))
+    f = font(size)
+    asc, desc = f.getmetrics()
+    lh = asc + desc + size * SS * 0.25
+    lines = s.split("\n")
+    ls = 6 * k * SS
+    n = 0
+    for j, line in enumerate(lines):
+        ws = [f.getlength(ch) for ch in line]
+        cx = X - (sum(ws) + ls * (len(ws) - 1)) / 2
+        cy = Y + (j - (len(lines) - 1) / 2) * lh
+        for ch, w in zip(line, ws):
+            gx = cx + w / 2
+            cx += w + ls
+            i, n = n, n + 1
+            im, ox, oy = _text_img(ch, size, fill, sw, sf)
+            if mode == "bounce":
+                tt = lu - 0.06 - i * 0.1
+                if tt < 0:
+                    continue
+                if tt > 2.5:
+                    blit(c.img, im, gx, cy, ox, oy, alpha=oa)
+                    continue
+                ph = abs(math.sin(math.pi * tt / 0.4))
+                yb = -78 * k * ph * math.exp(-2.6 * tt)
+                sq = 1 - 0.16 * (1 if ph < 0.25 else 0) * math.exp(-2.6 * tt)
+                blit(c.img, im, gx, cy + (yb + 44 * k) * SS, ox, oy + 44 * k * SS, (2 - sq, 0, 0, sq),
+                     oa * P(tt, 0, 0.08))
+            else:  # spin
+                tt = lu - 0.05 - i * 0.12
+                if tt < 0:
+                    continue
+                if tt > 0.7:
+                    blit(c.img, im, gx, cy, ox, oy, alpha=oa)
+                    continue
+                q = back_out(P(tt, 0, 0.62), 1.3)
+                sc = e_out(P(tt, 0, 0.25))
+                th = (1 - q) * -2 * math.pi
+                ct, st = math.cos(th) * sc, math.sin(th) * sc
+                blit(c.img, im, gx, cy, ox, oy, (ct, -st, st, ct), oa)
+
+
+def klabel(c, x, y, s, lu, mode, size=46, fg=INK, bg=YELLOW, anchor_x="c"):
+    """丸いラベル（地の色つき）を #008 の動きで出す。"""
+    w = text_w(s, size) + size * 0.9
+    kinetic(c, x if anchor_x == "c" else x + w / 2, y, s, size, lu, mode, fill=fg, bg=bg)
 
 
 # ---------- 各シーンの図解 ----------
@@ -202,7 +404,7 @@ def scene_title(c, t, dur):
     k = ease(t / 1.6)
     x = lerp(-320, 540, k)
     fish(c, x, 960 + 14 * math.sin(t * 3), 560, tail_wag=math.sin(t * 9))
-    c.pop_text(540, 1250, "BURI", 70, back((t - 1.2) / 0.6), fill=YELLOW)
+    kinetic(c, 540, 1250, "BURI", 70, t - 1.2, "slam", fill=YELLOW)
 
 
 def scene_shusse(c, t, dur):
@@ -210,16 +412,16 @@ def scene_shusse(c, t, dur):
     lens = [140, 190, 250, 320]
     kanto = ["ワカシ", "イナダ", "ワラサ", "ブリ"]
     kansai = ["ツバス", "ハマチ", "メジロ", "ブリ"]
-    label(c, 110, 660, "関東", 40, anchor_x="l", bg=SEA_LIGHT, fg=WHITE)
-    label(c, 110, 1200, "関西", 40, anchor_x="l", bg=ORANGE, fg=WHITE)
+    klabel(c, 110, 660, "関東", t, "stretch", 40, anchor_x="l", bg=SEA_LIGHT, fg=WHITE)
+    klabel(c, 110, 1200, "関西", t - 0.1, "stretch", 40, anchor_x="l", bg=ORANGE, fg=WHITE)
     for i in range(4):
         start = dur * (0.06 + i * 0.17)
         k = back((t - start) / 0.5)
         if k <= 0:
             continue
         fish(c, xs[i], 930, lens[i] * k, tail_wag=math.sin(t * 8 + i))
-        c.pop_text(xs[i], 790, kanto[i], 44, k, fill=WHITE)
-        c.pop_text(xs[i], 1070, kansai[i], 44, k, fill=YELLOW)
+        kinetic(c, xs[i], 790, kanto[i], 44, t - start, "bounce", fill=WHITE)
+        kinetic(c, xs[i], 1070, kansai[i], 44, t - start, "bounce", fill=YELLOW)
         if i < 3 and t > start + 0.4:
             ax = (xs[i] + lens[i] / 2 + xs[i + 1] - lens[i + 1] / 2) / 2
             c.line([(ax - 10, 912), (ax + 6, 930), (ax - 10, 948)], fill=(150, 190, 220), width=6)
@@ -234,9 +436,9 @@ def scene_aomono(c, t, dur):
         if k <= 0:
             continue
         fish(c, lerp(1400, 680, k), y, 400, body=body, stripe=stripe, tail_wag=math.sin(t * 8 + i))
-        label(c, lerp(-200, 230, k), y, name, 46)
+        klabel(c, 230, y, name, t - dur * (0.05 + i * 0.22), "stretch", 46)
     if t > dur * 0.8:
-        c.pop_text(540, 1330, "背中が青い回遊魚", 48, back((t - dur * 0.8) / 0.5), fill=SEA_LIGHT)
+        kinetic(c, 540, 1330, "背中が青い回遊魚", 48, t - dur * 0.8, "spin", fill=SEA_LIGHT)
 
 
 def scene_shore(c, t, dur):
@@ -269,7 +471,7 @@ def scene_shore(c, t, dur):
         jx = land[0] + 26 * math.sin(k2 * 14)
         c.line([tip, (jx, jy)], (180, 210, 230), 2)
         jig(c, jx, jy, angle=math.pi / 2 + 0.4 * math.sin(k2 * 14))
-        label(c, land[0] - 10, 960, "メタルジグ", 40)
+        klabel(c, land[0] - 10, 960, "メタルジグ", t - dur * 0.45, "bounce", 40)
         if k2 > 0.5:
             for i in range(3):
                 fx = lerp(1150, 640, ease((k2 - 0.5) * 2)) + i * 90
@@ -279,7 +481,8 @@ def scene_shore(c, t, dur):
 def scene_tackle(c, t, dur):
     items = [("ロッド", "10フィート前後"), ("ライン", "PE 1.5〜2号"), ("ルアー", "メタルジグ 40〜60g")]
     for i, (head, body) in enumerate(items):
-        k = ease((t - dur * (0.08 + i * 0.25)) / 0.5)
+        st = dur * (0.08 + i * 0.25)
+        k = ease((t - st) / 0.5)
         if k <= 0:
             continue
         y = 660 + i * 240
@@ -296,8 +499,8 @@ def scene_tackle(c, t, dur):
             c.circle(ix, iy, 12, fill=WHITE)
         else:
             jig(c, ix, iy, angle=-0.6, size=1.5)
-        c.text(x0 + 230, y - 34, head, 44, fill=SEA, anchor="lm")
-        c.text(x0 + 230, y + 30, body, 52, fill=INK, anchor="lm")
+        kinetic(c, x0 + 230 + text_w(head, 44) / 2, y - 34, head, 44, t - st - 0.5, "spin", fill=SEA)
+        kinetic(c, x0 + 230 + text_w(body, 52) / 2, y + 30, body, 52, t - st - 0.7, "stretch", fill=INK)
 
 
 def scene_morning(c, t, dur):
@@ -311,7 +514,7 @@ def scene_morning(c, t, dur):
     c.circle(250, sun_y, 90, fill=(255, 170, 60))
     waves(c, horizon, t, SEA, amp=6, bottom=1380)
     if t > dur * 0.1:
-        label(c, 250, 760, "朝マヅメ", 42, bg=ORANGE, fg=WHITE)
+        klabel(c, 250, 760, "朝マヅメ", t - dur * 0.1, "stretch", 42, bg=ORANGE, fg=WHITE)
     bird_k = clamp((t - dur * 0.35) / 0.6)
     if bird_k > 0:
         for i in range(7):
@@ -325,14 +528,14 @@ def scene_morning(c, t, dur):
             sx_ = 640 + i * 26
             c.circle(sx_, horizon - 70 * 4 * ph * (1 - ph), 6, fill=WHITE)
     if t > dur * 0.55:
-        k = back((t - dur * 0.55) / 0.5)
-        c.pop_text(760, 1180, "ナブラ発見！", 52, k, fill=YELLOW)
+        kinetic(c, 760, 1180, "ナブラ発見！", 52, t - dur * 0.55, "slam", fill=YELLOW)
 
 
 def scene_care(c, t, dur):
     cards = [(90, "① 血抜き"), (590, "② 潮氷")]
     for i, (x0, head) in enumerate(cards):
-        k = back((t - dur * (0.05 + i * 0.4)) / 0.5)
+        st = dur * (0.05 + i * 0.4)
+        k = back((t - st) / 0.5)
         if k <= 0:
             continue
         cx = x0 + 200
@@ -350,9 +553,9 @@ def scene_care(c, t, dur):
             c.rrect(cx - 110, 850, cx + 110, 990, 10, fill=(150, 210, 240))
             for j, (ox, oy) in enumerate([(-60, 900), (10, 880), (60, 930), (-20, 950)]):
                 c.rrect(cx + ox - 22, oy - 22, cx + ox + 22, oy + 22, 6, fill=WHITE, outline=(120, 180, 220), width=3)
-        c.text(cx, 1140, head, 48, fill=INK)
+        kinetic(c, cx, 1140, head, 48, t - st - 0.15, "stretch", fill=INK)
         if i == 1:
-            c.text(cx, 1210, "海水＋氷", 36, fill=SEA, bold=False)
+            kinetic(c, cx, 1210, "海水＋氷", 36, t - st - 0.45, "bounce", fill=SEA, bold=False)
     if t > dur * 0.4:
         k = ease((t - dur * 0.4) / 0.4)
         c.line([(500, 980), (500 + 80 * k, 980)], YELLOW, 12)
@@ -379,7 +582,7 @@ def scene_safety(c, t, dur):
             continue
         y = 1170 + i * 100
         check(c, 300, y, 60, (t - st) / 0.5)
-        c.text(360, y, s_, 52, fill=WHITE, anchor="lm")
+        kinetic(c, 360 + text_w(s_, 52) / 2, y, s_, 52, t - st, "slam", fill=WHITE)
 
 
 SCENES = [
@@ -404,17 +607,6 @@ SCENES = [
 
 # ---------- テロップ・字幕 ----------
 
-def draw_telop(c, text, t):
-    k = ease(t / 0.45)
-    size = 64 if max(len(s) for s in text.split("\n")) <= 12 else 54
-    lines = text.count("\n") + 1
-    h = lines * size * 1.3 + 60
-    y0 = lerp(80, 190, k)
-    c.rrect(60, y0, W - 60, y0 + h, 36, fill=WHITE)
-    c.rrect(60, y0, 76, y0 + h, 8, fill=YELLOW)
-    c.text(W / 2, y0 + h / 2, text, size, fill=INK)
-
-
 def subtitle_chunks(narration, max_len=17):
     parts = re.findall(r"[^、。？！]+[、。？！]?", narration)
     chunks = []
@@ -427,17 +619,24 @@ def subtitle_chunks(narration, max_len=17):
 
 
 def draw_subtitle(c, chunks, t, speech):
+    """字幕は #008 キネティックタイポグラフィ。区切りごとに登場し、最後の 0.2 秒で上へ消える。"""
     total = sum(len(s) for s in chunks)
     acc = 0
-    for s in chunks:
+    for n, s in enumerate(chunks):
+        start = speech * acc / total
         acc += len(s)
-        if t <= speech * acc / total or s is chunks[-1]:
+        end = speech * acc / total if n < len(chunks) - 1 else speech + 0.3
+        if t <= end or n == len(chunks) - 1:
             break
+    lu, dur = t - start, end - start
     s = s.rstrip("、")
     if len(s) > 17:  # 1行に収まらないときは真ん中で2行に分ける
         mid = (len(s) + 1) // 2
         s = s[:mid] + "\n" + s[mid:]
-    c.text(W / 2, 1540, s, 54, fill=WHITE, stroke=6, stroke_fill=INK)
+    # 言葉の調子で動きを選ぶ：「！」はドン、「？」はまわる、ほかは のびる／はねる を交互に
+    mode = "slam" if s.endswith("！") else "spin" if s.endswith("？") else ("stretch", "bounce")[n % 2]
+    kinetic(c, W / 2, 1540, s, 54, lu, mode, fill=WHITE, stroke=6, stroke_fill=INK,
+            out=P(lu, dur - 0.2, dur - 0.02))
 
 
 # ---------- Gemini TTS ----------
@@ -586,7 +785,7 @@ def build(args):
         img = bg.copy()
         c = Canvas(img)
         SCENES[i]["draw"](c, t, durs[i])
-        draw_telop(c, SCENES[i]["telop"], t)
+        draw_title(c, SCENES[i]["telop"], t, durs[i])
         if LEAD <= t <= LEAD + speeches[i] + 0.3:
             draw_subtitle(c, chunks[i], t - LEAD, speeches[i])
         c.rrect(60, 40, 60 + (W - 120) * T / total, 52, 6, fill=YELLOW)
