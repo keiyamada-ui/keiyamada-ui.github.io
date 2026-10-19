@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-20",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-20",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "水筒のパッキン、外して洗ったあと乾かす場所でいつも行方不明になる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "朝「寒い」って言って長袖着てったのに、帰ってきたら腕まくりして汗だく。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "靴下の左右で微妙に違う黒の濃さ、本人は気にならないのかな。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
