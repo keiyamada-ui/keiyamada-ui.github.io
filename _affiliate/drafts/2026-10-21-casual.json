@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-21",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-21",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "部活のユニフォーム、裏返しのまま洗濯カゴに突っ込んである。表に返してから入れてほしい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "帰ってきて手も洗わずに冷蔵庫を開けるの、毎日全力で止めてる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "「あと5分したら入る」って言ったお風呂、もう30分経ってる。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
