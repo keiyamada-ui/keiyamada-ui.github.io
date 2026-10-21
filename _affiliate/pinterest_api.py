@@ -132,6 +132,8 @@ def due_slots(now):
 def post_due(now=None, manual_dir=None, tok=None, create=None):
     """時刻を過ぎて、まだ出していない枠があれば、予約待ちのピンを1枚出す。返り値: 出したピン（なければ None）。"""
     now = now or datetime.datetime.now(JST)
+    if create is None and not (yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8")).get("pinterest") or {}).get("enabled", True):  # お休み中
+        return None
     tok = tok or _token()
     if not tok:
         return None

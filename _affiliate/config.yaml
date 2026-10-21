@@ -111,7 +111,8 @@ illust:
 
 # Pinterest のピン（画像・タイトル・説明・楽天のリンク）。毎朝作って、管理画面の「📌 Pinterest」に並べる
 pinterest:
-  enabled: true
+  # 今はお休み中（false のあいだは、ピン作り・自動投稿・日曜の通知をしない）。再開するときは true にする
+  enabled: false
   per_day: 2
   # ピンを入れるボード（Pinterest で同じ名前のボードを作っておく）
   boards: [小学生の習い事・知育, 子どもの本・図鑑, 子連れ旅行・おでかけ, 季節の準備・暮らし]

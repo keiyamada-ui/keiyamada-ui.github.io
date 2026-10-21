@@ -250,6 +250,13 @@ def check_pin(pin):
     return errors
 
 
+def _enabled():
+    """config.yaml の pinterest.enabled（お休み中は false）。"""
+    import yaml
+    conf = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8")) or {}
+    return (conf.get("pinterest") or {}).get("enabled", True)
+
+
 def make_pins(config, today, items, generate, pin_dir=PIN_DIR, manual_dir=None, fetch=True):
     """商品ごとにピンを作り、manual/pins.json に追加する。返り値: 作ったピンの一覧。"""
     conf = config.get("pinterest", {})
@@ -367,6 +374,8 @@ def main(argv=None):
             f.write(f"count={len(made)}\n")
         return 0
     if a.remind:
+        if not _enabled():
+            return 0
         n = waiting_count()
         if now.weekday() == 6 and n:
             subprocess.run([sys.executable, str(HERE / "push.py"), "send", "--title", f"📌 今週のピン {n} 枚",
