@@ -13,6 +13,7 @@ from PIL import Image  # noqa: E402
 
 FIXTURE = json.loads((HERE / "fixtures" / "sample_llm_output.json").read_text(encoding="utf-8"))["pins"]["pins"][0]
 CONFIG = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
+CONFIG["pinterest"] = dict(CONFIG["pinterest"], enabled=True)  # お休み中でも、ピン作りそのものは確かめる
 TODAY = datetime.date(2026, 10, 25)
 ITEMS = [{"id": f"shop:{n}", "name": f"商品{n}", "url": f"https://hb.afl.rakuten.co.jp/x{n}",
           "price": 1280, "review_average": 4.6, "review_count": 250, "source": "ichiba"} for n in range(3)]
