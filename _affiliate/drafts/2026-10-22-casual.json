@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-22",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-22",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "脱いだ制服のズボンが床に綺麗な筒状のまま立ってる。ハンガーにかけて。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "学校からのお便り、底にクシャクシャに沈んでるのを発掘した時のため息。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "消しゴムを小さくちぎって机の溝に詰めるの、本当にやめてほしい。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
