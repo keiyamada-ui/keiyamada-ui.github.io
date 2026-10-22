@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-23",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-23",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "金曜の夕方、ランドセルから溢れ出てる上靴と体操服。全部週末に洗うの誰だと思ってるんだろ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中学生のお弁当箱、週末のうちに出さないのってあるあるですか。月曜の朝に見つけた時の絶望感すごい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "肌寒いから上着羽織っていきなよって言ったのに、玄関にきれいに置いてある。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
