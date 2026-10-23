@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-24",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-24",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の朝なのに平日より早く起きて部活の水筒準備してる。二度寝したいな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "教科書の上にスマホ乗せて勉強してるの、あれ本当に集中できてるのかな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の食べる量がここ最近で一気に増えて、お米の減るスピードに買い出しが追いつかない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
