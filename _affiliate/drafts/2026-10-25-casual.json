@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-25",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-25",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "リビングの床に靴下が片方だけ落ちてる。もう片方はどこ行ったんだろ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夜になってから「明日図工で使う空き箱ある？」って言われるの、みんなの家もある？",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "子どもたちのリクエストで今夜は唐揚げ。私はキャベツ山盛りで我慢。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

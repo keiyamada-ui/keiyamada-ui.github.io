@@ -461,7 +461,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18217881115357577": {
   "date": "2026-10-18",
@@ -477,7 +477,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18199889929342118": {
   "date": "2026-10-18",
@@ -493,7 +493,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18191267962410077": {
   "date": "2026-10-19",
@@ -509,7 +509,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18114050708148609": {
   "date": "2026-10-19",
@@ -525,7 +525,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18128849228485301": {
   "date": "2026-10-20",
@@ -541,7 +541,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18134639191591077": {
   "date": "2026-10-20",
@@ -557,7 +557,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "17963828088195905": {
   "date": "2026-10-20",
@@ -573,7 +573,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "17940998970379590": {
   "date": "2026-10-21",
@@ -582,14 +582,14 @@
   "post_index": 0,
   "permalink": "https://www.threads.com/@kotori.family/post/Dewg-J4kSIi",
   "metrics": {
-   "views": 319,
+   "views": 320,
    "likes": 0,
    "replies": 3,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18115656269034069": {
   "date": "2026-10-22",
@@ -605,7 +605,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
  },
  "18120825689284264": {
   "date": "2026-10-23",
@@ -621,6 +621,22 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-24"
+  "fetched": "2026-10-25"
+ },
+ "17913411243493337": {
+  "date": "2026-10-24",
+  "kind": "casual",
+  "draft": "2026-10-24-casual.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/De3KanSG81k",
+  "metrics": {
+   "views": 472,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-10-25"
  }
 }
