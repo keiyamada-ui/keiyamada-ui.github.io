@@ -1,12 +1,12 @@
 {
- "updated": "2026-10-25",
+ "updated": "2026-10-26",
  "min_posts": 3,
  "slots": [
   {
    "slot": 1,
    "name": "昼（短い投稿）",
-   "posts": 4,
-   "views": 248,
+   "posts": 5,
+   "views": 293,
    "buckets": [
     {
      "from": 690,
@@ -21,9 +21,9 @@
      "from": 720,
      "to": 750,
      "label": "12:00〜12:30",
-     "posts": 1,
-     "views": 139,
-     "likes": 1.0,
+     "posts": 2,
+     "views": 306,
+     "likes": 0.5,
      "best": false
     },
     {

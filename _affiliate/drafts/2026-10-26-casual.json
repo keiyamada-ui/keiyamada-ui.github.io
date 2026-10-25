@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-26",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-26",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "脱いだパジャマが裏返しのまま脱衣所に放置されてる。表に直して洗濯機に入れるの地味に面倒。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "テストの答案用紙、点数より先にどこを間違えたのか気になって細かく見ちゃう。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "プリント類、学年だよりだけいつもランドセルの底でぐしゃぐしゃになってるの何でだろ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
