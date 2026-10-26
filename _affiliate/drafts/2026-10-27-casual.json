@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-27",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-27",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "ダイニングテーブルに散らばった消しゴムのカス、毎日集めてるの私なんだけど。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "ノートの最後の数ページだけ残して新しいの使い始めるの、うちだけですか。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "塾のお迎え待ち。車の中で飲む温かいお茶が染みる。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
