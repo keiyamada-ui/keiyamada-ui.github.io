@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-28",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-28",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "体操服の袋、結局カバンにぶら下げたまま帰ってくる。洗濯物に出すの、毎回声かけてる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "お弁当箱のゴムパッキン、洗うたびに外して乾かすのが地味に手間。でもやらないと気持ち悪い。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "朝晩ちょっと冷えてきた。中2はまだ半袖で出ていこうとする。薄手の上着は持たせた。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
