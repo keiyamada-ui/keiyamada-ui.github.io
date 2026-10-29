@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-29",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-29",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "リビングの充電器のコード、きれいに束ねても次の日にはほどけてる。もう諦めたい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "木曜の夜って親も子もいちばん疲れてる気がする。明日の朝、起きられるかな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "部活のシューズ、洗っても洗っても中から細かい砂が出てくるのなんでだろう。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
