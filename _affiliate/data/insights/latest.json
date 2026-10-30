@@ -637,7 +637,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "18031175315911217": {
   "date": "2026-10-25",
@@ -653,7 +653,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "18123365554931348": {
   "date": "2026-10-26",
@@ -669,7 +669,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "17891282481460467": {
   "date": "2026-10-26",
@@ -685,7 +685,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "18223659931341967": {
   "date": "2026-10-27",
@@ -701,7 +701,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "17910626583591463": {
   "date": "2026-10-27",
@@ -717,7 +717,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
  },
  "17948829735350706": {
   "date": "2026-10-29",
@@ -726,13 +726,45 @@
   "post_index": 0,
   "permalink": "https://www.threads.com/@kotori.family/post/DfFI_PplnSO",
   "metrics": {
-   "views": 218,
+   "views": 224,
    "likes": 0,
    "replies": 1,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-30"
+  "fetched": "2026-10-31"
+ },
+ "17888745816488244": {
+  "date": "2026-10-30",
+  "kind": "casual",
+  "draft": "2026-10-30-casual.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DfGpH07DTx6",
+  "metrics": {
+   "views": 383,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-10-31"
+ },
+ "18079143182423781": {
+  "date": "2026-10-30",
+  "kind": "buzz",
+  "draft": "2026-10-30-buzz.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DfHsuM2m_qV",
+  "metrics": {
+   "views": 256,
+   "likes": 1,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-10-31"
  }
 }

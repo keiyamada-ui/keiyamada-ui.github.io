@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-31",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-31",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の朝練、水筒に氷をどのくらい入れるか毎回悩む。朝は寒いけど昼は走るしな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "整えたばかりのソファに中2がダイブして、一瞬でクッションが散らかった。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "週末のまとめ買い、行く前はあれこれ献立考えてたのに結局いつもと同じメニューになる。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
