@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-30",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-10-30",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "上履き、金曜なのに持って帰ってくるの忘れたらしい。月曜の朝に持っていくの確定した。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "「宿題やったの？」って聞いた瞬間、部屋のドアが静かに閉まる。中2のわかりやすい合図。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "カレー作った日に限って、家族の帰る時間がバラバラ。何回温め直せばいいんだろ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

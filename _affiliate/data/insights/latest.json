@@ -621,7 +621,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "17913411243493337": {
   "date": "2026-10-24",
@@ -637,7 +637,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "18031175315911217": {
   "date": "2026-10-25",
@@ -653,7 +653,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "18123365554931348": {
   "date": "2026-10-26",
@@ -669,7 +669,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "17891282481460467": {
   "date": "2026-10-26",
@@ -685,7 +685,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "18223659931341967": {
   "date": "2026-10-27",
@@ -701,7 +701,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
  },
  "17910626583591463": {
   "date": "2026-10-27",
@@ -717,6 +717,22 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-10-29"
+  "fetched": "2026-10-30"
+ },
+ "17948829735350706": {
+  "date": "2026-10-29",
+  "kind": "buzz",
+  "draft": "2026-10-29-buzz.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DfFI_PplnSO",
+  "metrics": {
+   "views": 218,
+   "likes": 0,
+   "replies": 1,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-10-30"
  }
 }
