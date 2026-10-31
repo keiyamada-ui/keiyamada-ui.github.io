@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-01",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-01",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夜に「明日、図工でプリンカップ使う」って言われて、洗って乾かしてあったやつを必死で探してる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "「どっちでもいい」って言うからうどんにしたのに、一口食べて「やっぱご飯がよかった」は反則だと思う。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "脱衣所のカゴの前に落ちてる靴下、なんで毎日裏返しのまま丸まってるんだろう。カゴまであと十センチなのに。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
