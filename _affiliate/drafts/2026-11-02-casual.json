@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-02",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-02",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "洗面台の鏡、きれいに拭いたそばから歯磨き粉飛ばされてるのを見届ける月曜の朝。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "炊飯器開けたらご飯が一口分だけ残されてて、ラップするのも面倒な量で立ち尽くす。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "学校からの手紙、集金と年間予定のプリントだけは即ファイルに入れないと気が済まない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
