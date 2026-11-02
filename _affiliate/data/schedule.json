@@ -1,27 +1,27 @@
 {
- "date": "2026-11-02",
+ "date": "2026-11-03",
  "slots": [
   {
    "slot": 1,
    "name": "昼（短い投稿）",
-   "minute": 764,
-   "time": "12:44",
+   "minute": 708,
+   "time": "11:48",
    "window": "11:30〜13:00",
    "rest": false
   },
   {
    "slot": 2,
    "name": "夕方（役立つ投稿・PR 投稿）",
-   "minute": 1074,
-   "time": "17:54",
+   "minute": 1085,
+   "time": "18:05",
    "window": "17:00〜19:00",
    "rest": false
   },
   {
    "slot": 3,
    "name": "夜（短い投稿）",
-   "minute": 1268,
-   "time": "21:08",
+   "minute": 1280,
+   "time": "21:20",
    "window": "20:30〜22:00",
    "rest": false
   }
