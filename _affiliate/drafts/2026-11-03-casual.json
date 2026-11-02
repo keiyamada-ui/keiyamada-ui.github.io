@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-03",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-03",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5が漢字ドリル開きっぱなしでどこか行った。机の上が消しカスだらけ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "薄手の上着を出したのに、中2は今日も半袖で行った。見ているこっちが寒い。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "お弁当箱、帰ってきたらすぐ出してって言ってるのに、いつもシンクに出てくるの寝る直前。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
