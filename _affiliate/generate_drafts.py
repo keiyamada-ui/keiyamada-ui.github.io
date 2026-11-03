@@ -644,8 +644,18 @@ def make_extras(config, today, generate, pats, args):
     if config.get("buzz", {}).get("enabled", True):
         try:
             collect = (lambda *a: ([("お試し", "運動会の練習で毎日体操服を洗う季節")], [])) if args.dry_run else sources.collect
-            buzz = extras.make_buzz(config, today, generate, pats, drafts_dir, collect)
+            # 3日以上前に伸びた投稿があれば、ニュースの代わりにそれを作り直す（伸びた話題は、また伸びやすい）
+            done_path = DATA / "recycled.json"
+            done = json.loads(done_path.read_text(encoding="utf-8")) if done_path.exists() else []
+            store = json.loads((DATA / "insights" / "latest.json").read_text(encoding="utf-8")) \
+                if (DATA / "insights" / "latest.json").exists() else {}
+            recycle = None if args.dry_run else extras.pick_recycle(store, drafts_dir, today, done)
+            buzz = extras.make_buzz(config, today, generate, pats, drafts_dir, collect, recycle=recycle)
             extras.save_json(drafts_dir, f"{today.isoformat()}-buzz.json", buzz)
+            if recycle and not buzz["errors"]:
+                done.append({"date": today.isoformat(), "permalink": recycle["permalink"], "views": recycle["views"]})
+                done_path.write_text(json.dumps(done[-100:], ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+                notes.append(f"🔁 {recycle['date']}に伸びた投稿（表示 {recycle['views']}）を作り直して、集客投稿にしました")
             sections.append(extras.render_buzz(buzz))
         except Exception as e:  # noqa: BLE001
             notes.append(f"集客投稿を作れませんでした（朝の枠は役立つ投稿で代わりに出します）: {str(e)[:150]}")
@@ -1024,7 +1034,7 @@ def main(argv=None):
     today = datetime.date.fromisoformat(args.date) if args.date else datetime.datetime.now(JST).date()
     # 今の季節感（実際の気温）を調べて、文章作りと確認に使う
     info = season.get(today, store=DATA / "season", fetcher=(lambda d: None) if args.dry_run else season.fetch)
-    prompts.SEASON_NOTE = info["note"] + (("\n" + events.note(today)) if events.note(today) else "")
+    prompts.SEASON_NOTE = "\n".join(x for x in (info["note"], events.note(today), events.five_zero(today)) if x)
     checks.SEASON.update(avoid=info["avoid"], avg_max=info["avg_max"])
     prompts.LEARNED_NOTE = learn.note(DATA / "learned.json")
     # 最近使いすぎの言い回しを避け、書き出しの形を毎日変える

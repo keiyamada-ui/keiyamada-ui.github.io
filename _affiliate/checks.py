@@ -7,6 +7,7 @@ warnings = 人の目で確認してほしいもの（PR の本文に表示する
 import re
 
 THREADS_MAX_CHARS = 500
+REPLY_MAX_CHARS = 200  # リンク（250文字ほど）を足しても Threads の上限に収まるように
 LINK_PLACEHOLDER = "{{LINK}}"
 URL_PATTERN = re.compile(r"https?://|www\.|\.co\.jp|\.com/")
 
@@ -104,17 +105,20 @@ def check_posts(posts, room_comment=None, owner_note=None):
             errors.append(f"{label}: リンクなし投稿に返信用の文が入っています")
 
         if post.get("type") == "pr":
-            first_line = text.strip().splitlines()[0] if text.strip() else ""
-            if "PR" not in first_line:
-                errors.append(f"{label}: 本文の1行目に「PR」の表記がありません")
+            # 本文は宣伝に見せない（宣伝っぽい投稿は Threads でほとんど表示されないため）。PR 表記はリンクのある返信の1行目に
+            if "【PR】" in text or "#PR" in text:
+                errors.append(f"{label}: 本文に【PR】を入れないでください（PR 表記は、リンクを貼る返信の1行目に入れます）")
+            reply_first = reply.strip().splitlines()[0] if reply.strip() else ""
+            if "PR" not in reply_first:
+                errors.append(f"{label}: 返信用の文の1行目に「【PR】」の表記がありません")
+            if len(reply.replace(LINK_PLACEHOLDER, "")) > REPLY_MAX_CHARS:
+                errors.append(f"{label}: 返信用の文が長すぎます（リンクを除いて{len(reply.replace(LINK_PLACEHOLDER, ''))}文字、{REPLY_MAX_CHARS}文字まで）")
             if reply.count(LINK_PLACEHOLDER) != 1:
                 errors.append(f"{label}: 返信用の文にリンクの置き場所 {LINK_PLACEHOLDER} がちょうど1つ必要です")
             if "#PR" not in reply:
                 errors.append(f"{label}: 返信用の文に「#PR」がありません")
             if URL_PATTERN.search(reply.replace(LINK_PLACEHOLDER, "")):
                 errors.append(f"{label}: 返信用の文に置き場所以外のリンクが入っています")
-            if len(reply.replace(LINK_PLACEHOLDER, "x" * 60)) > THREADS_MAX_CHARS:
-                errors.append(f"{label}: 返信用の文が長すぎます")
 
     if room_comment is not None:
         errors += check_room_comment(room_comment)

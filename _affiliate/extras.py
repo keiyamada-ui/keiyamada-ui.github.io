@@ -6,6 +6,7 @@
               → drafts/日付-casual.json
 """
 
+import datetime
 import json
 from pathlib import Path
 
@@ -36,13 +37,62 @@ def _total(d):
     return d["empathy"] + d["reply"] + d["share"] + d["human"]
 
 
-def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect):
-    headlines, failed = collect(config.get("buzz", {}).get("feeds"), config.get("buzz", {}).get("queries"))
-    print(f"📰 ニュース・トレンドの見出し {len(headlines)}件（取得できなかった出どころ {len(failed)}件）")
-    recent = _recent(drafts_dir, "buzz", "topic")
-    system, user = prompts.buzz_research_messages(config["account"], today,
-                                                  [f"{t}（{n}）" for n, t in headlines], recent)
-    research = generate.research(system, user, tier="important")
+# ---------------------------------------------------------------- 伸びた投稿の作り直し
+
+RECYCLE_AFTER = 3        # 何日たったら作り直してよいか
+RECYCLE_WITHIN = 14      # 何日前までの投稿を見るか
+RECYCLE_GAP = 3          # 作り直しは、前回から3日以上あける
+RECYCLE_MIN_VIEWS = 300  # これより少ない表示の投稿は「伸びた」とみなさない
+RECYCLE_KINDS = ("buzz", "casual", "value")
+
+
+def pick_recycle(store, drafts_dir, today, done):
+    """3〜14日前の投稿で、ほかよりはっきり伸びたもの（表示がふだんの2倍以上）。作り直していないものから1つ。"""
+    if done and (today - datetime.date.fromisoformat(max(d["date"] for d in done))).days < RECYCLE_GAP:
+        return None
+    views = sorted(v["metrics"].get("views", 0) for v in store.values() if v.get("kind") in RECYCLE_KINDS)
+    if not views:
+        return None
+    need = max(RECYCLE_MIN_VIEWS, 2 * views[len(views) // 2])
+    used = {d["permalink"] for d in done}
+    best = None
+    for v in store.values():
+        age = (today - datetime.date.fromisoformat(v["date"])).days
+        if (v.get("kind") in RECYCLE_KINDS and RECYCLE_AFTER <= age <= RECYCLE_WITHIN
+                and v["metrics"].get("views", 0) >= need and v.get("permalink") not in used):
+            if best is None or v["metrics"]["views"] > best["metrics"]["views"]:
+                best = v
+    if not best:
+        return None
+    path = Path(drafts_dir) / best["draft"]
+    posts = json.loads(path.read_text(encoding="utf-8")).get("posts", []) if path.exists() else []
+    if best["post_index"] >= len(posts):
+        return None
+    p = posts[best["post_index"]]
+    return {"text": "\n".join([p["text"], *(p.get("thread_parts") or [])]), "views": best["metrics"]["views"],
+            "likes": best["metrics"].get("likes", 0), "permalink": best.get("permalink", ""), "date": best["date"]}
+
+
+def recycle_memo(src):
+    return (f"# 今回は「伸びた投稿の作り直し」\n{src['date']}に出した投稿が、ふだんの2倍以上見られた"
+            f"（表示 {src['views']}・いいね {src['likes']}）。同じ話題・同じ型で、もう一度出す。\n"
+            "- 文をそのまま使わない。書き出し・言い回し・例を変えて、新しく書く（同じ文のくり返しはスパム扱いになる）。\n"
+            "- 何が受けたのか（話題・共感のポイント・1行目の形）を読み取って、それを残す。\n"
+            "- topic には元の話題を書き、why_now には「前に伸びた話題の作り直し」と書く。\n\n"
+            f"元の投稿:\n{src['text']}")
+
+
+def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect, recycle=None):
+    if recycle:  # 伸びた投稿の作り直し: ニュースは調べない
+        print(f"🔁 伸びた投稿（{recycle['date']}・表示 {recycle['views']}）を作り直します")
+        research = recycle_memo(recycle)
+    else:
+        headlines, failed = collect(config.get("buzz", {}).get("feeds"), config.get("buzz", {}).get("queries"))
+        print(f"📰 ニュース・トレンドの見出し {len(headlines)}件（取得できなかった出どころ {len(failed)}件）")
+        recent = _recent(drafts_dir, "buzz", "topic")
+        system, user = prompts.buzz_research_messages(config["account"], today,
+                                                      [f"{t}（{n}）" for n, t in headlines], recent)
+        research = generate.research(system, user, tier="important")
 
     feedback, result, chosen, errors = None, None, None, []
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -72,6 +122,7 @@ def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect
         "errors": errors, "warnings": [],
         "topic": result["topic"], "why_now": result["why_now"], "parent_emotion": result["parent_emotion"],
         "topic_tag": tag,
+        "recycled_from": recycle["permalink"] if recycle else "",
         "product": {"keyword": result["product_keyword"], "source": result["product_source"],
                     "persona": result["product_persona"]},
         "posts": [{"type": "buzz", "angle": pick["pattern"], "text": pick["text"], "thread_parts": [],
@@ -85,6 +136,8 @@ def make_buzz(config, today, generate, pats, drafts_dir, collect=sources.collect
 
 def render_buzz(data):
     out = ["## 📣 集客投稿（朝・リンクなし・宣伝なし）", ""]
+    if data.get("recycled_from"):
+        out += [f"🔁 前に伸びた投稿の作り直しです（元の投稿: {data['recycled_from']}）", ""]
     if data["errors"]:
         out += ["❌ **自動チェックに通らなかったため、自動投稿しません:**"] + [f"- {e}" for e in data["errors"]] + [""]
     post = data["posts"][0]
