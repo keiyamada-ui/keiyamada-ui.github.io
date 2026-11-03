@@ -43,11 +43,15 @@ def test_link_in_body_is_rejected():
     assert any("本文にリンク" in e for e in errors)
 
 
-def test_pr_label_must_be_on_first_line():
+def test_pr_label_goes_on_reply_not_body():
     posts = good_posts()
-    posts[2]["text"] = posts[2]["text"].replace("【PR】", "")
+    posts[2]["reply_text"] = posts[2]["reply_text"].replace("【PR】", "")
     errors, _ = checks.check_posts(posts, ROOM)
     assert any("1行目" in e for e in errors)
+    posts = good_posts()
+    posts[2]["text"] = "【PR】" + posts[2]["text"]
+    errors, _ = checks.check_posts(posts, ROOM)
+    assert any("本文に【PR】" in e for e in errors)
 
 
 def test_reply_needs_exactly_one_link_and_hashtag():
@@ -418,7 +422,7 @@ def test_rewrite_loop_feeds_errors_back():
         calls.append(user)
         result = json.loads(json.dumps(FIXTURES["write"]))
         if len(calls) == 1:
-            result["posts"][2]["text"] = "表記を忘れた本文"
+            result["posts"][2]["reply_text"] = "表記を忘れた返信\n{{LINK}}\n#PR"
         return result
 
     result, errors, _ = generate_drafts.write_posts(CONFIG, theme, chosen, analysis, [], TODAY, generate)

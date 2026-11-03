@@ -194,7 +194,7 @@ def test_pr_post_puts_link_in_reply(dirs):
     report, ok = autopost.run(2, TODAY, config(), drafts, posted, client)
     assert ok and "💎" in report
     (body, _), (reply, parent) = client.calls
-    assert "【PR】" in body and "https://" not in body
+    assert "https://" not in body
     assert "https://hb.afl.rakuten.co.jp/x" in reply and parent == "id1"
 
 
