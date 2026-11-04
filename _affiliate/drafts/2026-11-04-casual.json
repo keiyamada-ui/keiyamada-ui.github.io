@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-04",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-04",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の部活のジャージ、洗濯カゴの底から出てきた。においで気づくのやめたい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "夕飯の準備してたら、小5が後ろから「今日なに？」って3回聞いてきた。まだ煮てる途中です。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "リビングのテーブル、いつの間にか充電器とプリントの山。今夜こそ全部戻す🧹",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

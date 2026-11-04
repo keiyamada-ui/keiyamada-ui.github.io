@@ -726,14 +726,14 @@
   "post_index": 0,
   "permalink": "https://www.threads.com/@kotori.family/post/DfFI_PplnSO",
   "metrics": {
-   "views": 224,
+   "views": 225,
    "likes": 0,
    "replies": 1,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
  },
  "17888745816488244": {
   "date": "2026-10-30",
@@ -749,7 +749,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
  },
  "18079143182423781": {
   "date": "2026-10-30",
@@ -765,7 +765,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
  },
  "18117306104045700": {
   "date": "2026-10-31",
@@ -781,7 +781,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
  },
  "18055098587809599": {
   "date": "2026-11-01",
@@ -790,14 +790,14 @@
   "post_index": 0,
   "permalink": "https://www.threads.com/@kotori.family/post/DfL8p3-lJsv",
   "metrics": {
-   "views": 551,
+   "views": 552,
    "likes": 1,
    "replies": 0,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
  },
  "18084827096713784": {
   "date": "2026-11-02",
@@ -806,13 +806,45 @@
   "post_index": 2,
   "permalink": "https://www.threads.com/@kotori.family/post/DfPILnBFX8c",
   "metrics": {
-   "views": 1,
+   "views": 3,
    "likes": 0,
    "replies": 1,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-03"
+  "fetched": "2026-11-04"
+ },
+ "18357250660220714": {
+  "date": "2026-11-03",
+  "kind": "casual",
+  "draft": "2026-11-03-casual.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DfQ2QmkjEMe",
+  "metrics": {
+   "views": 178,
+   "likes": 1,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-11-04"
+ },
+ "18133114189809573": {
+  "date": "2026-11-03",
+  "kind": "value",
+  "draft": "2026-11-03.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DfRrFS_llc_",
+  "metrics": {
+   "views": 17,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-11-04"
  }
 }
