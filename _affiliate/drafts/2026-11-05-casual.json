@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-05",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-05",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5が寝る前に急に「明日の体育、長袖いる？」って聞いてきた。天気予報を見ながら、体操服を2枚並べて悩む夜。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の机の横に、配られたプリントが無造作に挟まってる。出せと言うべきか、見なかったことにするか。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "洗濯物をたたんでたら、いつの間にか隣で小5が靴下の左右そろえてくれてた。何も言わずそっとありがたく受け取る。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
