@@ -16,42 +16,101 @@
   .memoline { margin-top: 8px; font-size: 12.5px; color: var(--sub); background: var(--box); border-radius: 12px; padding: 7px 10px; line-height: 1.6; }
   .memoline b { font-family: var(--num); color: var(--text); }
   .alert { color: var(--pr); font-weight: 700; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+  .summary button { border: 0; border-radius: 16px; padding: 10px 4px; cursor: pointer; text-align: center; color: inherit; transition: transform .12s, box-shadow .2s; }
+  .summary button:active { transform: scale(.95); }
+  .summary button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text); }
+  .summary b { display: block; font-family: var(--num); font-size: 20px; font-weight: 900; }
+  .summary span { font-size: 11px; font-weight: 700; }
+  .tagrow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px dashed var(--line); }
+  .tagrow:first-child { border-top: 0; }
+  .tagrow .badge { font-size: 13px; }
+  .tagrow small { color: var(--sub); flex: 1; }
 </style>
 </head>
 <body>
-<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>⭐ ウォッチリスト</h1></header>
-<p class="note">銘柄の画面の右上の ☆ を押すと、ここに集まります。事前ルールメモ（目標株価・損切りライン）を書いた銘柄は、採点が下がったときやランクが落ちたときに目立つようにお知らせします。ウォッチリストとメモはこの端末の中だけに保存されます。</p>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>⭐ ウォッチ</h1>
+  <div class="right"><button class="iconbtn" id="tagbtn" aria-label="タグを管理">🏷️</button></div></header>
+<p class="note">気になる銘柄に ☆ やタグ（監視中・買い候補・保有中など）を付けると、ここに集まります。タグを押すとその銘柄だけ表示。事前ルールメモを書いた銘柄は、ランクが下がった・損切りラインを割ったなどのときに目立たせます。この一覧はこの端末の中だけに保存されます。</p>
+
+<div class="summary" id="summary"></div>
+<div class="chips" id="filter" style="margin-bottom:10px"></div>
 <div id="list"></div>
 
 <script src="app.js"></script>
 <script>
+let DATA = null, filter = "all";
 $("list").replaceChildren(...skeleton(3));
-function render(data) {
-  const list = scoreAll(data, weightsFor(data));
-  const codes = Watch.all();
-  if (!codes.length) {
-    $("list").replaceChildren(el("div", { class: "empty", html: "まだウォッチしている銘柄はないよ🐤<br>気になる銘柄の ☆ を押してね" }),
-      el("div", { class: "actions" }, [el("a", { class: "btn primary", href: "ranking.html", text: "🏅 ランキングから探す" })]));
+
+function counts() {
+  const codes = Watch.all(), m = Tags.map();
+  const c = { all: codes.length, none: codes.filter(x => !(m[x] || []).length).length };
+  for (const d of Tags.defs()) c[d.id] = codes.filter(x => (m[x] || []).includes(d.id)).length;
+  return c;
+}
+function renderTop() {
+  const c = counts(), defs = Tags.defs();
+  $("summary").replaceChildren(...defs.slice(0, 4).map(d => el("button", { style: { background: d.color }, "aria-pressed": String(filter === d.id),
+    onclick: () => { filter = filter === d.id ? "all" : d.id; renderTop(); renderList(); } }, [el("b", { text: c[d.id] || 0 }), el("span", { text: d.label })])));
+  $("filter").replaceChildren(
+    el("button", { class: "chip", "aria-pressed": String(filter === "all"), text: `すべて ${c.all}`, onclick: () => { filter = "all"; renderTop(); renderList(); } }),
+    ...defs.map(d => el("button", { class: "chip soft", "aria-pressed": String(filter === d.id), text: `${d.label} ${c[d.id] || 0}`,
+      onclick: () => { filter = d.id; renderTop(); renderList(); } })),
+    el("button", { class: "chip soft", "aria-pressed": String(filter === "none"), text: `タグなし ${c.none}`, onclick: () => { filter = "none"; renderTop(); renderList(); } }));
+}
+function renderList() {
+  if (!DATA) return;
+  const m = Tags.map();
+  const codes = Watch.all().filter(c => filter === "all" || (filter === "none" ? !(m[c] || []).length : (m[c] || []).includes(filter)));
+  if (!Watch.all().length) {
+    $("list").replaceChildren(el("div", { class: "empty", html: "まだウォッチしている銘柄はないよ🐤<br>気になる銘柄の ☆ やタグを押してね" }),
+      el("div", { class: "actions" }, [el("a", { class: "btn primary", href: "screen.html", text: "🔍 条件でさがす" }), el("a", { class: "btn", href: "ranking.html", text: "🏅 ランキング" })]));
     return;
   }
-  const items = codes.map(c => data.byCode.get(c)).filter(Boolean);
-  $("list").replaceChildren(...items.map(s => {
+  if (!codes.length) { $("list").replaceChildren(el("div", { class: "empty", text: "このタグの銘柄はまだないよ🐤" })); return; }
+  $("list").replaceChildren(...codes.map(c => {
+    const s = DATA.byCode.get(c);
+    if (!s) return el("a", { class: "stock", href: `stock.html?c=${c}` }, [el("b", { text: c }), el("div", { class: "muted", text: "採点の対象外になりました（データ不足など）" })]);
     const r = stockRow(s, { showPos: false });
-    const m = store.get("invest-rule-" + s.c, null);
+    const memo = store.get("invest-rule-" + s.c, null);
     const notes = [];
     if (s.prevRank && "SABCD".indexOf(s.rank) > "SABCD".indexOf(s.prevRank)) notes.push(el("div", { class: "alert", text: `⚠ ランクが ${s.prevRank} → ${s.rank} に下がりました。買う理由が崩れていないか確認を` }));
     if (s.f.length) notes.push(el("div", { class: "alert", text: "⚠ 要注意フラグ：" + s.f.join("、") }));
-    if (m && (m.target || m.stop)) {
-      const p = s.p, t = parseFloat(m.target), st = parseFloat(m.stop);
+    if (memo && (memo.target || memo.stop)) {
+      const p = s.p, t = parseFloat(memo.target), st = parseFloat(memo.stop);
       notes.push(el("div", { html: `目標 <b>${t ? fmt.yen(t) : "–"}</b>（${t && p ? ((t / p - 1) * 100).toFixed(1) + "%" : "–"}）　損切り <b>${st ? fmt.yen(st) : "–"}</b>（${st && p ? ((st / p - 1) * 100).toFixed(1) + "%" : "–"}）` }));
       if (st && p && p <= st) notes.push(el("div", { class: "alert", text: "🔻 基準日の株価が損切りラインを下回っています。ルールどおりに判断を" }));
       if (t && p && p >= t) notes.push(el("div", { class: "alert", style: { color: "var(--ok)" }, text: "🎯 基準日の株価が目標株価に届いています。利益確定を検討" }));
     }
+    if (memo && memo.reason) notes.push(el("div", { text: "📝 " + memo.reason.slice(0, 60) + (memo.reason.length > 60 ? "…" : "") }));
     if (notes.length) r.append(el("div", { class: "memoline" }, notes));
     return r;
   }));
 }
-loadData(render, e => keyNeeded($("list"), e));
+
+function manageTags() {
+  const draw = () => {
+    const c = counts();
+    openSheet([el("h3", { text: "🏷️ タグを管理" }),
+      el("p", { class: "muted", text: "自分だけのタグを作れます（例：高配当、決算待ち、テンバガー候補）。" }),
+      el("div", { class: "card tight" }, Tags.defs().map(d => el("div", { class: "tagrow" }, [
+        el("span", { class: "badge", style: { background: d.color }, text: d.label }), el("small", { text: `${c[d.id] || 0}銘柄` }),
+        el("button", { class: "btn small danger", text: "削除", onclick: () => {
+          if (!confirm(`「${d.label}」を削除しますか？（銘柄はウォッチに残ります）`)) return;
+          Tags.removeDef(d.id); if (filter === d.id) filter = "all"; draw(); renderTop(); renderList(); } })]))),
+      el("label", { class: "field", for: "newtag", text: "新しいタグ" }),
+      el("input", { type: "text", id: "newtag", placeholder: "例：🔥 決算待ち", maxlength: "16" }),
+      el("div", { class: "actions" }, [el("button", { class: "btn", text: "閉じる", onclick: closeSheet }),
+        el("button", { class: "btn primary", text: "追加する", onclick: () => {
+          const v = $("newtag").value.trim(); if (!v) { toast("タグの名前を入れてください"); return; }
+          Tags.addDef(v); draw(); renderTop(); toast(`「${v}」を作りました`); } })])]);
+  };
+  draw();
+}
+$("tagbtn").addEventListener("click", manageTags);
+renderTop();
+if (location.hash === "#tags") manageTags();
+loadData(d => { DATA = d; scoreAll(d, weightsFor(d)); renderList(); }, e => keyNeeded($("list"), e));
 </script>
 </body>
 </html>

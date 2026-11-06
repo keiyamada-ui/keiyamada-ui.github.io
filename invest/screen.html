@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>さがす｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .cond { display: grid; grid-template-columns: 1fr 76px 14px 76px 30px; align-items: center; gap: 6px; padding: 9px 0; border-top: 1px dashed var(--line); }
+  .cond:first-child { border-top: 0; padding-top: 2px; }
+  .cond .nm { font-weight: 900; font-size: 14px; line-height: 1.3; }
+  .cond .nm small { display: block; color: var(--sub); font-size: 11px; font-weight: 700; }
+  .cond input { padding: 8px 8px; font-size: 15px; text-align: right; font-family: var(--num); font-weight: 800; border-radius: 12px; }
+  .cond .sep { text-align: center; color: var(--sub); font-size: 12px; }
+  .cond .x { border: 0; background: var(--box); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; color: var(--sub); font-size: 15px; }
+  .hitbar { position: sticky; top: 58px; z-index: 9; margin: 0 -16px 10px; padding: 8px 16px; display: flex; align-items: center; gap: 10px;
+            background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .hit { font-family: var(--num); font-size: 26px; font-weight: 900; }
+  .hit small { font-family: var(--font); font-size: 13px; color: var(--sub); font-weight: 700; margin-left: 2px; }
+  .hitbar select { width: auto; margin-left: auto; padding: 7px 12px; font-size: 13px; font-weight: 700; border-radius: 999px; background: var(--card); }
+  .addgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .addgrid button { text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 16px; padding: 10px 12px; cursor: pointer; color: inherit; }
+  .addgrid button b { display: block; font-size: 14px; font-weight: 900; }
+  .addgrid button small { display: block; font-size: 11.5px; color: var(--sub); }
+  .addgrid button:disabled { opacity: .4; }
+  .saved { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px dashed var(--line); }
+  .saved:first-child { border-top: 0; }
+  .saved button.go { flex: 1; text-align: left; background: none; border: 0; font-weight: 900; font-size: 14px; cursor: pointer; color: inherit; padding: 0; }
+  .saved button.go small { display: block; color: var(--sub); font-weight: 500; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🔍 銘柄をさがす</h1></header>
+
+<div class="search"><input type="search" id="q" placeholder="証券コード（例 7203）か社名で検索" enterkeyhint="go" autocomplete="off" inputmode="search"></div>
+<div id="qres"></div>
+
+<h2>ひな形から</h2>
+<div class="chips" id="presets"></div>
+
+<h2>条件 <a href="#" id="savebtn">この条件を保存</a></h2>
+<section class="card">
+  <div id="conds"></div>
+  <div class="chips" id="opts" style="margin-top:10px"></div>
+  <div class="actions"><button class="btn" id="add">＋ 条件を追加</button><button class="btn" id="reset">リセット</button></div>
+</section>
+<section class="card" id="savedbox" style="display:none"><div class="title" style="margin-bottom:4px">💾 保存した条件</div><div id="saved"></div></section>
+
+<div class="hitbar"><span class="hit" id="hit">–<small>社</small></span>
+  <select id="sort" aria-label="並べ替え">
+    <option value="score">総合点が高い順</option><option value="roe">ROEが高い順</option><option value="fper">予想PERが低い順</option>
+    <option value="dy">配当利回りが高い順</option><option value="rd">ROE−DOEが大きい順</option><option value="sg">売上の伸び順</option>
+    <option value="mc">時価総額が大きい順</option></select></div>
+<div id="list"></div>
+<div class="more" id="more" style="text-align:center;padding:14px 0;color:var(--sub);font-size:13px"></div>
+
+<script src="app.js"></script>
+<script>
+// 条件にできる指標。unit: pct（%で入力）・x（倍）・oku（億円）・pt（点）
+const FIELDS = {
+  score: { label: "総合点", unit: "pt", hint: "いまの配分での点数" },
+  roe: { label: "ROE", unit: "pct", hint: "自己資本利益率" },
+  opm: { label: "営業利益率", unit: "pct", hint: "本業のもうけ" },
+  sg: { label: "売上の伸び", unit: "pct", hint: "前期比" },
+  og: { label: "営業利益の伸び", unit: "pct", hint: "前期比" },
+  eg: { label: "予想EPSの伸び", unit: "pct", hint: "会社予想" },
+  fper: { label: "予想PER", unit: "x", hint: "低いほど割安" },
+  pbr: { label: "PBR", unit: "x", hint: "1倍割れ＝解散価値以下" },
+  dy: { label: "配当利回り", unit: "pct", hint: "予想配当÷株価" },
+  rd: { label: "ROE−DOE", unit: "pct", hint: "増配余力" },
+  eqg: { label: "株主資本の伸び", unit: "pct", hint: "前期比" },
+  eqr: { label: "自己資本比率", unit: "pct", hint: "財務の健全さ" },
+  mc: { label: "時価総額", unit: "oku", hint: "会社の大きさ" },
+};
+const UNIT = { pct: "%", x: "倍", oku: "億円", pt: "点" };
+const PRESETS = [
+  ["💰 億り人の基準", { roe: [10, null], fper: [null, 15] }, "ROE10%以上・予想PER15倍以下"],
+  ["📈 増配余力", { rd: [8, null], eqg: [5, null] }, "ROE−DOE8%以上・株主資本が5%以上増"],
+  ["🍰 高配当・安定", { dy: [3.5, null], eqr: [40, null], fper: [null, 20] }, "利回り3.5%以上・自己資本比率40%以上"],
+  ["🚀 成長株", { sg: [15, null], og: [15, null], roe: [10, null] }, "売上も営業利益も15%以上の伸び"],
+  ["🪙 割安株", { fper: [null, 12], pbr: [null, 1], roe: [8, null] }, "予想PER12倍以下・PBR1倍以下"],
+  ["🏰 大型の優良株", { mc: [3000, null], roe: [12, null], eqr: [40, null] }, "時価総額3,000億円以上"],
+];
+const OPTS = { markets: [], noflag: true, star: false };
+let DATA = null, LIST = [], shown = 0;
+let C = store.get("invest-screen-current", { roe: [10, null], fper: [null, 15] });
+Object.assign(OPTS, store.get("invest-screen-opts", {}));
+
+const toInput = (k, v) => v === null || v === undefined ? "" : String(v);
+const toValue = (k, v) => v === null || v === undefined || v === "" ? null : FIELDS[k].unit === "pct" ? v / 100 : FIELDS[k].unit === "oku" ? v * 1e8 : v;
+function save() { store.set("invest-screen-current", C); store.set("invest-screen-opts", OPTS); }
+
+function renderPresets() {
+  $("presets").replaceChildren(...PRESETS.map(([name, conds, desc]) => el("button", { class: "chip soft", text: name, title: desc,
+    onclick: () => { C = JSON.parse(JSON.stringify(conds)); save(); renderConds(); apply(); toast(desc); } })));
+}
+function renderConds() {
+  const keys = Object.keys(C).filter(k => FIELDS[k]);
+  $("conds").replaceChildren(...(keys.length ? keys.map(k => {
+    const f = FIELDS[k];
+    const inp = (i, ph) => {
+      const n = el("input", { type: "number", inputmode: "decimal", placeholder: ph, value: toInput(k, C[k][i]), "aria-label": `${f.label}の${i ? "上限" : "下限"}` });
+      n.addEventListener("input", () => { C[k][i] = n.value === "" ? null : parseFloat(n.value); save(); applySoon(); });
+      return n;
+    };
+    return el("div", { class: "cond" }, [el("div", { class: "nm" }, [f.label, el("small", { text: `${UNIT[f.unit]}　${f.hint}` })]),
+      inp(0, "下限"), el("span", { class: "sep", text: "〜" }), inp(1, "上限"),
+      el("button", { class: "x", "aria-label": f.label + "の条件を外す", text: "×", onclick: () => { delete C[k]; save(); renderConds(); apply(); } })]);
+  }) : [el("div", { class: "muted", text: "条件がありません。ひな形を選ぶか「＋ 条件を追加」から。" })]));
+  $("opts").replaceChildren(
+    ...["プライム", "スタンダード", "グロース"].map(m => el("button", { class: "chip soft", "aria-pressed": String(OPTS.markets.includes(m)), text: m,
+      onclick: () => { const i = OPTS.markets.indexOf(m); i >= 0 ? OPTS.markets.splice(i, 1) : OPTS.markets.push(m); save(); renderConds(); apply(); } })),
+    el("button", { class: "chip soft", "aria-pressed": String(OPTS.star), text: "★あり", onclick: () => { OPTS.star = !OPTS.star; save(); renderConds(); apply(); } }),
+    el("button", { class: "chip soft", "aria-pressed": String(OPTS.noflag), text: "⚠を除く", onclick: () => { OPTS.noflag = !OPTS.noflag; save(); renderConds(); apply(); } }));
+}
+$("add").addEventListener("click", () => openSheet([el("h3", { text: "＋ 条件を追加" }),
+  el("p", { class: "muted", text: "追加したら、下限・上限に数字を入れてください（空欄は制限なし）。" }),
+  el("div", { class: "addgrid" }, Object.entries(FIELDS).map(([k, f]) => el("button", { disabled: C[k] ? "" : null,
+    onclick: () => { C[k] = [null, null]; save(); renderConds(); closeSheet(); apply(); } }, [el("b", { text: f.label }), el("small", { text: f.hint })]))),
+  el("div", { class: "actions" }, [el("button", { class: "btn", text: "閉じる", onclick: closeSheet })])]));
+$("reset").addEventListener("click", () => { C = {}; OPTS.markets = []; OPTS.star = false; OPTS.noflag = true; save(); renderConds(); apply(); });
+
+// 保存した条件
+function renderSaved() {
+  const list = store.get("invest-screens", []);
+  $("savedbox").style.display = list.length ? "" : "none";
+  $("saved").replaceChildren(...list.map((s, i) => el("div", { class: "saved" }, [
+    el("button", { class: "go", onclick: () => { C = JSON.parse(JSON.stringify(s.conds)); Object.assign(OPTS, s.opts || {}); save(); renderConds(); apply(); toast(`「${s.name}」で絞り込みました`); } },
+      [s.name, el("small", { text: Object.keys(s.conds).map(k => FIELDS[k] ? FIELDS[k].label : k).join("・") })]),
+    el("button", { class: "btn small danger", text: "削除", onclick: () => { list.splice(i, 1); store.set("invest-screens", list); renderSaved(); } })])));
+}
+$("savebtn").addEventListener("click", e => {
+  e.preventDefault();
+  const name = prompt("この条件の名前", "わたしの条件");
+  if (!name) return;
+  const list = store.get("invest-screens", []); list.unshift({ name, conds: JSON.parse(JSON.stringify(C)), opts: { ...OPTS } });
+  store.set("invest-screens", list); renderSaved(); toast("保存しました");
+});
+
+// 絞り込み
+let at; function applySoon() { clearTimeout(at); at = setTimeout(apply, 200); }
+function apply() {
+  if (!DATA) return;
+  const all = scoreAll(DATA, weightsFor(DATA));
+  const conds = Object.entries(C).filter(([k]) => FIELDS[k]).map(([k, [lo, hi]]) => [k, toValue(k, lo), toValue(k, hi)]);
+  LIST = all.filter(s => {
+    if (OPTS.noflag && s.f.length) return false;
+    if (OPTS.star && !s.b.length) return false;
+    if (OPTS.markets.length && !OPTS.markets.some(m => (s.m || "").includes(m))) return false;
+    for (const [k, lo, hi] of conds) {
+      const v = s[k];
+      if ((lo !== null || hi !== null) && (v === null || v === undefined)) return false;
+      if (k === "fper" && v !== null && v <= 0) return false;
+      if (lo !== null && v < lo) return false;
+      if (hi !== null && v > hi) return false;
+    }
+    return true;
+  });
+  const key = $("sort").value;
+  LIST.sort(key === "score" ? (a, b) => b.score - a.score : key === "fper" ? (a, b) => (a.fper || 1e9) - (b.fper || 1e9) : (a, b) => (b[key] ?? -1e9) - (a[key] ?? -1e9));
+  $("hit").replaceChildren(String(LIST.length.toLocaleString()), el("small", { text: `社 / ${all.length.toLocaleString()}社` }));
+  $("list").replaceChildren(); shown = 0; more();
+}
+function more() {
+  const next = LIST.slice(shown, shown + 40);
+  if (!shown && !next.length) $("list").append(el("div", { class: "empty", html: "条件に合う銘柄がありません🐤<br>条件をゆるめてみてね" }));
+  $("list").append(...next.map(s => stockRow(s, { showPos: false })));
+  shown += next.length;
+  $("more").textContent = shown < LIST.length ? "読み込み中…" : LIST.length ? "ここまで🐤" : "";
+}
+new IntersectionObserver(es => { if (es[0].isIntersecting && shown < LIST.length) more(); }, { rootMargin: "600px" }).observe($("more"));
+$("sort").addEventListener("change", apply);
+
+// コード・社名検索（4桁のコードがあればすぐ開ける）
+function search() {
+  const q = $("q").value.trim().toUpperCase().replace(/[０-９Ａ-Ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  if (!q) { $("qres").replaceChildren(); return; }
+  const hits = DATA ? DATA.stocks.filter(s => s.c.toUpperCase().startsWith(q) || (s.n || "").toUpperCase().includes(q)).slice(0, 6) : [];
+  const exact = /^[0-9][0-9A-Z]{3}$/.test(q) && !hits.some(s => s.c === q);
+  $("qres").replaceChildren(el("section", { class: "card tight" }, [
+    ...hits.map(s => el("a", { href: `stock.html?c=${s.c}`, class: "row", style: { padding: "7px 0", textDecoration: "none", borderTop: "1px dashed var(--line)" } },
+      [rankEl(s.rank || "D", 28), el("b", { text: s.n, style: { flex: 1 } }), el("span", { class: "muted num", text: s.c })])),
+    exact ? el("a", { href: `stock.html?c=${q}`, class: "muted", style: { display: "block", padding: "7px 0" }, text: `コード ${q} を開く（採点の対象外でも外部サイトで調べられます） ›` }) : null,
+    !hits.length && !exact ? el("div", { class: "muted", text: "見つかりませんでした" }) : null]));
+}
+$("q").addEventListener("input", search);
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") { const a = $("qres").querySelector("a"); if (a) location.href = a.href; } });
+
+renderPresets(); renderConds(); renderSaved();
+$("list").replaceChildren(...skeleton(4));
+loadData(d => { DATA = d; apply(); search(); }, e => keyNeeded($("list"), e));
+</script>
+</body>
+</html>

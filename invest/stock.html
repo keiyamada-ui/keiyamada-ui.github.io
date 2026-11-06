@@ -74,7 +74,15 @@ function render(data) {
   const w = weightsFor(data);
   const list = scoreAll(data, w);
   const s = data.byCode.get(code);
-  if (!s) { $("main").replaceChildren(el("div", { class: "empty", text: "この銘柄は採点の対象に入っていません🐤" })); return; }
+  if (!s) {
+    $("title").textContent = code;
+    $("main").replaceChildren(el("section", { class: "card" }, [
+      el("div", { class: "empty", html: `コード <b>${code.replace(/[<>&"]/g, "")}</b> は採点の対象に入っていません🐤<br>上場して間もない・決算データが足りない・ETFなどが考えられます。` }),
+      el("div", { class: "links" }, [
+        el("a", { href: `https://kabutan.jp/stock/?code=${encodeURIComponent(code)}`, target: "_blank", rel: "noopener", text: "📰 株探で見る" }),
+        el("a", { href: `https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T`, target: "_blank", rel: "noopener", text: "💹 Yahoo!ファイナンス" })])]));
+    return;
+  }
   $("title").textContent = s.n || s.c;
   document.title = `${s.n}｜ことり投資ノート`;
 
@@ -165,7 +173,20 @@ function render(data) {
       L(`https://news.google.com/search?q=${encodeURIComponent(s.n || code)}&hl=ja&gl=JP&ceid=JP:ja`, "🗞️", "ニュース", "Googleニュース"),
     ])]);
 
-  $("main").replaceChildren(hero, breakdown, numbers, rule, links);
+  // タグ（要監視・買い候補など）
+  const tagBox = el("div", { class: "chips", style: { margin: "8px -16px 0", flexWrap: "wrap" } });
+  const drawTags = () => {
+    const on = Tags.of(code);
+    tagBox.replaceChildren(...Tags.defs().map(d => el("button", { class: "chip soft", "aria-pressed": String(on.includes(d.id)), text: d.label,
+      onclick: () => { const added = Tags.toggle(code, d.id); setWatch(); drawTags(); toast(added ? `「${d.label}」を付けました` : `「${d.label}」を外しました`); } })),
+      el("a", { class: "chip", href: "watch.html#tags", text: "＋ タグを作る" }));
+  };
+  drawTags();
+  const tags = el("section", { class: "card rise" }, [
+    el("div", { class: "row between" }, [el("span", { class: "title", text: "🏷️ タグ" }), el("a", { class: "muted", href: "watch.html", text: "ウォッチ一覧へ ›" })]),
+    el("p", { class: "muted", style: { margin: "4px 0 0" }, text: "付けるとウォッチに入り、タグごとに一覧で見られます。" }), tagBox]);
+
+  $("main").replaceChildren(hero, tags, breakdown, numbers, rule, links);
 }
 loadData(render, e => keyNeeded($("main"), e));
 </script>

@@ -200,8 +200,45 @@ function legendEl() {
 const Watch = {
   all() { return store.get("invest-watch", []); },
   has(c) { return Watch.all().includes(c); },
-  toggle(c) { const w = Watch.all(); const i = w.indexOf(c); if (i >= 0) w.splice(i, 1); else w.unshift(c); store.set("invest-watch", w); return i < 0; },
+  add(c) { const w = Watch.all(); if (!w.includes(c)) { w.unshift(c); store.set("invest-watch", w); } },
+  toggle(c) {
+    const w = Watch.all(); const i = w.indexOf(c);
+    if (i >= 0) { w.splice(i, 1); Tags.clear(c); } else w.unshift(c);
+    store.set("invest-watch", w); return i < 0;
+  },
 };
+// タグ（要監視・買い候補など）。タグを付けるとウォッチにも入る。この端末に保存
+const DEFAULT_TAGS = [
+  { id: "watch", label: "👀 監視中", color: "var(--p-sky)" },
+  { id: "buy", label: "🛒 買い候補", color: "var(--p-mint)" },
+  { id: "hold", label: "💼 保有中", color: "var(--p-sun)" },
+  { id: "wait", label: "💤 様子見", color: "var(--p-sand)" },
+];
+const TAG_COLORS = ["var(--p-peach)", "var(--p-lilac)", "var(--p-pink)", "var(--p-sky)", "var(--p-mint)", "var(--p-sun)"];
+const Tags = {
+  defs() { return store.get("invest-tagdefs", DEFAULT_TAGS); },
+  addDef(label) {
+    const defs = Tags.defs(); const id = "t" + Date.now().toString(36);
+    defs.push({ id, label, color: TAG_COLORS[defs.length % TAG_COLORS.length] }); store.set("invest-tagdefs", defs); return id;
+  },
+  removeDef(id) {
+    store.set("invest-tagdefs", Tags.defs().filter(d => d.id !== id));
+    const m = Tags.map(); for (const c in m) m[c] = m[c].filter(t => t !== id); store.set("invest-tags", m);
+  },
+  map() { return store.get("invest-tags", {}); },
+  of(c) { return Tags.map()[c] || []; },
+  toggle(c, id) {
+    const m = Tags.map(); const cur = m[c] || []; const i = cur.indexOf(id);
+    if (i >= 0) cur.splice(i, 1); else { cur.push(id); Watch.add(c); }
+    m[c] = cur; store.set("invest-tags", m); return i < 0;
+  },
+  clear(c) { const m = Tags.map(); delete m[c]; store.set("invest-tags", m); },
+  def(id) { return Tags.defs().find(d => d.id === id); },
+};
+function tagChip(id) {
+  const d = Tags.def(id); if (!d) return null;
+  return el("span", { class: "badge", style: { background: d.color }, text: d.label });
+}
 function stockRow(s, { showPos = true } = {}) {
   const metas = [["ROE", fmt.pct(s.roe)], ["予想PER", s.fper ? s.fper.toFixed(1) + "倍" : "–"], ["利回り", fmt.pct(s.dy)], ["ROE−DOE", fmt.pct(s.rd)]];
   return el("a", { class: "stock", href: `stock.html?c=${encodeURIComponent(s.c)}` }, [
@@ -214,7 +251,8 @@ function stockRow(s, { showPos = true } = {}) {
     ]),
     fbarsEl(s.s),
     el("div", { class: "meta" }, metas.map(([k, v]) => el("span", {}, [k + " ", el("b", { text: v })]))),
-    (s.b.length || s.f.length) ? el("div", { class: "tags" }, [
+    (s.b.length || s.f.length || Tags.of(s.c).length) ? el("div", { class: "tags" }, [
+      ...Tags.of(s.c).map(tagChip),
       ...s.b.map(b => el("span", { class: "badge star", text: "★ " + b })),
       ...s.f.map(f => el("span", { class: "badge warn", text: "⚠ " + f })),
     ]) : null,
@@ -259,8 +297,8 @@ function closeSheet() { $("sheet-bg")?.classList.remove("open"); $("sheet")?.cla
 (function dock() {
   if (document.body.dataset.nodock !== undefined) return;
   const here = location.pathname.split("/").pop() || "index.html";
-  const items = [["index.html", "🏠", "ホーム"], ["ranking.html", "🏅", "ランキング"], ["watch.html", "⭐", "ウォッチ"],
-                 ["tune.html", "🎚️", "配分"], ["more.html", "🌱", "育てる"]];
+  const items = [["index.html", "🏠", "ホーム"], ["ranking.html", "🏅", "ランキング"], ["screen.html", "🔍", "さがす"],
+                 ["watch.html", "⭐", "ウォッチ"], ["more.html", "🌱", "育てる"]];
   document.body.append(el("nav", { class: "dock", "aria-label": "メニュー" }, items.map(([href, icon, label]) =>
     el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null }, [el("span", { class: "i", text: icon }), label]))));
 })();
