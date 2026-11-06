@@ -61,8 +61,8 @@
 $("main").replaceChildren(...skeleton(3));
 let P = null, K = "s";
 try { K = localStorage.getItem("invest-picks-tab") || "s"; } catch (e) {}
-const sg = v => v == null ? el("span", { class: "wait", text: "集計待ち" }) : el("span", { class: v > 0 ? "up" : v < 0 ? "down" : "", text: (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%" });
-const pctTxt = v => (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+const sg = v => v == null ? el("span", { class: "wait", text: "集計待ち" }) : el("span", { class: v > 0 ? "up" : v < 0 ? "down" : "", text: (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%" });
+const pctTxt = v => (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
 const md = d => d.slice(5).replace("-", "/");
 
 function kpis(st, n) {

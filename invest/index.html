@@ -197,7 +197,7 @@ function render(data) {
     for (const [k, set] of Object.entries(PICKS.today.sets)) {
       const st = PICKS.strats[k], s10 = st.stats && st.stats["10"];
       blocks.push(el("div", { class: "muted", style: { margin: "10px 4px 6px", fontWeight: 900, color: "var(--text)" },
-        text: `${k === "s" ? "⚡" : "🌳"} ${st.name}` + (s10 ? `（勝率 ${Math.round(s10.win * 100)}%・TOPIXとの差 ${(s10.avgx * 100).toFixed(1)}%）` : "") }),
+        text: `${k === "s" ? "⚡" : "🌳"} ${st.name}` + (s10 ? `（勝率 ${Math.round(s10.win * 100)}%・TOPIXとの差 ${(s10.avgx * 100).toFixed(2)}%）` : "") }),
         ...set.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s)));
     }
   }

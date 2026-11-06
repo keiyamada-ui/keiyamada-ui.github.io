@@ -145,7 +145,7 @@ function render(data) {
   const rows = FACTOR_KEYS.filter(k => w[k] > 0).map(k => el("div", { class: "contrib" }, [
     el("div", { class: "nm" }, [FACTOR_LONG[k], el("small", { text: `配分 ${w[k]}点` })]),
     el("div", { class: "bar" }, [el("i", { style: { width: s.s[k] + "%", background: `var(${FCOLOR[k]})` } })]),
-    el("div", { class: "pt" }, [((s.s[k] * w[k]) / 100).toFixed(1), el("small", { text: `順位 ${Math.round(s.s[k])}点` })]),
+    el("div", { class: "pt" }, [((s.s[k] * w[k]) / 100).toFixed(2), el("small", { text: `順位 ${Math.round(s.s[k])}点` })]),
     el("div", { class: "how", text: FACTOR_HOW[k] })]));
   const adjs = [...s.b.map(b => el("div", { class: "adj plus" }, [el("span", {}, ["★ " + b, el("small", { text: BONUS_DESC[b] || "" })]), el("b", { text: "+" + data.bonus[b] })])),
                 ...s.f.map(f => el("div", { class: "adj minus" }, [el("span", {}, ["⚠ " + f, el("small", { text: FLAG_DESC[f] || "" })]), el("b", { text: "−" + data.penalty[f] })]))];
@@ -162,9 +162,9 @@ function render(data) {
     el("span", { class: "title", text: "📊 数字で見る" }),
     group("profit", "収益性"), kv([["ROE", fmt.pct(s.roe)], ["営業利益率", fmt.pct(s.opm)]]),
     group("growth", "成長性"), kv([["売上の伸び", fmt.pct(s.sg)], ["営業利益の伸び", fmt.pct(s.og)], ["予想EPSの伸び", fmt.pct(s.eg)], ["会社予想の修正（営業利益）", fmt.pct(s.rev)], ["進捗率" + (s.pt ? `（${s.pt}時点）` : ""), s.prg == null ? "–" : fmt.pct(s.prg) + (s.pgap == null ? "" : `（標準より${s.pgap >= 0 ? "+" : ""}${(s.pgap * 100).toFixed(0)}pt）`)]]),
-    group("value", "割安性"), kv([["予想PER", s.fper ? s.fper.toFixed(1) + "<small>倍</small>" : "–"], ["実績PER", s.per ? s.per.toFixed(1) + "<small>倍</small>" : "–"],
+    group("value", "割安性"), kv([["予想PER", s.fper ? s.fper.toFixed(2) + "<small>倍</small>" : "–"], ["実績PER", s.per ? s.per.toFixed(2) + "<small>倍</small>" : "–"],
                                   ["PBR", s.pbr ? s.pbr.toFixed(2) + "<small>倍</small>" : "–"]]),
-    group("dividend", "増配余力"), kv([["ROE−DOE", fmt.pct(s.rd)], ["DOE", fmt.pct(s.doe)], ["予想配当", s.dps ? s.dps.toFixed(1) + "<small>円</small>" : "–"],
+    group("dividend", "増配余力"), kv([["ROE−DOE", fmt.pct(s.rd)], ["DOE", fmt.pct(s.doe)], ["予想配当", s.dps ? s.dps.toFixed(2) + "<small>円</small>" : "–"],
                                        ["配当利回り", fmt.pct(s.dy)], ["株主資本の伸び", fmt.pct(s.eqg)]]),
     group("quality", "利益の質・健全性"), kv([["営業CF÷純利益", s.cfo !== null ? s.cfo.toFixed(2) + "<small>倍</small>" : "–"], ["自己資本比率", fmt.pct(s.eqr)],
                                               ["1日の売買代金", s.va ? fmt.oku(s.va) : "–"]]),
@@ -178,9 +178,9 @@ function render(data) {
     const t = parseFloat(memo.target), st = parseFloat(memo.stop), p = s.p;
     const pct = v => (v / p - 1) * 100;
     calc.replaceChildren(
-      el("div", { style: { background: "var(--up-bg)" } }, [el("span", { text: "目標まで" }), el("b", { style: { color: "var(--up)" }, text: t && p ? (pct(t) >= 0 ? "+" : "") + pct(t).toFixed(1) + "%" : "–" })]),
-      el("div", { style: { background: "var(--down-bg)" } }, [el("span", { text: "損切りまで" }), el("b", { style: { color: "var(--down)" }, text: st && p ? pct(st).toFixed(1) + "%" : "–" })]),
-      el("div", { style: { background: "var(--box)" } }, [el("span", { text: "損益の比率" }), el("b", { text: t && st && p && p > st ? ((t - p) / (p - st)).toFixed(1) + " : 1" : "–" })]));
+      el("div", { style: { background: "var(--up-bg)" } }, [el("span", { text: "目標まで" }), el("b", { style: { color: "var(--up)" }, text: t && p ? (pct(t) >= 0 ? "+" : "") + pct(t).toFixed(2) + "%" : "–" })]),
+      el("div", { style: { background: "var(--down-bg)" } }, [el("span", { text: "損切りまで" }), el("b", { style: { color: "var(--down)" }, text: st && p ? pct(st).toFixed(2) + "%" : "–" })]),
+      el("div", { style: { background: "var(--box)" } }, [el("span", { text: "損益の比率" }), el("b", { text: t && st && p && p > st ? ((t - p) / (p - st)).toFixed(2) + " : 1" : "–" })]));
   };
   const field = (k, label, type, ph) => {
     const input = type === "area" ? el("textarea", { id: "m-" + k, placeholder: ph }) : el("input", { id: "m-" + k, type, inputmode: type === "number" ? "decimal" : null, placeholder: ph });
@@ -302,16 +302,16 @@ function render(data) {
         el("div", {}, [el("div", { class: "muted", text: "📈 チャートから見た買い時" }), el("div", { class: "lbl", text: t.label }),
           el("span", { class: "badge " + (TIMING_STYLE[t.label] || "gray"), text: `タイミング ${t.score}点・${t.trend}トレンド` })]),
         el("div", { class: "pricebox" }, [el("b", { text: fmt.yen(t.p) }),
-          el("small", {}, [fmt.md(t.date) + "　", el("span", { class: "delta " + (t.chg1d > 0 ? "up" : t.chg1d < 0 ? "down" : "flat"), text: t.chg1d == null ? "" : (t.chg1d > 0 ? "+" : "") + (t.chg1d * 100).toFixed(1) + "%" })])])]),
+          el("small", {}, [fmt.md(t.date) + "　", el("span", { class: "delta " + (t.chg1d > 0 ? "up" : t.chg1d < 0 ? "down" : "flat"), text: t.chg1d == null ? "" : (t.chg1d > 0 ? "+" : "") + (t.chg1d * 100).toFixed(2) + "%" })])])]),
       el("div", { style: { margin: "12px -4px 0" } }, [sparkSVG(sp, { w: 320, h: 140, color: t.trend === "下降" ? "#3577C4" : "#D9485F", lines })]),
       el("div", { class: "legend" }, [el("span", {}, [el("i", { style: { background: "#F2A93B" } }), "25日線"]), el("span", {}, [el("i", { style: { background: "#8D7BC9" } }), "75日線"]),
         t.neck ? el("span", {}, [el("i", { style: { background: "var(--ok)" } }), "逆三尊のネックライン"]) : null,
         t.neck_top ? el("span", {}, [el("i", { style: { background: "var(--pr)" } }), "三尊天井のネックライン"]) : null, el("span", { text: `約${sp.length}日` })]),
       el("div", { class: "kv", style: { marginTop: "10px" } }, [
         el("div", {}, [el("span", { text: "RSI（14日）" }), el("b", { text: t.rsi ?? "–" }), el("div", { class: "rsibar" }, [el("i", { style: { left: (t.rsi || 0) + "%" } })])]),
-        el("div", {}, [el("span", { text: "最新株価での予想PER" }), el("b", { html: freshPer ? freshPer.toFixed(1) + "<small>倍</small>" : "–" })]),
-        el("div", {}, [el("span", { text: "1か月の値動き" }), el("b", { text: t.chg1m == null ? "–" : (t.chg1m > 0 ? "+" : "") + (t.chg1m * 100).toFixed(1) + "%" })]),
-        el("div", {}, [el("span", { text: "52週高値まで" }), el("b", { text: t.hi52 ? ((t.p / t.hi52 - 1) * 100).toFixed(1) + "%" : "–" })])]),
+        el("div", {}, [el("span", { text: "最新株価での予想PER" }), el("b", { html: freshPer ? freshPer.toFixed(2) + "<small>倍</small>" : "–" })]),
+        el("div", {}, [el("span", { text: "1か月の値動き" }), el("b", { text: t.chg1m == null ? "–" : (t.chg1m > 0 ? "+" : "") + (t.chg1m * 100).toFixed(2) + "%" })]),
+        el("div", {}, [el("span", { text: "52週高値まで" }), el("b", { text: t.hi52 ? ((t.p / t.hi52 - 1) * 100).toFixed(2) + "%" : "–" })])]),
       el("div", { style: { marginTop: "8px" } }, sigs.length ? sigs.map(g => el("div", { class: "sig" }, [
         el("span", { class: "k " + g.side, text: g.side === "buy" ? "買い" : g.side === "sell" ? "売り" : "注目" }),
         el("b", { text: `${g.name}${g.horizon ? "（" + g.horizon + "）" : ""}` }), el("small", { text: g.desc })])) : [el("div", { class: "muted", text: "目立ったサインはありません。" })]),

@@ -75,13 +75,13 @@ const store = {
 
 // ── 数字の見せ方 ──
 const fmt = {
-  pct(v, d = 1) { return v === null || v === undefined ? "–" : (v * 100).toFixed(d) + "%"; },
-  x(v) { return v === null || v === undefined ? "–" : v.toFixed(1) + "倍"; },
+  pct(v, d = 2) { return v === null || v === undefined ? "–" : (v * 100).toFixed(d) + "%"; },
+  x(v) { return v === null || v === undefined ? "–" : v.toFixed(2) + "倍"; },
   yen(v) { return v === null || v === undefined ? "–" : Math.round(v).toLocaleString("ja-JP") + "円"; },
   oku(v) {
     if (v === null || v === undefined) return "–";
     const oku = v / 1e8;
-    return oku >= 10000 ? (oku / 10000).toFixed(1) + "兆円" : Math.round(oku).toLocaleString("ja-JP") + "億円";
+    return oku >= 10000 ? (oku / 10000).toFixed(2) + "兆円" : Math.round(oku).toLocaleString("ja-JP") + "億円";
   },
   date(s) { if (!s) return "–"; const [y, m, d] = s.slice(0, 10).split("-"); return `${+y}年${+m}月${+d}日`; },
   md(s) { if (!s) return "–"; const [, m, d] = s.slice(0, 10).split("-"); return `${+m}/${+d}`; },
@@ -275,7 +275,7 @@ function tagChip(id) {
   return el("span", { class: "badge", style: { background: d.color }, text: d.label });
 }
 function stockRow(s, { showPos = true } = {}) {
-  const metas = [["ROE", fmt.pct(s.roe)], ["予想PER", s.fper ? s.fper.toFixed(1) + "倍" : "–"], ["利回り", fmt.pct(s.dy)], ["ROE−DOE", fmt.pct(s.rd)]];
+  const metas = [["ROE", fmt.pct(s.roe)], ["予想PER", s.fper ? s.fper.toFixed(2) + "倍" : "–"], ["利回り", fmt.pct(s.dy)], ["ROE−DOE", fmt.pct(s.rd)]];
   return el("a", { class: "stock", href: `stock.html?c=${encodeURIComponent(s.c)}` }, [
     el("div", { class: "head" }, [
       showPos ? el("span", { class: "pos", text: s.pos }) : null,

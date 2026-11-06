@@ -68,9 +68,9 @@
 <script src="app.js"></script>
 <script>
 $("main").replaceChildren(...skeleton(4));
-const fmtV = (key, v) => v == null ? "–" : key === "us10y" ? v.toFixed(2) + "%" : key === "vix" ? v.toFixed(1)
+const fmtV = (key, v) => v == null ? "–" : key === "us10y" ? v.toFixed(2) + "%" : key === "vix" ? v.toFixed(2)
   : ["usdjpy", "eurjpy"].includes(key) ? v.toFixed(2) + "円" : v >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2);
-const chg = v => v == null ? el("span", { class: "flat", text: "–" }) : el("span", { class: v > 0.0005 ? "up" : v < -0.0005 ? "down" : "flat", text: (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%" });
+const chg = v => v == null ? el("span", { class: "flat", text: "–" }) : el("span", { class: v > 0.0005 ? "up" : v < -0.0005 ? "down" : "flat", text: (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%" });
 const ago = iso => { if (!iso) return ""; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m}分前` : m < 1440 ? `${Math.round(m / 60)}時間前` : `${Math.round(m / 1440)}日前`; };
 let D = null;
 
@@ -95,7 +95,7 @@ function render() {
       return el("button", { onclick: () => openSheet([el("h3", { text: x.name }), el("p", { class: "muted", text: x.desc }),
           el("div", { style: { margin: "10px 0" } }, [sparkSVG(x.spark, { w: 300, h: 120, color, lines: [{ vals: movingAvg(x.spark, 38), color: "var(--accent-deep)", dash: "4 3" }] })]),
           el("div", { class: "kv" }, [["いま", fmtV(x.key, x.last)], ["トレンド", x.trend], ["1日", x.chg1d == null ? "–" : (x.chg1d * 100).toFixed(2) + "%"],
-            ["1週間", x.chg1w == null ? "–" : (x.chg1w * 100).toFixed(1) + "%"], ["1か月", x.chg1m == null ? "–" : (x.chg1m * 100).toFixed(1) + "%"],
+            ["1週間", x.chg1w == null ? "–" : (x.chg1w * 100).toFixed(2) + "%"], ["1か月", x.chg1m == null ? "–" : (x.chg1m * 100).toFixed(2) + "%"],
             ["52週の位置", x.pos52 == null ? "–" : Math.round(x.pos52 * 100) + "%"]].map(([k, v]) => el("div", {}, [el("span", { text: k }), el("b", { text: v })]))),
           el("p", { class: "muted", style: { marginTop: "10px" }, text: "点線は約75日の平均（図は2日ごとに間引き）。52週の位置は、1年の安値=0%・高値=100%。" }),
           el("div", { class: "actions" }, [el("button", { class: "btn", text: "閉じる", onclick: closeSheet })])]) }, [

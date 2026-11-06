@@ -78,7 +78,7 @@ function renderList() {
     if (s.f.length) notes.push(el("div", { class: "alert", text: "⚠ 要注意フラグ：" + s.f.join("、") }));
     if (memo && (memo.target || memo.stop)) {
       const p = s.p, t = parseFloat(memo.target), st = parseFloat(memo.stop);
-      notes.push(el("div", { html: `目標 <b>${t ? fmt.yen(t) : "–"}</b>（${t && p ? ((t / p - 1) * 100).toFixed(1) + "%" : "–"}）　損切り <b>${st ? fmt.yen(st) : "–"}</b>（${st && p ? ((st / p - 1) * 100).toFixed(1) + "%" : "–"}）` }));
+      notes.push(el("div", { html: `目標 <b>${t ? fmt.yen(t) : "–"}</b>（${t && p ? ((t / p - 1) * 100).toFixed(2) + "%" : "–"}）　損切り <b>${st ? fmt.yen(st) : "–"}</b>（${st && p ? ((st / p - 1) * 100).toFixed(2) + "%" : "–"}）` }));
       if (st && p && p <= st) notes.push(el("div", { class: "alert", text: "🔻 基準日の株価が損切りラインを下回っています。ルールどおりに判断を" }));
       if (t && p && p >= t) notes.push(el("div", { class: "alert", style: { color: "var(--ok)" }, text: "🎯 基準日の株価が目標株価に届いています。利益確定を検討" }));
     }
