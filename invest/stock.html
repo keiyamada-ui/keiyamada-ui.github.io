@@ -56,6 +56,12 @@
   .ai .runrow button:disabled { opacity: .5; }
   .ai .runrow b { display: block; font-size: 14.5px; font-weight: 900; }
   .ai .runrow small { display: block; font-size: 11.5px; color: var(--sub); }
+  .ai .runrow button.main { background: var(--accent-bg); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-deep), var(--shadow); }
+  .ai .runrow .tagline { display: inline-block; font-size: 10.5px; font-weight: 900; color: #9A6A10; background: #fff; border-radius: 999px; padding: 1px 7px; margin-bottom: 4px; }
+  .ai .billing { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 12px; border-radius: 14px; background: var(--box);
+                 text-decoration: none; font-size: 12.5px; color: var(--sub); }
+  .ai .billing b { color: var(--text); font-weight: 900; }
+  .ai .billing::after { content: "↗"; margin-left: auto; font-weight: 900; }
   .ai .body { margin-top: 12px; font-size: 14px; line-height: 1.85; }
   .ai .body h4 { font-size: 15px; font-weight: 900; margin: 16px 0 4px; padding-left: 10px; border-left: 4px solid var(--accent); }
   .ai .body h5 { font-size: 14px; font-weight: 900; margin: 12px 0 2px; }
@@ -208,8 +214,11 @@ function render(data) {
   const aiCard = el("section", { class: "card ai rise" }, [
     el("div", { class: "row between" }, [el("span", { class: "title", text: "🤖 AI分析" }), el("span", { class: "badge gray", text: "参考情報" })]),
     el("p", { class: "muted", style: { margin: "4px 0 0" }, text: "点数・決算の数字と最新ニュースをAIが読み、強み・リスク・確認すべきことをまとめます（1〜2分）。" }),
-    el("div", { class: "runrow" }, Object.entries(AI).map(([k, a]) => el("button", { "data-ai": k, onclick: () => startAI(k) },
-      [el("b", { text: `${a.icon} ${a.name}で分析` }), el("small", { text: a.cost })]))),
+    el("div", { class: "runrow" }, Object.entries(AI).map(([k, a]) => el("button", { "data-ai": k, class: k === "gemini" ? "main" : null, onclick: () => startAI(k) }, [
+      el("span", { class: "tagline", text: k === "gemini" ? "いつもはこちら" : "じっくり見たいとき" }),
+      el("b", { text: `${a.icon} ${a.name}で分析` }), el("small", { text: a.cost })]))),
+    el("a", { class: "billing", href: "https://platform.claude.com/settings/billing", target: "_blank", rel: "noopener",
+      html: "💳 <span><b>Claudeの残高を確認・チャージ</b><br>Claude Console の支払い画面を開きます</span>" }),
     aiBody]);
   let history = [], showIdx = 0;
   const drawAI = () => {
@@ -240,7 +249,9 @@ function render(data) {
       if (r.ok) { toast("分析ができました"); await loadAI(); }
       else {
         wait.replaceWith(el("div", { class: "warnbox", style: { marginTop: "12px" }, html: r.timeout ? "時間がかかっています。少ししてから開き直してください。"
-          : `うまくいきませんでした。invest-system の Secret に <b>${model === "claude" ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY"}</b> が登録されているか確認してください。` +
+          : (model === "claude"
+              ? `うまくいきませんでした。Claudeの<b>残高が足りない</b>か、Secret の <b>ANTHROPIC_API_KEY</b> の期限が切れている可能性があります。 <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">残高を確認・チャージ</a>`
+              : `うまくいきませんでした。Geminiの無料枠を使い切ったか、Secret の <b>GEMINI_API_KEY</b> に問題がある可能性があります。少し時間をおくか、Claudeで試してください。`) +
             (r.url ? ` <a href="${r.url}" target="_blank" rel="noopener">記録を見る</a>` : "") }));
       }
     } catch (e) { wait.replaceWith(el("div", { class: "warnbox", style: { marginTop: "12px" }, text: e.message })); }

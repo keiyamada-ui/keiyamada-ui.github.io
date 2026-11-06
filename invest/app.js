@@ -305,7 +305,7 @@ function closeSheet() { $("sheet-bg")?.classList.remove("open"); $("sheet")?.cla
 
 // ── AI分析 ──
 const AI = {
-  gemini: { name: "Gemini", cost: "1回 1円未満の目安", icon: "✨" },
+  gemini: { name: "Gemini", cost: "無料枠で使える", icon: "✨" },
   claude: { name: "Claude", cost: "1回 20〜30円の目安", icon: "🧠" },
 };
 async function fetchAnalysis(code) {
@@ -339,6 +339,7 @@ function mdToEls(md) {
     const li = line.match(/^\s*(?:[-*・]|\d+\.)\s+(.*)$/);
     if (li) { if (!list) { list = el("ul"); out.push(list); } list.append(el("li", { html: inline(li[1]) })); continue; }
     list = null;
+    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { out.push(el("hr", { style: { border: 0, borderTop: "1px dashed var(--line)", margin: "12px 0" } })); continue; }
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) out.push(el(h[1].length <= 2 ? "h4" : "h5", { html: inline(h[2]) }));
     else if (line.trim()) out.push(el("p", { html: inline(line) }));
