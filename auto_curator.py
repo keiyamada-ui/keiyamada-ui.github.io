@@ -34,21 +34,50 @@ RSS_FEEDS = [
 ]
 # ==========================================
 
+def get_posted_links():
+    """GitHubの既存記事（直近30件）から投稿済みの情報源URLを集めて、重複投稿を防ぐ"""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/_posts"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    try:
+        res = requests.get(url, headers=headers, timeout=30)
+        if res.status_code != 200:
+            return set()
+        recent = sorted(res.json(), key=lambda f: f["name"], reverse=True)[:30]
+        posted_links = set()
+        for f in recent:
+            content_res = requests.get(f["download_url"], timeout=30)
+            if content_res.status_code == 200:
+                for line in content_res.text.splitlines():
+                    if line.startswith("**情報源:**"):
+                        posted_links.update(re.findall(r'https?://[^\s\)\"]+', line))
+        return posted_links
+    except Exception:
+        return set()
+
 def get_diverse_news(limit=2):
     print("🌍 最新ニュースを探索中...")
-    selected_feeds = random.sample(RSS_FEEDS, min(limit, len(RSS_FEEDS)))
+    posted_links = get_posted_links()
+    feeds = RSS_FEEDS[:]
+    random.shuffle(feeds)
     news_list = []
-    for feed_url in selected_feeds:
+    seen_links = set()
+    for feed_url in feeds:
+        if len(news_list) >= limit:
+            break
         try:
             parsed = feedparser.parse(feed_url)
-            if parsed.entries:
-                entry = parsed.entries[0]
-                news_list.append({
-                    "title": entry.title,
-                    "link": entry.link,
-                    "source": parsed.feed.title if hasattr(parsed.feed, 'title') else "Tech Media"
-                })
-        except Exception as e:
+            # 各フィードの新しい順に最大5件を見て、まだ投稿していない記事を1件選ぶ
+            for entry in parsed.entries[:5]:
+                link = entry.get("link", "")
+                if link and link not in posted_links and link not in seen_links:
+                    news_list.append({
+                        "title": entry.title,
+                        "link": link,
+                        "source": parsed.feed.title if hasattr(parsed.feed, 'title') else "Tech Media"
+                    })
+                    seen_links.add(link)
+                    break
+        except Exception:
             pass
     return news_list
 
