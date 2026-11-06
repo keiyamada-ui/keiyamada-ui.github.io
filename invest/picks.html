@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>今日の3選｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .pk { position: relative; display: block; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+        padding: 14px 14px 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .pk .hd { display: flex; align-items: center; gap: 10px; }
+  .pk .no { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--num); font-weight: 900; font-size: 17px;
+            background: linear-gradient(150deg, #FFE7A8, #F7C35C); color: #6B4A00; }
+  .pk .nm { flex: 1; min-width: 0; } .pk .nm b { display: block; font-size: 16.5px; font-weight: 900; }
+  .pk .nm small { color: var(--sub); font-size: 12px; }
+  .pk .cs { text-align: right; } .pk .cs b { font-family: var(--num); font-size: 24px; font-weight: 900; line-height: 1; display: block; }
+  .pk .cs small { font-size: 10.5px; color: var(--sub); font-weight: 700; }
+  .bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0 6px; }
+  .bars div { font-size: 10px; color: var(--sub); font-weight: 700; text-align: center; }
+  .bars i { display: block; height: 6px; border-radius: 99px; background: var(--box); margin-bottom: 3px; position: relative; overflow: hidden; }
+  .bars i::after { content: ""; position: absolute; inset: 0; width: var(--w); background: var(--accent); border-radius: 99px; }
+  .pk ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .kpi div { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px 6px; text-align: center; box-shadow: var(--shadow); }
+  .kpi b { display: block; font-family: var(--num); font-size: 20px; font-weight: 900; }
+  .kpi small { font-size: 11px; color: var(--sub); font-weight: 700; }
+  .seg { display: flex; gap: 6px; margin: 0 0 10px; }
+  .day { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px; margin-bottom: 8px; }
+  .day .dt { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 900; color: var(--sub); margin-bottom: 4px; }
+  .day a { display: flex; align-items: center; gap: 8px; padding: 5px 0; text-decoration: none; border-top: 1px dashed var(--line); font-size: 13.5px; }
+  .day a:nth-of-type(1) { border-top: 0; }
+  .day a span { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day a b { font-family: var(--num); font-weight: 900; min-width: 62px; text-align: right; }
+  .day a small { font-family: var(--num); color: var(--sub); min-width: 70px; text-align: right; font-size: 11px; }
+  .up { color: var(--up); } .down { color: var(--down); } .wait { color: var(--faint); }
+  .wt { display: grid; gap: 7px; }
+  .wt div { display: grid; grid-template-columns: 7.5em 1fr 3em; gap: 8px; align-items: center; font-size: 12.5px; font-weight: 700; }
+  .wt i { height: 10px; border-radius: 99px; background: var(--box); position: relative; overflow: hidden; }
+  .wt i::after { content: ""; position: absolute; inset: 0; width: var(--w); background: var(--accent); border-radius: 99px; }
+  .wt b { font-family: var(--num); text-align: right; }
+  .wt em { font-style: normal; font-size: 10.5px; color: var(--sub); font-weight: 700; }
+  .lesson p { margin: 6px 0; font-size: 13.5px; line-height: 1.75; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🐤 今日の3選</h1></header>
+<p class="note">「会社の良さ・チャートの形・市場より強いか（RS）・業績の勢い・割安さ」の5つを合計して、毎営業日の夕方に3銘柄を選びます。1週間後・2週間後の成績を自動で採点し、当たった観点の配分を少しずつ増やして精度を上げていきます。勉強用の記録で、売買のおすすめではありません。</p>
+<main id="main"></main>
+
+<script src="app.js"></script>
+<script>
+$("main").replaceChildren(...skeleton(3));
+let P = null, H = "10";
+const sg = v => v == null ? el("span", { class: "wait", text: "集計待ち" }) : el("span", { class: v > 0 ? "up" : v < 0 ? "down" : "", text: (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%" });
+const pctTxt = v => (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+
+function render() {
+  if (!P) return;
+  const b = [], t = P.today;
+  if (t && t.picks.length) {
+    const d = t.date.slice(5).replace("-", "/");
+    b.push(el("h2", { text: `${d} の3選（${d} の終値で選定）` }));
+    if (t.regime && t.regime.score != null && t.regime.score < 40)
+      b.push(el("div", { class: "warnbox", text: `${t.regime.icon || ""} 市場は「${t.regime.label}」。選んだ銘柄でも、買うなら少しずつ・損切りラインを先に決めて。` }));
+    t.picks.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
+      el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・ランク${p.rank}・${fmt.yen(p.p)}` })]),
+        el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
+      el("div", { class: "bars" }, Object.keys(P.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), P.feats[k].replace(/（.*）/, "")]))),
+      el("ul", {}, p.why.slice(0, 5).map(w => el("li", { text: w })))])));
+  } else b.push(el("div", { class: "card muted", text: "今日の3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" }));
+
+  b.push(el("h2", { text: "📊 これまでの成績" }));
+  const seg = el("div", { class: "seg" }, P.horizons.map(h => el("button", { class: "chip", "aria-pressed": String(String(h) === H), text: h === 5 ? "1週間後（5営業日）" : "2週間後（10営業日）",
+    onclick: () => { H = String(h); render(); } })));
+  b.push(seg);
+  const st = P.stats[H];
+  b.push(el("div", { class: "kpi" }, st ? [
+    el("div", {}, [el("b", { text: Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（${st.n}回）` })]),
+    el("div", {}, [el("b", { class: st.avg >= 0 ? "up" : "down", text: pctTxt(st.avg) }), el("small", { text: "平均の騰落率" })]),
+    el("div", {}, [el("b", { class: st.avgx >= 0 ? "up" : "down", text: pctTxt(st.avgx) }), el("small", { text: `TOPIXとの差（勝ち${Math.round(st.beat * 100)}%）` })])]
+    : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: `最初の結果は${H === "5" ? "1週間" : "2週間"}後に出ます` })])]));
+  b.push(el("p", { class: "muted", style: { margin: "8px 4px", fontSize: "11.5px" }, text: "選んだ日の終値で買い、5・10営業日後の終値で売ったとした場合の計算（手数料・税は含みません）。" }));
+  b.push(...P.history.filter(d => d.picks.length).slice(0, 20).map(d => el("div", { class: "day" }, [
+    el("div", { class: "dt" }, [el("span", { text: d.date.slice(5).replace("-", "/") + " の3選" }), el("span", {}, ["TOPIX ", sg(d["b" + H])])]),
+    ...d.picks.map(p => el("a", { href: `stock.html?c=${p.c}` }, [el("span", { text: p.n }), el("b", {}, [sg(p["r" + H])]),
+      el("small", { text: p["x" + H] == null ? "" : `差 ${pctTxt(p["x" + H])}` })]))])));
+
+  b.push(el("h2", { text: "🧠 ことりの勉強ノート" }));
+  b.push(el("section", { class: "card lesson" }, P.lessons.map(x => el("p", { text: x }))));
+  const ic = P.learn && P.learn.ic || {};
+  b.push(el("section", { class: "card" }, [el("div", { class: "muted", style: { marginBottom: "8px", fontSize: "12px" }, text: "いまの点数の配分（右の数字は、2週間後の成績との相関。プラスほど「当たっている」観点）" }),
+    el("div", { class: "wt" }, Object.keys(P.feats).map(k => el("div", {}, [el("span", { text: P.feats[k] }), el("i", { style: { "--w": Math.round(P.weights[k] * 200) + "%" } }),
+      el("b", {}, [Math.round(P.weights[k] * 100) + "%", el("em", { text: ic[k] != null && P.learn.days ? ` ${ic[k] >= 0 ? "+" : ""}${ic[k].toFixed(2)}` : "" })])])))]));
+  $("main").replaceChildren(...b);
+}
+loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"), e));
+</script>
+</body>
+</html>

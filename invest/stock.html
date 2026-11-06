@@ -161,7 +161,7 @@ function render(data) {
   const numbers = el("section", { class: "card rise" }, [
     el("span", { class: "title", text: "📊 数字で見る" }),
     group("profit", "収益性"), kv([["ROE", fmt.pct(s.roe)], ["営業利益率", fmt.pct(s.opm)]]),
-    group("growth", "成長性"), kv([["売上の伸び", fmt.pct(s.sg)], ["営業利益の伸び", fmt.pct(s.og)], ["予想EPSの伸び", fmt.pct(s.eg)]]),
+    group("growth", "成長性"), kv([["売上の伸び", fmt.pct(s.sg)], ["営業利益の伸び", fmt.pct(s.og)], ["予想EPSの伸び", fmt.pct(s.eg)], ["会社予想の修正（営業利益）", fmt.pct(s.rev)], ["進捗率" + (s.pt ? `（${s.pt}時点）` : ""), s.prg == null ? "–" : fmt.pct(s.prg) + (s.pgap == null ? "" : `（標準より${s.pgap >= 0 ? "+" : ""}${(s.pgap * 100).toFixed(0)}pt）`)]]),
     group("value", "割安性"), kv([["予想PER", s.fper ? s.fper.toFixed(1) + "<small>倍</small>" : "–"], ["実績PER", s.per ? s.per.toFixed(1) + "<small>倍</small>" : "–"],
                                   ["PBR", s.pbr ? s.pbr.toFixed(2) + "<small>倍</small>" : "–"]]),
     group("dividend", "増配余力"), kv([["ROE−DOE", fmt.pct(s.rd)], ["DOE", fmt.pct(s.doe)], ["予想配当", s.dps ? s.dps.toFixed(1) + "<small>円</small>" : "–"],

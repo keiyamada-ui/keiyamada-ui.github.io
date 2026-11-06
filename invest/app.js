@@ -31,6 +31,8 @@ const BONUS_DESC = {
   "ROE10%↑PER15↓": "ROE10%以上かつ予想PER15倍以下（稼ぐ力があり割高でない）",
   "増収増益": "売上・営業利益が増え、会社予想EPSも増加（成長ストーリーが続いている）",
   "増配余力大": "配当ありで ROE−DOE が8%以上（利益の多くが株主資本に積み上がる）",
+  "上方修正": "今期の会社予想（営業利益）を期初から3%以上引き上げた。上方修正する会社は続けて修正しやすい",
+  "進捗率が高い": "四半期の時点で通期予想に対する進み具合が標準より10ポイント以上速い（上方修正の候補）",
 };
 const FLAG_DESC = {
   "特別利益の疑い": "最終利益が営業利益の1.2倍超。資産売却など一時的な利益の可能性",
@@ -39,6 +41,7 @@ const FLAG_DESC = {
   "減益予想": "会社予想EPSが前期実績より20%以上低い",
   "営業CF赤字": "本業で現金が出ていっている",
   "売買が少ない": "1日の売買代金が3,000万円未満で売買しにくい",
+  "下方修正": "今期の会社予想（営業利益）を期初から5%以上引き下げた",
 };
 
 // ── 小さな道具 ──
@@ -141,9 +144,10 @@ async function loadJSON(path, onData, onError = () => {}, quiet = false) {
 }
 async function loadData(onData, onError) { return loadJSON(DATA_FILE, d => onData(prepare(d)), onError); }
 // 市場の天気・チャート・ニュース（毎日更新）。まだ無ければ何もしない
-let CHART = null, MARKET = null, NEWS = null, MOVERS = null;
+let CHART = null, MARKET = null, NEWS = null, MOVERS = null, PICKS = null;
 function loadChart(cb) { return loadJSON("data/chart.json", d => { CHART = d; cb && cb(d); }, () => {}, true); }
 function loadMarket(cb) { return loadJSON("data/market.json", d => { MARKET = d; cb && cb(d); }, () => {}, true); }
+function loadPicks(cb) { return loadJSON("data/picks.json", d => { PICKS = d; cb && cb(d); }, () => {}, true); }
 function loadMovers(cb) { return loadJSON("data/movers.json", d => { MOVERS = d; cb && cb(d); }, () => {}, true); }
 function loadNews(cb) { return loadJSON("data/news.json", d => { NEWS = d; cb && cb(d); }, () => {}, true); }
 const TIMING_STYLE = { "買い場候補": "ok", "やや良い": "star", "様子見": "gray", "待ち・注意": "warn" };
