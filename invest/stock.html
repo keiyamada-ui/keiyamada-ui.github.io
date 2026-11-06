@@ -49,6 +49,23 @@
   .rule .calc div { flex: 1; text-align: center; border-radius: 14px; padding: 8px; }
   .rule .calc span { display: block; font-size: 11px; font-weight: 700; color: var(--sub); }
   .rule .calc b { font-family: var(--num); font-size: 17px; font-weight: 900; }
+  .ai .runrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .ai .runrow button { text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 18px; padding: 11px 12px; cursor: pointer;
+                       color: inherit; box-shadow: var(--shadow); transition: transform .12s; }
+  .ai .runrow button:active { transform: scale(.97); }
+  .ai .runrow button:disabled { opacity: .5; }
+  .ai .runrow b { display: block; font-size: 14.5px; font-weight: 900; }
+  .ai .runrow small { display: block; font-size: 11.5px; color: var(--sub); }
+  .ai .body { margin-top: 12px; font-size: 14px; line-height: 1.85; }
+  .ai .body h4 { font-size: 15px; font-weight: 900; margin: 16px 0 4px; padding-left: 10px; border-left: 4px solid var(--accent); }
+  .ai .body h5 { font-size: 14px; font-weight: 900; margin: 12px 0 2px; }
+  .ai .body p { margin: 4px 0; }
+  .ai .body ul { margin: 4px 0; padding-left: 20px; }
+  .ai .body li { margin: 2px 0; }
+  .ai .meta2 { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .ai .waiting { display: flex; align-items: center; gap: 12px; margin-top: 12px; background: var(--box); border-radius: 16px; padding: 12px; font-size: 13.5px; }
+  .ai .waiting img { width: 44px; height: 44px; animation: hop 1.4s ease-in-out infinite; }
+  @keyframes hop { 0%, 60%, 100% { transform: translateY(0) } 75% { transform: translateY(-7px) rotate(-4deg) } }
   .principle { font-size: 12.5px; color: var(--sub); line-height: 1.7; background: var(--box); border-radius: 14px; padding: 10px 12px; margin-bottom: 4px; }
 </style>
 </head>
@@ -186,7 +203,53 @@ function render(data) {
     el("div", { class: "row between" }, [el("span", { class: "title", text: "🏷️ タグ" }), el("a", { class: "muted", href: "watch.html", text: "ウォッチ一覧へ ›" })]),
     el("p", { class: "muted", style: { margin: "4px 0 0" }, text: "付けるとウォッチに入り、タグごとに一覧で見られます。" }), tagBox]);
 
-  $("main").replaceChildren(hero, tags, breakdown, numbers, rule, links);
+  // AI分析
+  const aiBody = el("div");
+  const aiCard = el("section", { class: "card ai rise" }, [
+    el("div", { class: "row between" }, [el("span", { class: "title", text: "🤖 AI分析" }), el("span", { class: "badge gray", text: "参考情報" })]),
+    el("p", { class: "muted", style: { margin: "4px 0 0" }, text: "点数・決算の数字と最新ニュースをAIが読み、強み・リスク・確認すべきことをまとめます（1〜2分）。" }),
+    el("div", { class: "runrow" }, Object.entries(AI).map(([k, a]) => el("button", { "data-ai": k, onclick: () => startAI(k) },
+      [el("b", { text: `${a.icon} ${a.name}で分析` }), el("small", { text: a.cost })]))),
+    aiBody]);
+  let history = [], showIdx = 0;
+  const drawAI = () => {
+    if (!history.length) { aiBody.replaceChildren(el("div", { class: "muted", style: { marginTop: "12px" }, text: "まだ分析していません。上のボタンで始められます。" })); return; }
+    const h = history[showIdx];
+    aiBody.replaceChildren(
+      el("div", { class: "meta2" }, [
+        ...history.map((x, i) => el("button", { class: "chip" + (i === showIdx ? "" : " soft"), "aria-pressed": String(i === showIdx),
+          text: `${AI[x.ai] ? AI[x.ai].icon : "🤖"} ${new Date(x.created_at).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}`,
+          onclick: () => { showIdx = i; drawAI(); } }))]),
+      el("div", { class: "muted", style: { marginTop: "6px", fontSize: "12px" }, text: `${h.model}・株価は${fmt.md(h.price_date)}時点のデータで分析` }),
+      el("div", { class: "body" }, mdToEls(h.markdown)),
+      h.news && h.news.length ? el("details", {}, [el("summary", { text: `参考にしたニュースの見出し（${h.news.length}件）` }),
+        el("ul", { style: { fontSize: "12.5px", paddingLeft: "18px", lineHeight: "1.7" } }, h.news.map(n =>
+          el("li", {}, [el("a", { href: n.url, target: "_blank", rel: "noopener", text: n.title }), " ", el("span", { class: "muted", text: n.date })])))]) : null);
+  };
+  const loadAI = async () => {
+    try { const doc = await fetchAnalysis(code); history = doc ? doc.history : []; showIdx = 0; drawAI(); }
+    catch (e) { aiBody.replaceChildren(el("div", { class: "warnbox", style: { marginTop: "12px" }, text: e.message })); }
+  };
+  async function startAI(model) {
+    if (!Key.get()) { location.href = "key.html"; return; }
+    aiCard.querySelectorAll("[data-ai]").forEach(b => { b.disabled = true; });
+    const wait = el("div", { class: "waiting" }, [el("img", { src: "avatar.png", alt: "" }), el("span", { text: `${AI[model].name}が分析しています…` })]);
+    aiBody.prepend(wait);
+    try {
+      const r = await runAnalysis(code, model, sec => { wait.lastChild.textContent = `${AI[model].name}が分析しています…（${sec}秒）`; });
+      if (r.ok) { toast("分析ができました"); await loadAI(); }
+      else {
+        wait.replaceWith(el("div", { class: "warnbox", style: { marginTop: "12px" }, html: r.timeout ? "時間がかかっています。少ししてから開き直してください。"
+          : `うまくいきませんでした。invest-system の Secret に <b>${model === "claude" ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY"}</b> が登録されているか確認してください。` +
+            (r.url ? ` <a href="${r.url}" target="_blank" rel="noopener">記録を見る</a>` : "") }));
+      }
+    } catch (e) { wait.replaceWith(el("div", { class: "warnbox", style: { marginTop: "12px" }, text: e.message })); }
+    aiCard.querySelectorAll("[data-ai]").forEach(b => { b.disabled = false; });
+  }
+  aiBody.replaceChildren(el("div", { class: "muted", style: { marginTop: "12px" }, text: "読み込み中…" }));
+  loadAI();
+
+  $("main").replaceChildren(hero, tags, aiCard, breakdown, numbers, rule, links);
 }
 loadData(render, e => keyNeeded($("main"), e));
 </script>

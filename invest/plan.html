@@ -86,9 +86,23 @@
 
 <section class="card svc">
   <div class="head"><span class="ic" style="background:var(--p-lilac)">🤖</span>
-    <span class="t"><b>AI（Gemini・Claude）</b><small>ニュース・決算短信を読む（これから）</small></span>
-    <span class="badge gray">準備中</span></div>
-  <p class="muted" style="margin:10px 0 0">「ニュース・地政学リスク・配当方針（DOEの書き方）をAIが読んで点数に反映する」段階で使います。キーはブログの自動投稿用にすでにあります。費用の目安は、その段階でここに表示します。</p>
+    <span class="t"><b>AI（Gemini・Claude）</b><small>銘柄の画面の「🤖 AI分析」で使う</small></span>
+    <span class="badge ok">使える</span></div>
+  <div class="compare">
+    <div><div class="pn">✨ Gemini</div><div class="price">1円<small>未満／回</small></div>
+      <ul><li>ふだん使いに</li><li>Google検索で最新ニュース</li></ul></div>
+    <div><div class="pn">🧠 Claude（Opus 5.5）</div><div class="price">20〜30<small>円／回</small></div>
+      <ul><li>じっくり見たい銘柄に</li><li>Web検索で決算・方針も確認</li></ul></div>
+  </div>
+  <p class="muted" style="margin:10px 0 0">押したときだけ動くので、使わなければ費用はかかりません。金額はニュースの量などで前後します。</p>
+  <details><summary>使いはじめる手順（最初に1回）</summary>
+    <ol class="steps">
+      <li><a href="https://github.com/keiyamada-ui/invest-system/settings/secrets/actions/new" target="_blank" rel="noopener">invest-system の Secret 登録画面</a>を開く</li>
+      <li>Gemini を使うなら Name に <code>GEMINI_API_KEY</code>（キーは <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>）</li>
+      <li>Claude を使うなら Name に <code>ANTHROPIC_API_KEY</code>（キーは <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Claude Console</a>）</li>
+      <li>使いすぎが心配なら、Claude Console の <b>Limits</b> で月の上限金額を決めておく</li>
+    </ol>
+  </details>
 </section>
 
 <h2>プランを見直すサイン</h2>

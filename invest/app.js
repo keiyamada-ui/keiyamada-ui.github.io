@@ -303,6 +303,49 @@ function closeSheet() { $("sheet-bg")?.classList.remove("open"); $("sheet")?.cla
     el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null }, [el("span", { class: "i", text: icon }), label]))));
 })();
 
+// ── AI分析 ──
+const AI = {
+  gemini: { name: "Gemini", cost: "1回 1円未満の目安", icon: "✨" },
+  claude: { name: "Claude", cost: "1回 20〜30円の目安", icon: "🧠" },
+};
+async function fetchAnalysis(code) {
+  try { return JSON.parse(await gh(`/repos/${REPO}/contents/analysis/${encodeURIComponent(code)}.json?ref=main`, { accept: "application/vnd.github.raw+json" })); }
+  catch (e) { if (e.status === 404) return null; throw e; }
+}
+// 分析を動かし、終わるまで待つ。onTick(経過秒) で進み具合を知らせる。成功なら true
+async function runAnalysis(code, model, onTick) {
+  const started = new Date(Date.now() - 10000).toISOString();
+  await gh(`/repos/${REPO}/actions/workflows/analyze.yml/dispatches`, { method: "POST", body: { ref: "main", inputs: { code, model } } });
+  const t0 = Date.now();
+  while (Date.now() - t0 < 6 * 60000) {
+    await new Promise(r => setTimeout(r, 6000));
+    onTick && onTick(Math.round((Date.now() - t0) / 1000));
+    try {
+      const runs = await gh(`/repos/${REPO}/actions/workflows/analyze.yml/runs?event=workflow_dispatch&per_page=5`);
+      const run = runs.workflow_runs.find(r => r.created_at >= started.slice(0, 19));
+      if (run && run.status === "completed") return { ok: run.conclusion === "success", url: run.html_url };
+    } catch (e) { /* 次の回でもう一度見る */ }
+  }
+  return { ok: false, timeout: true };
+}
+// AIが書いたMarkdownを安全に表示する（見出し・箇条書き・太字・リンクだけ）
+function mdToEls(md) {
+  const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const out = []; let list = null;
+  for (const raw of md.split("\n")) {
+    const line = raw.trimEnd();
+    const li = line.match(/^\s*(?:[-*・]|\d+\.)\s+(.*)$/);
+    if (li) { if (!list) { list = el("ul"); out.push(list); } list.append(el("li", { html: inline(li[1]) })); continue; }
+    list = null;
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) out.push(el(h[1].length <= 2 ? "h4" : "h5", { html: inline(h[2]) }));
+    else if (line.trim()) out.push(el("p", { html: inline(line) }));
+  }
+  return out;
+}
+
 // 説明文は「？ この画面の使い方」を押したときだけ開く
 (function foldHelp() {
   for (const p of document.querySelectorAll("p.note")) {
