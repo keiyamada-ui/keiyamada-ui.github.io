@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ことり投資">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .hero { position: relative; margin: 0 -4px 6px; }
+  .cover { border-radius: 26px; overflow: hidden; aspect-ratio: 1200 / 470; background: var(--card); box-shadow: var(--shadow); }
+  .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .tool { height: 36px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none;
+          display: inline-flex; align-items: center; background: color-mix(in srgb, var(--card) 86%, transparent);
+          -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 4px 12px -6px rgba(0,0,0,.35); transition: transform .12s; }
+  .tool:active { transform: scale(.94); }
+  .me { display: flex; align-items: flex-start; gap: 12px; margin: -40px 8px 0; position: relative; }
+  .avatar { width: 88px; height: 88px; border-radius: 50%; border: 5px solid var(--bg); background: #F7F3E8; flex: none;
+            box-shadow: 0 6px 16px -8px rgba(140,115,150,.5); animation: hop 2.8s ease-in-out 1s infinite; transform-origin: 50% 100%; }
+  @keyframes hop { 0%, 86%, 100% { transform: translateY(0) } 90% { transform: translateY(-6px) rotate(-3deg) } 94% { transform: translateY(0) } 97% { transform: translateY(-2px) } }
+  .me .name { padding-top: 48px; min-width: 0; }
+  .me h1 { font-size: 18px; font-weight: 900; margin: 0; line-height: 1.35; letter-spacing: .02em; }
+  .me .sub { color: var(--sub); font-size: 13px; margin-top: 2px; }
+
+  .bubble { position: relative; margin: 14px 0 12px; padding: 14px 16px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow);
+            border: 1px solid var(--line); font-size: 14.5px; line-height: 1.8; }
+  .bubble::before { content: ""; position: absolute; top: -9px; left: 38px; width: 18px; height: 18px; background: var(--card);
+                    border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); border-radius: 4px 0 0 0; }
+  .bubble .greet { font-weight: 900; font-size: 15.5px; }
+  .bubble b { color: var(--accent-deep); font-family: var(--num); }
+  .bubble ul { list-style: none; margin: 4px 0 0; padding: 0; }
+  .bubble li { display: flex; gap: 8px; }
+  .bubble li a { color: inherit; text-decoration: none; }
+  .bubble li a::after { content: " ›"; color: var(--sub); font-weight: 900; }
+
+  /* データの鮮度 */
+  .fresh { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .fresh div { background: var(--box); border-radius: 14px; padding: 9px 12px; }
+  .fresh span { display: block; font-size: 11.5px; color: var(--sub); font-weight: 700; }
+  .fresh b { font-size: 15px; font-weight: 900; }
+  .runline { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--sub); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.ng { background: var(--pr); }
+  .dot.run { background: var(--accent-deep); animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .3 } }
+
+  /* ランク分布 */
+  .dist { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--box); margin: 12px 0 10px; }
+  .dist i { display: block; height: 100%; transition: width .8s cubic-bezier(.2,.9,.3,1); }
+  .dist .S { background: #F5C451; } .dist .A { background: #7CCBA2; } .dist .B { background: #8DB8E8; } .dist .C { background: #B9A9E6; } .dist .D { background: #DDD4CA; }
+  .distlegend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; text-align: center; }
+  .distlegend div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .distlegend b { font-family: var(--num); font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .distlegend small { font-size: 11px; color: var(--sub); font-weight: 700; margin-top: -3px; }
+
+  .stylebar { display: flex; align-items: center; gap: 8px; margin: 4px 2px 10px; }
+  .stylebar .muted { flex: 1; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  a.tile { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px; min-height: 100px; background: var(--card);
+           border: 1px solid var(--line); border-radius: 22px; text-decoration: none; box-shadow: var(--shadow); transition: transform .14s ease; }
+  a.tile:active { transform: scale(.96); }
+  a.tile.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 84px; }
+  a.tile.wide .txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 16px; font-size: 24px; flex: none; background: var(--p-sand); }
+  .sun .ic { background: var(--p-sun); } .peach .ic { background: var(--p-peach); } .mint .ic { background: var(--p-mint); }
+  .sky .ic { background: var(--p-sky); } .lilac .ic { background: var(--p-lilac); } .pink .ic { background: var(--p-pink); }
+  .label { font-weight: 900; font-size: 15px; line-height: 1.35; }
+  .desc { color: var(--sub); font-size: 12.5px; line-height: 1.5; }
+  .tile .nb { position: absolute; top: 10px; right: 10px; min-width: 24px; height: 24px; padding: 0 8px; border-radius: 999px; background: var(--pr);
+              color: #fff; font-size: 12.5px; font-weight: 900; line-height: 24px; text-align: center; font-family: var(--num); }
+  .tile .nb:empty { display: none; }
+  .newin { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
+  .newin::-webkit-scrollbar { display: none; }
+  .newin a { flex: none; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+             padding: 9px 12px 9px 9px; text-decoration: none; box-shadow: var(--shadow); max-width: 210px; }
+  .newin a b { font-size: 13.5px; font-weight: 900; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+  .newin a small { font-size: 11.5px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="cover"><img src="header.jpg" alt="" width="1200" height="509"></div>
+  <div class="tools"><button class="tool" id="reload">🔄 更新</button></div>
+</div>
+<div class="me">
+  <img class="avatar" src="avatar.png" alt="ことり" width="88" height="88">
+  <div class="name"><h1>ことり投資ノート</h1><div class="sub">事前ルールで、優良株を機械的にさがす</div></div>
+</div>
+
+<div class="bubble"><span class="greet" id="greet">こんにちは🐤</span><ul id="say"><li>いま、採点の結果を見てくるね…</li></ul></div>
+
+<main id="main"></main>
+
+<h2>しらべる・ととのえる</h2>
+<div class="grid">
+  <a class="tile wide sun" href="ranking.html"><span class="ic">🏅</span>
+    <span class="txt"><span class="label">ランキング</span><span class="desc">全銘柄を点数順に。検索・絞り込み・並べ替え</span></span></a>
+  <a class="tile lilac" href="ranking.html#dividend"><span class="ic">📈</span><span class="label">増配余力</span><span class="desc">ROE−DOE が大きい順</span></a>
+  <a class="tile pink" href="ranking.html#caution"><span class="nb" id="b-caution"></span><span class="ic">⚠️</span><span class="label">要注意リスト</span><span class="desc">数字だけ良く見える銘柄</span></a>
+  <a class="tile mint" href="tune.html"><span class="ic">🎚️</span><span class="label">配分を調整</span><span class="desc">何を重視するかを自分で決める</span></a>
+  <a class="tile sky" href="plan.html"><span class="nb" id="b-plan"></span><span class="ic">🧾</span><span class="label">データと料金</span><span class="desc">プランの切り替え・使用量</span></a>
+  <a class="tile peach" href="more.html"><span class="ic">🌱</span><span class="label">アプリを育てる</span><span class="desc">改善アイデア・これからの計画</span></a>
+  <a class="tile" href="key.html"><span class="nb" id="b-key"></span><span class="ic">🔑</span><span class="label">合い鍵</span><span class="desc">データを読むための鍵</span></a>
+</div>
+
+<footer class="foot">
+  <img src="avatar.png" alt="">
+  点数は機械的な目安です。投資の判断はご自身で。<br>
+  ホーム画面に追加: Safari の共有ボタン →「ホーム画面に追加」<br>
+  このページに株のデータは載せていません。合い鍵はこの端末の中だけに保存されます。
+</footer>
+
+<script src="app.js"></script>
+<script>
+$("reload").addEventListener("click", () => { const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u.href); });
+const h = new Date(Date.now() + 9 * 3600000).getUTCHours();
+$("greet").textContent = h < 10 ? "おはよう！☀️" : h < 17 ? "こんにちは！🌼" : h < 22 ? "こんばんは🌙" : "おつかれさま🌙";
+$("main").replaceChildren(...skeleton(3));
+
+// 合い鍵の期限
+(() => { const d = keyDaysLeft(); if (!Key.get()) $("b-key").textContent = "!"; else if (d !== null && d <= 14) $("b-key").textContent = d + "日"; })();
+
+function say(lines) {
+  $("say").replaceChildren(...lines.map(([icon, html, href]) => {
+    const body = href ? el("a", { href, html }) : el("span", { html });
+    return el("li", {}, [el("span", { text: icon }), body]);
+  }));
+}
+
+function render(data) {
+  const style = currentStyle();
+  const list = scoreAll(data, weightsFor(data, style));
+  const n = r => list.filter(s => s.rank === r).length;
+  const counts = Object.fromEntries(["S", "A", "B", "C", "D"].map(r => [r, n(r)]));
+  const newS = data.prev ? list.filter(s => s.rank === "S" && s.prevRank !== "S") : [];
+  const caution = list.filter(s => s.f.length && s.roe !== null && s.roe >= 0.15).length;
+  $("b-caution").textContent = caution ? String(Math.min(caution, 99)) : "";
+  const free = data.plan === "free";
+  if (free) $("b-plan").textContent = "!";
+
+  // ことりの一言
+  const lines = [["🏅", `「${STYLE_NAMES[style]}」の配分で、Sランクは <b>${counts.S}社</b>、Aランクは <b>${counts.A}社</b>。`, "ranking.html"]];
+  if (newS.length) lines.push(["✨", `前回から新しくSランクに入ったのは <b>${newS.length}社</b>`, null]);
+  if (free) lines.push(["🕰️", `いまの株価は ${fmt.md(data.price_date)} 時点（無料プランなので約3か月前）`, "plan.html"]);
+  say(lines);
+
+  const card = (...c) => el("section", { class: "card rise" }, c);
+  const fresh = card(
+    el("div", { class: "row between" }, [el("span", { class: "title", text: "📅 データの鮮度" }),
+      el("span", { class: "badge " + (free ? "warn" : "ok"), text: free ? "無料プラン" : "Lightプラン" })]),
+    el("div", { class: "fresh" }, [
+      el("div", {}, [el("span", { text: "採点した日" }), el("b", { class: "num", text: fmt.date(data.date) })]),
+      el("div", {}, [el("span", { text: "株価の基準日" }), el("b", { class: "num", text: fmt.date(data.price_date) })])]),
+    el("div", { class: "runline", id: "runline" }, [el("span", { class: "dot" }), "前回の実行を確認中…"]),
+    el("div", { class: "actions" }, [el("button", { class: "btn primary", text: "▶ 今すぐ採点する（約15分）", onclick: askRun })]),
+  );
+
+  const total = list.length || 1;
+  const dist = card(
+    el("div", { class: "row between" }, [el("span", { class: "title", text: "🎯 ランクの分布" }), el("span", { class: "muted", text: `${list.length.toLocaleString()}社を採点` })]),
+    el("div", { class: "dist" }, ["S", "A", "B", "C", "D"].map(r => el("i", { class: r, style: { width: (100 * counts[r] / total) + "%" } }))),
+    el("div", { class: "distlegend" }, ["S", "A", "B", "C", "D"].map(r => el("div", {}, [rankEl(r, 28), el("b", { text: counts[r].toLocaleString() }), el("small", { text: "社" })]))),
+  );
+
+  const styleBar = el("div", { class: "stylebar" }, [
+    el("span", { class: "muted", html: `いまの配分：<b style="color:var(--text)">${STYLE_NAMES[style]}</b>　${STYLE_DESC[style]}` }),
+    el("a", { class: "btn small", href: "tune.html", text: "変える" })]);
+
+  const top = list.slice(0, 5).map(s => stockRow(s));
+  const blocks = [fresh, dist, el("h2", {}, ["きょうの上位5社", el("a", { href: "ranking.html", text: "すべて見る" })]), styleBar, ...top];
+  if (newS.length) {
+    blocks.push(el("h2", { text: "✨ 新しくSランク入り" }), el("div", { class: "newin" }, newS.slice(0, 12).map(s =>
+      el("a", { href: `stock.html?c=${s.c}` }, [rankEl("S", 30), el("span", {}, [el("b", { text: s.n }), el("small", { text: `${s.c}　${Math.round(s.score)}点` })])]))));
+  }
+  $("main").replaceChildren(...blocks);
+  showRun();
+}
+
+async function showRun() {
+  const line = $("runline");
+  if (!line || !Key.get()) return;
+  try {
+    const r = await lastRun();
+    if (!r) { line.replaceChildren(el("span", { class: "dot" }), "まだ実行されていません"); return; }
+    const state = r.status !== "completed" ? ["run", "採点中…（終わると自動で新しい結果になります）"]
+      : r.conclusion === "success" ? ["ok", "前回の実行は成功"] : ["ng", "前回の実行は失敗しました"];
+    const when = new Date(r.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    line.replaceChildren(...[el("span", { class: "dot " + state[0] }), `${state[1]}（${when}）`,
+      state[0] === "ng" ? el("a", { href: r.html_url, target: "_blank", rel: "noopener", text: " 詳しく", style: { fontWeight: 700 } }) : null].filter(Boolean));
+    if (state[0] === "run") setTimeout(showRun, 30000);
+  } catch (e) { line.replaceChildren(el("span", { class: "dot" }), "実行状況を読めませんでした"); }
+}
+
+function askRun() {
+  if (!Key.get()) { location.href = "key.html"; return; }
+  let style = currentStyle() === "custom" ? "balanced" : currentStyle(), plan = store.get("invest-plan", "free");
+  const styleChips = el("div", { class: "chips" }, Object.keys(STYLE_DESC).filter(k => k !== "custom").map(k =>
+    el("button", { class: "chip soft", "aria-pressed": String(k === style), text: STYLE_NAMES[k], onclick: e => {
+      style = k; styleChips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === e.currentTarget))); } })));
+  const planChips = el("div", { class: "chips" }, [["free", "無料（約3か月前の株価）"], ["light", "Light（最新の株価）"]].map(([k, label]) =>
+    el("button", { class: "chip soft", "aria-pressed": String(k === plan), text: label, onclick: e => {
+      plan = k; planChips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === e.currentTarget))); } })));
+  openSheet([
+    el("h3", { text: "▶ 今すぐ採点する" }),
+    el("p", { class: "muted", text: "東証の全銘柄の決算と株価を集めて採点し直します。15分ほどかかります。アプリを閉じても大丈夫です。" }),
+    el("label", { class: "field", text: "レポートの配分" }), styleChips,
+    el("label", { class: "field", html: "J-Quants のプラン <small>（契約しているプランを選ぶ）</small>" }), planChips,
+    el("p", { class: "muted", style: { marginTop: "8px" }, text: "※ アプリの順位は、どの配分で採点しても「配分を調整」からすぐ切り替えられます。" }),
+    el("div", { class: "actions" }, [
+      el("button", { class: "btn", text: "やめる", onclick: closeSheet }),
+      el("button", { class: "btn primary", text: "採点をはじめる", onclick: async e => {
+        e.currentTarget.disabled = true;
+        try { store.set("invest-plan", plan); await dispatchScore(style, plan); closeSheet(); toast("採点をはじめました。15分ほどで新しい結果になります"); setTimeout(showRun, 4000); }
+        catch (err) { toast(err.message); e.currentTarget.disabled = false; }
+      } })]),
+  ]);
+}
+
+loadData(render, e => { say([["🐤", "合い鍵を登録すると、ここに採点の結果が出るよ", "key.html"]]); keyNeeded($("main"), e); });
+</script>
+</body>
+</html>

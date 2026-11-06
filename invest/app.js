@@ -1,0 +1,278 @@
+// ことり投資ノート 共通処理
+// - この画面（公開サイト）にはデータを置かない。データは非公開の invest-system から「合い鍵」で直接読む
+// - 合い鍵は、この端末（ブラウザ）の中だけに保存する
+const REPO = "keiyamada-ui/invest-system";
+const OWNER = REPO.split("/")[0];
+const API = "https://api.github.com";
+const DATA_FILE = "data/jp_latest.json";
+const WORKFLOW = "jp_score.yml";
+const KEY_NAME = "invest-gh-key";
+
+const STYLE_NAMES = {
+  balanced: "バランス", yomi: "億り人流", dividend: "増配重視", quality: "長期優良", value: "割安重視", growth: "成長重視", custom: "マイ配分",
+};
+const STYLE_DESC = {
+  balanced: "6つの観点をバランスよく", yomi: "稼ぐ力×成長×割安（ROE10%↑・PER15↓の考え方）",
+  dividend: "ROE−DOE（増配余力）を最重視", quality: "長く持てる健全で質の高い会社", value: "安く買えることを重視",
+  growth: "売上・利益の伸びを最重視", custom: "あなたが調整した配分",
+};
+const FACTOR_KEYS = ["profit", "growth", "value", "dividend", "quality", "safety"];
+const FACTOR_SHORT = { profit: "収益", growth: "成長", value: "割安", dividend: "増配", quality: "質", safety: "健全" };
+const FACTOR_LONG = { profit: "収益性", growth: "成長性", value: "割安性", dividend: "増配余力", quality: "利益の質", safety: "健全性" };
+const FACTOR_HOW = {
+  profit: "ROE・営業利益率。稼ぐ力は株価の土台",
+  growth: "売上・営業利益・会社予想EPSの伸び",
+  value: "予想PER・PBR。低いほど高得点",
+  dividend: "ROE−DOE・株主資本の伸び・配当利回り",
+  quality: "営業CF÷純利益。利益が現金を伴っているか",
+  safety: "自己資本比率。不況に強いか",
+};
+const BONUS_DESC = {
+  "ROE10%↑PER15↓": "ROE10%以上かつ予想PER15倍以下（稼ぐ力があり割高でない）",
+  "増収増益": "売上・営業利益が増え、会社予想EPSも増加（成長ストーリーが続いている）",
+  "増配余力大": "配当ありで ROE−DOE が8%以上（利益の多くが株主資本に積み上がる）",
+};
+const FLAG_DESC = {
+  "特別利益の疑い": "最終利益が営業利益の1.2倍超。資産売却など一時的な利益の可能性",
+  "本業赤字": "営業利益がマイナスなのに最終利益はプラス",
+  "PER異常に低い": "PER4倍未満。一時的な利益か株式分割による計算のずれの可能性",
+  "減益予想": "会社予想EPSが前期実績より20%以上低い",
+  "営業CF赤字": "本業で現金が出ていっている",
+  "売買が少ない": "1日の売買代金が3,000万円未満で売買しにくい",
+};
+
+// ── 小さな道具 ──
+function el(tag, attrs = {}, children = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k === "html") n.innerHTML = v;
+    else if (k === "style" && typeof v === "object") {
+      for (const [sk, sv] of Object.entries(v)) sk.startsWith("--") ? n.style.setProperty(sk, String(sv)) : (n.style[sk] = sv);
+    }
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c !== null && c !== undefined && c !== false) n.append(c);
+  return n;
+}
+const $ = id => document.getElementById(id);
+function toast(msg) {
+  let t = $("toast");
+  if (!t) { t = el("div", { id: "toast", role: "status" }); document.body.append(t); }
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 2300);
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+// ── 数字の見せ方 ──
+const fmt = {
+  pct(v, d = 1) { return v === null || v === undefined ? "–" : (v * 100).toFixed(d) + "%"; },
+  x(v) { return v === null || v === undefined ? "–" : v.toFixed(1) + "倍"; },
+  yen(v) { return v === null || v === undefined ? "–" : Math.round(v).toLocaleString("ja-JP") + "円"; },
+  oku(v) {
+    if (v === null || v === undefined) return "–";
+    const oku = v / 1e8;
+    return oku >= 10000 ? (oku / 10000).toFixed(1) + "兆円" : Math.round(oku).toLocaleString("ja-JP") + "億円";
+  },
+  date(s) { if (!s) return "–"; const [y, m, d] = s.slice(0, 10).split("-"); return `${+y}年${+m}月${+d}日`; },
+  md(s) { if (!s) return "–"; const [, m, d] = s.slice(0, 10).split("-"); return `${+m}/${+d}`; },
+};
+
+// ── 合い鍵 ──
+const Key = {
+  get() { try { return localStorage.getItem(KEY_NAME) || ""; } catch (e) { return ""; } },
+  set(v) { try { localStorage.setItem(KEY_NAME, v); } catch (e) {} },
+  clear() { try { localStorage.removeItem(KEY_NAME); localStorage.removeItem("invest-key-exp"); } catch (e) {} },
+};
+
+async function gh(path, { method = "GET", body, accept } = {}) {
+  const key = Key.get();
+  if (!key) { const e = new Error("合い鍵が登録されていません"); e.status = 0; throw e; }
+  const headers = { Accept: accept || "application/vnd.github+json", Authorization: "Bearer " + key };
+  if (body) headers["Content-Type"] = "application/json";
+  const r = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+  const exp = r.headers.get("github-authentication-token-expiration");
+  if (exp) store.set("invest-key-exp", exp);
+  if (!r.ok) {
+    let msg = ""; try { msg = (await r.json()).message || ""; } catch (e) {}
+    const e = new Error(explain(r.status, msg)); e.status = r.status; throw e;
+  }
+  if (r.status === 204) return null;
+  return accept && accept.includes("raw") ? r.text() : r.json();
+}
+function explain(status, msg) {
+  if (status === 401) return "合い鍵が使えなくなっています（期限切れ・削除など）。「🔑 合い鍵」で登録し直してください";
+  if (status === 403 && /rate limit/i.test(msg)) return "読み込みの回数制限に達しました。少し待ってから開き直してください";
+  if (status === 403 || status === 404) return "権限が足りないか、データがまだありません。合い鍵の権限と、採点を一度実行したかを確認してください";
+  return `うまくいきませんでした（${status} ${msg}）`;
+}
+function keyDaysLeft() {
+  const exp = store.get("invest-key-exp", "");
+  if (!exp) return null;
+  const t = Date.parse(String(exp).replace(" UTC", "Z").replace(" ", "T"));
+  return isNaN(t) ? null : Math.floor((t - Date.now()) / 86400000);
+}
+
+// ── データ（最新の採点結果）。前回読んだものをこの端末に残し、すぐ表示 → 裏で最新に更新 ──
+const CACHE = "invest-data-v1";
+async function cachedData() {
+  try { const r = await (await caches.open(CACHE)).match(DATA_FILE); return r ? r.json() : null; } catch (e) { return null; }
+}
+async function fetchData() {
+  const text = await gh(`/repos/${REPO}/contents/${DATA_FILE}?ref=main`, { accept: "application/vnd.github.raw+json" });
+  try { await (await caches.open(CACHE)).put(DATA_FILE, new Response(text, { headers: { "Content-Type": "application/json" } })); } catch (e) {}
+  return JSON.parse(text);
+}
+// onData は「端末に残っていたデータ」と「最新のデータ」で最大2回呼ばれる
+async function loadData(onData, onError) {
+  const cached = await cachedData();
+  if (cached) onData(prepare(cached), true);
+  if (!Key.get()) { if (!cached) onError(Object.assign(new Error("nokey"), { status: 0 })); return; }
+  try {
+    const fresh = await fetchData();
+    if (!cached || fresh.generated_at !== cached.generated_at) onData(prepare(fresh), false);
+  } catch (e) { if (!cached) onError(e); else toast("最新データを読めませんでした（前回のデータを表示中）"); }
+}
+
+// ── 点数の計算（アプリ側で重みを変えて計算し直せる） ──
+function currentStyle() { return store.get("invest-style", "balanced"); }
+function setStyle(s) { store.set("invest-style", s); }
+function weightsFor(data, style = currentStyle()) {
+  if (style === "custom") { const w = store.get("invest-custom-weights", null); if (w) return w; }
+  return data.styles[style] || data.styles.balanced;
+}
+function rankOf(score, ranks) { for (const [th, r] of ranks) if (score >= th) return r; return "D"; }
+function totalOf(sub, adj, w) {
+  let t = 0;
+  for (const k of FACTOR_KEYS) t += (sub[k] || 0) * (w[k] || 0) / 100;
+  return Math.max(0, Math.min(100, t + adj));
+}
+function prepare(data) {
+  data.byCode = new Map(data.stocks.map(s => [s.c, s]));
+  return data;
+}
+// 重みで全銘柄を採点し、点数順に並べる。前回の点数（同じ重み）と順位も付ける
+function scoreAll(data, w) {
+  for (const s of data.stocks) { s.score = totalOf(s.s, s.adj, w); s.rank = rankOf(s.score, data.ranks); }
+  const list = [...data.stocks].sort((a, b) => b.score - a.score);
+  list.forEach((s, i) => { s.pos = i + 1; });
+  if (data.prev && data.prev.scores) {
+    const prevList = Object.entries(data.prev.scores).map(([c, v]) => {
+      const sub = {}; FACTOR_KEYS.forEach((k, i) => { sub[k] = v[i]; });
+      return [c, totalOf(sub, v[6], w)];
+    }).sort((a, b) => b[1] - a[1]);
+    const prevPos = new Map(prevList.map(([c, sc], i) => [c, { pos: i + 1, score: sc }]));
+    for (const s of list) {
+      const p = prevPos.get(s.c);
+      s.prevScore = p ? p.score : null; s.prevPos = p ? p.pos : null;
+      s.prevRank = p ? rankOf(p.score, data.ranks) : null;
+    }
+  }
+  return list;
+}
+
+// ── 見た目の部品 ──
+function rankEl(r, size) {
+  const e = el("span", { class: "rank " + r, text: r, "aria-label": r + "ランク" });
+  if (size) Object.assign(e.style, { width: size + "px", height: size + "px", fontSize: Math.round(size * .52) + "px", borderRadius: Math.round(size * .34) + "px" });
+  return e;
+}
+function deltaEl(s) {
+  if (s.prevPos === undefined) return null;
+  if (s.prevPos === null) return el("span", { class: "delta new", text: "NEW" });
+  const d = s.prevPos - s.pos;
+  if (Math.abs(d) < 1) return el("span", { class: "delta flat", text: "→" });
+  return el("span", { class: "delta " + (d > 0 ? "up" : "down"), text: (d > 0 ? "▲" : "▼") + Math.abs(d) });
+}
+function fbarsEl(sub) {
+  return el("div", { class: "fbars", "aria-hidden": "true" },
+    FACTOR_KEYS.map(k => el("span", { class: "fbar " + k }, [el("i", { style: { width: Math.round(sub[k] || 0) + "%" } })])));
+}
+function legendEl() {
+  return el("div", { class: "flegend", "aria-hidden": "true" }, FACTOR_KEYS.map(k => el("span", { text: FACTOR_SHORT[k] })));
+}
+const Watch = {
+  all() { return store.get("invest-watch", []); },
+  has(c) { return Watch.all().includes(c); },
+  toggle(c) { const w = Watch.all(); const i = w.indexOf(c); if (i >= 0) w.splice(i, 1); else w.unshift(c); store.set("invest-watch", w); return i < 0; },
+};
+function stockRow(s, { showPos = true } = {}) {
+  const metas = [["ROE", fmt.pct(s.roe)], ["予想PER", s.fper ? s.fper.toFixed(1) + "倍" : "–"], ["利回り", fmt.pct(s.dy)], ["ROE−DOE", fmt.pct(s.rd)]];
+  return el("a", { class: "stock", href: `stock.html?c=${encodeURIComponent(s.c)}` }, [
+    el("div", { class: "head" }, [
+      showPos ? el("span", { class: "pos", text: s.pos }) : null,
+      rankEl(s.rank),
+      el("span", { class: "nm" }, [el("b", { text: s.n || s.c }),
+        el("small", { text: [s.c, s.m, Watch.has(s.c) ? "★ウォッチ中" : ""].filter(Boolean).join("　") })]),
+      el("span", { class: "pt" }, [el("span", { class: "score", text: Math.round(s.score) }), deltaEl(s)]),
+    ]),
+    fbarsEl(s.s),
+    el("div", { class: "meta" }, metas.map(([k, v]) => el("span", {}, [k + " ", el("b", { text: v })]))),
+    (s.b.length || s.f.length) ? el("div", { class: "tags" }, [
+      ...s.b.map(b => el("span", { class: "badge star", text: "★ " + b })),
+      ...s.f.map(f => el("span", { class: "badge warn", text: "⚠ " + f })),
+    ]) : null,
+  ]);
+}
+function skeleton(n = 5) { return Array.from({ length: n }, () => el("div", { class: "skel" })); }
+
+// 合い鍵がない・使えないときの案内
+function keyNeeded(container, e) {
+  container.replaceChildren(el("div", { class: "card rise" }, [
+    el("div", { class: "empty", html: e && e.status === 0
+      ? "はじめまして🐤<br>採点の結果は非公開の場所にあるので、<br>最初に「合い鍵」をこの端末に登録してね。"
+      : "データを読めませんでした🐤<br>" + (e ? e.message : "") }),
+    el("div", { class: "actions" }, [el("a", { class: "btn primary", href: "key.html", text: "🔑 合い鍵を登録する" })]),
+  ]));
+}
+
+// ── 採点を今すぐ動かす ──
+async function dispatchScore(style, plan) {
+  return gh(`/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: "POST", body: { ref: "main", inputs: { style, plan, top_n: "30" } } });
+}
+async function lastRun() {
+  const r = await gh(`/repos/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=1`);
+  return r.workflow_runs[0] || null;
+}
+
+// ── 下から出るシート ──
+function openSheet(content) {
+  let bg = $("sheet-bg"), sh = $("sheet");
+  if (!bg) {
+    bg = el("div", { id: "sheet-bg", class: "sheet-bg", onclick: closeSheet });
+    sh = el("div", { id: "sheet", class: "sheet", role: "dialog", "aria-modal": "true" });
+    document.body.append(bg, sh);
+  }
+  sh.replaceChildren(...[].concat(content));
+  requestAnimationFrame(() => { bg.classList.add("open"); sh.classList.add("open"); });
+}
+function closeSheet() { $("sheet-bg")?.classList.remove("open"); $("sheet")?.classList.remove("open"); }
+
+// ── 下のナビ ──
+(function dock() {
+  if (document.body.dataset.nodock !== undefined) return;
+  const here = location.pathname.split("/").pop() || "index.html";
+  const items = [["index.html", "🏠", "ホーム"], ["ranking.html", "🏅", "ランキング"], ["watch.html", "⭐", "ウォッチ"],
+                 ["tune.html", "🎚️", "配分"], ["more.html", "🌱", "育てる"]];
+  document.body.append(el("nav", { class: "dock", "aria-label": "メニュー" }, items.map(([href, icon, label]) =>
+    el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null }, [el("span", { class: "i", text: icon }), label]))));
+})();
+
+// 説明文は「？ この画面の使い方」を押したときだけ開く
+(function foldHelp() {
+  for (const p of document.querySelectorAll("p.note")) {
+    if (p.dataset.keep !== undefined) continue;
+    const d = el("details", { class: "help" }, [el("summary", { text: "？ この画面の使い方" })]);
+    p.replaceWith(d); d.append(p);
+  }
+})();
+
+// ホーム画面に追加したときに速く開くため（画面のファイルだけを端末に残す）
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

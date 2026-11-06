@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>データと料金｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .svc .head { display: flex; align-items: center; gap: 12px; }
+  .svc .ic { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; flex: none; }
+  .svc .head .t { flex: 1; min-width: 0; }
+  .svc .head b { display: block; font-size: 16px; font-weight: 900; }
+  .svc .head small { color: var(--sub); font-size: 12.5px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .compare > div { border-radius: 16px; padding: 11px 12px; background: var(--box); position: relative; }
+  .compare > div.now { background: var(--accent-bg); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .compare .pn { font-size: 12.5px; font-weight: 900; }
+  .compare .price { font-family: var(--num); font-size: 20px; font-weight: 900; margin: 2px 0 4px; }
+  .compare .price small { font-size: 11px; font-family: var(--font); color: var(--sub); font-weight: 700; }
+  .compare ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.7; color: var(--sub); }
+  .compare .tag { position: absolute; top: -8px; right: 10px; background: var(--accent-deep); color: #fff; font-size: 10.5px; font-weight: 900; padding: 2px 8px; border-radius: 999px; }
+  ol.steps { padding-left: 20px; margin: 10px 0 0; font-size: 13.5px; line-height: 1.85; }
+  .meter { height: 10px; border-radius: 99px; background: var(--box); overflow: hidden; margin: 8px 0 4px; }
+  .meter i { display: block; height: 100%; border-radius: 99px; background: var(--ok); }
+  .signs li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🧾 データと料金</h1></header>
+<p class="note">この仕組みが使っている外部サービスと、そのプランをまとめています。プランを変える必要が出てきたら、ここから手順どおりに進めてください。料金は変わることがあるので、最終的には各サービスの公式ページで確認してください。</p>
+
+<div id="status"></div>
+
+<h2>使っているサービス</h2>
+
+<section class="card svc">
+  <div class="head"><span class="ic" style="background:var(--p-sun)">🇯🇵</span>
+    <span class="t"><b>J-Quants（日本取引所グループ公式）</b><small>日本株の決算・株価のデータ</small></span>
+    <span class="badge ok">使用中</span></div>
+  <div class="compare" id="jq"></div>
+  <details><summary>Light に切り替える手順</summary>
+    <ol class="steps">
+      <li><a href="https://jpx-jquants.com/ja" target="_blank" rel="noopener">J-Quants</a> にログインし、左のメニューの <b>Subscription</b> から Light を選ぶ（支払いは <b>Billing</b>）</li>
+      <li>このアプリのホームで <b>「▶ 今すぐ採点する」</b> → プランで <b>Light</b> を選んで実行</li>
+      <li>次からは最新の株価で採点されます（APIキーはそのままでOK）</li>
+    </ol>
+  </details>
+</section>
+
+<section class="card svc">
+  <div class="head"><span class="ic" style="background:var(--p-mint)">⚙️</span>
+    <span class="t"><b>GitHub Actions</b><small>採点を自動で動かす場所</small></span>
+    <span class="badge ok">無料枠</span></div>
+  <p class="muted" style="margin:10px 0 0">非公開の場所では、自動実行に<b>月2,000分</b>の無料枠があります。採点は1回およそ16分なので、<b>月に約120回</b>まで無料です。毎日1回なら約480分で、余裕があります。</p>
+  <div class="meter" aria-hidden="true"><i id="meter" style="width:24%"></i></div>
+  <div class="muted" id="metertext">毎日1回採点した場合の目安：約24%</div>
+  <div class="actions"><a class="btn small" href="https://github.com/settings/billing/summary" target="_blank" rel="noopener">使用量を見る ↗</a>
+    <a class="btn small" href="https://github.com/keiyamada-ui/invest-system/actions" target="_blank" rel="noopener">実行の記録 ↗</a></div>
+</section>
+
+<section class="card svc">
+  <div class="head"><span class="ic" style="background:var(--p-sky)">🇺🇸</span>
+    <span class="t"><b>Financial Datasets</b><small>米国株のデータ（保険として準備済み）</small></span>
+    <span class="badge gray">未使用</span></div>
+  <div class="compare">
+    <div class="now"><span class="tag">いま</span><div class="pn">未契約</div><div class="price">0<small>円</small></div>
+      <ul><li>米国株は無料のYahooで代用</li></ul></div>
+    <div><div class="pn">従量制（Credits）</div><div class="price">$20<small>で1,000回</small></div>
+      <ul><li>米国の全銘柄から発掘</li><li>使い切ったら止まるだけ</li><li>自動で追加請求されない</li></ul></div>
+  </div>
+  <details><summary>使いはじめる手順</summary>
+    <ol class="steps">
+      <li><a href="https://www.financialdatasets.ai/pricing" target="_blank" rel="noopener">料金ページ</a>で Credits を購入（月額プランは選ばない）</li>
+      <li>自動チャージ（auto-reload）があれば <b>OFF</b> のまま</li>
+      <li>Claude に「米国株も採点に入れて」と頼む（Secret は登録済み）</li>
+    </ol>
+  </details>
+</section>
+
+<section class="card svc">
+  <div class="head"><span class="ic" style="background:var(--p-lilac)">🤖</span>
+    <span class="t"><b>AI（Gemini・Claude）</b><small>ニュース・決算短信を読む（これから）</small></span>
+    <span class="badge gray">準備中</span></div>
+  <p class="muted" style="margin:10px 0 0">「ニュース・地政学リスク・配当方針（DOEの書き方）をAIが読んで点数に反映する」段階で使います。キーはブログの自動投稿用にすでにあります。費用の目安は、その段階でここに表示します。</p>
+</section>
+
+<h2>プランを見直すサイン</h2>
+<section class="card">
+  <ul class="signs muted" style="margin:0;padding-left:18px">
+    <li><b>株価が古くて、買い時の判断に使えない</b> → J-Quants を Light に</li>
+    <li><b>5年分の推移（株主資本の伸びなど）で判断したい</b> → J-Quants を Light に</li>
+    <li><b>米国株も同じ基準で発掘したい</b> → Financial Datasets の Credits</li>
+    <li><b>採点が途中で止まる・遅い</b> → まずは「実行の記録」を確認（多くは一時的なもの）</li>
+  </ul>
+</section>
+
+<script src="app.js"></script>
+<script>
+function jq(plan) {
+  const box = (key, name, price, unit, items) => el("div", { class: key === plan ? "now" : "" }, [
+    key === plan ? el("span", { class: "tag", text: "いま" }) : null,
+    el("div", { class: "pn", text: name }), el("div", { class: "price", html: `${price}<small>${unit}</small>` }),
+    el("ul", {}, items.map(t => el("li", { text: t })))]);
+  $("jq").replaceChildren(
+    box("free", "Free", "0", "円", ["株価は約12週間前", "決算は約2年分", "1分に5回まで"]),
+    box("light", "Light", "1,650", "円/月（税込）", ["最新の株価", "決算は約5年分", "1分に60回まで"]));
+}
+jq(store.get("invest-plan", "free"));
+loadData(data => {
+  jq(data.plan);
+  const lag = Math.round((Date.now() - Date.parse(data.price_date)) / 86400000);
+  $("status").replaceChildren(el("div", { class: data.plan === "free" ? "warnbox" : "okbox", html: data.plan === "free"
+    ? `🕰️ いまの採点は<b>無料プラン</b>で、株価は <b>${fmt.date(data.price_date)}</b> 時点（${lag}日前）です。<br>会社の良し悪しの判定には十分ですが、<b>買い時の判断</b>には最新の株価で確かめてください。`
+    : `✅ <b>Lightプラン</b>で、株価は ${fmt.date(data.price_date)} 時点です。` }));
+}, () => {});
+</script>
+</body>
+</html>

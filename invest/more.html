@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>アプリを育てる｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .road { position: relative; padding-left: 26px; }
+  .road::before { content: ""; position: absolute; left: 10px; top: 8px; bottom: 8px; width: 3px; border-radius: 99px; background: var(--line); }
+  .step { position: relative; margin-bottom: 10px; }
+  .step::before { content: ""; position: absolute; left: -22px; top: 18px; width: 15px; height: 15px; border-radius: 50%; background: var(--card);
+                  border: 3px solid var(--line); box-sizing: border-box; }
+  .step.done::before { background: var(--ok); border-color: var(--ok); }
+  .step.next::before { background: var(--accent); border-color: var(--accent-deep); box-shadow: 0 0 0 5px var(--accent-bg); }
+  .step .card { margin: 0; padding: 13px 14px; }
+  .step b { font-size: 14.5px; font-weight: 900; }
+  .step p { margin: 4px 0 0; font-size: 12.5px; color: var(--sub); line-height: 1.65; }
+  .idea { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px dashed var(--line); text-decoration: none; }
+  .idea:first-child { border-top: 0; }
+  .idea .t { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.5; }
+  .idea .t small { display: block; color: var(--sub); font-size: 11.5px; font-weight: 500; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🌱 アプリを育てる</h1></header>
+<p class="note">「こうしたい」「ここが使いにくい」を思いついたら、その場でメモして送ってください。非公開の invest-system に「改善案」として貯まり、次に Claude と作業するときにまとめて反映できます。</p>
+
+<h2>💡 改善アイデアを送る</h2>
+<section class="card">
+  <div class="chips" id="kinds" style="margin:0 -16px 4px"></div>
+  <label class="field" for="idea">どうしたい？</label>
+  <textarea id="idea" placeholder="例：ROE−DOEが大きい銘柄だけを毎週ホームに出してほしい"></textarea>
+  <div class="actions"><button class="btn primary" id="send">送る</button></div>
+</section>
+<section class="card" id="ideas"><div class="muted">読み込み中…</div></section>
+
+<h2>🗺️ これからの計画</h2>
+<div class="road">
+  <div class="step done"><div class="card"><b>① 発掘：全銘柄の点数化</b><p>東証の全銘柄を6つの観点で採点。★加点（ROE10%↑PER15↓・増収増益・増配余力）と⚠減点。</p></div></div>
+  <div class="step done"><div class="card"><b>② スマホで見られるアプリ</b><p>ランキング・銘柄の内訳・配分の調整・事前ルールメモ・ウォッチリスト。</p></div></div>
+  <div class="step next"><div class="card"><b>③ 市場の空気とタイミング</b><p>為替・原油先物・金利・VIXで「リスクオン／オフ」を判定。移動平均・RSI・逆三尊／三尊天井などのチャートの形を機械的に検出し、買い場を知らせる。</p></div></div>
+  <div class="step"><div class="card"><b>④ ニュース・開示をAIが読む</b><p>地政学リスク・決算短信・配当方針（DOEの「以上」「下限」など本気度）をAIが読み、追い風／向かい風として点数化。投資家の意見は参考として別表示。</p></div></div>
+  <div class="step"><div class="card"><b>⑤ 売り時のルールとリバランス</b><p>事前ルールメモ（目標株価・損切り・成長ストーリー）を毎日チェックして知らせる。資産配分のズレを見てリバランスを提案。</p></div></div>
+  <div class="step"><div class="card"><b>⑥ 短期・中期・長期の総合判断と通知</b><p>期間ごとに「買い候補／保有継続／売り検討」と理由を毎日まとめ、スマホに通知。米国株も同じ基準で。</p></div></div>
+</div>
+
+<h2>🔧 そのほか</h2>
+<div class="actions" style="margin-top:0">
+  <a class="btn" href="key.html">🔑 合い鍵</a>
+  <a class="btn" href="https://github.com/keiyamada-ui/invest-system" target="_blank" rel="noopener">invest-system ↗</a>
+</div>
+<div class="actions">
+  <button class="btn danger" id="clearcache">端末に残したデータを消す</button>
+</div>
+
+<script src="app.js"></script>
+<script>
+const KINDS = ["新しい機能", "使いにくい", "点数の付け方", "その他"];
+let kind = KINDS[0];
+$("kinds").replaceChildren(...KINDS.map(k => el("button", { class: "chip soft", "aria-pressed": String(k === kind), text: k, onclick: e => {
+  kind = k; $("kinds").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === e.currentTarget))); } })));
+
+async function loadIdeas() {
+  if (!Key.get()) { $("ideas").replaceChildren(el("div", { class: "muted", html: "送ったアイデアの一覧は、<a href='key.html'>合い鍵</a>を登録すると表示されます。" })); return; }
+  try {
+    const issues = await gh(`/repos/${REPO}/issues?state=all&per_page=30`);
+    const list = issues.filter(i => !i.pull_request && i.title.startsWith("[改善案]"));
+    if (!list.length) { $("ideas").replaceChildren(el("div", { class: "muted", text: "まだ送ったアイデアはありません。" })); return; }
+    $("ideas").replaceChildren(...list.map(i => el("a", { class: "idea", href: i.html_url, target: "_blank", rel: "noopener" }, [
+      el("span", { class: "badge " + (i.state === "closed" ? "ok" : "gray"), text: i.state === "closed" ? "反映ずみ" : "受付中" }),
+      el("span", { class: "t" }, [i.title.replace(/^\[改善案\]\s*/, ""), el("small", { text: fmt.date(i.created_at) })])])));
+  } catch (e) { $("ideas").replaceChildren(el("div", { class: "warnbox", text: e.message })); }
+}
+$("send").addEventListener("click", async e => {
+  const text = $("idea").value.trim();
+  if (!text) { toast("アイデアを書いてください"); return; }
+  if (!Key.get()) { location.href = "key.html"; return; }
+  e.currentTarget.disabled = true;
+  try {
+    const first = text.split("\n")[0].slice(0, 60);
+    await gh(`/repos/${REPO}/issues`, { method: "POST", body: { title: `[改善案] ${first}`, body: `種類: ${kind}\n\n${text}\n\n（ことり投資ノートから送信）` } });
+    $("idea").value = ""; toast("送りました。ありがとう🐤"); loadIdeas();
+  } catch (err) { toast(err.message); }
+  e.currentTarget.disabled = false;
+});
+$("clearcache").addEventListener("click", async () => {
+  if (!confirm("この端末に残した採点データを消しますか？（合い鍵・ウォッチ・メモは残ります）")) return;
+  try { await caches.delete("invest-data-v1"); } catch (e) {}
+  toast("消しました。次に開いたときに最新を読み込みます");
+});
+loadIdeas();
+</script>
+</body>
+</html>

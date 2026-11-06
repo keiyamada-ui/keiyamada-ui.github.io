@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>配分を調整｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .preset { text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 18px; padding: 11px 12px; cursor: pointer;
+            box-shadow: var(--shadow); transition: transform .12s, border-color .2s; color: inherit; }
+  .preset:active { transform: scale(.97); }
+  .preset[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); }
+  .preset b { display: block; font-size: 14.5px; font-weight: 900; }
+  .preset small { display: block; font-size: 11.5px; color: var(--sub); line-height: 1.5; margin-top: 2px; }
+  .preset .mini { display: flex; height: 6px; border-radius: 99px; overflow: hidden; margin-top: 8px; background: var(--box); }
+  .preset .mini i { display: block; height: 100%; }
+
+  .slider { padding: 12px 0 10px; border-top: 1px dashed var(--line); }
+  .slider:first-of-type { border-top: 0; }
+  .slider .top { display: flex; align-items: baseline; gap: 8px; }
+  .slider .top b { font-size: 15px; font-weight: 900; }
+  .slider .top .v { margin-left: auto; font-family: var(--num); font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .slider .top .v small { font-size: 12px; color: var(--sub); font-family: var(--font); margin-left: 2px; }
+  .slider .how { font-size: 12px; color: var(--sub); margin: 2px 0 8px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 99px; outline: none;
+                      background: linear-gradient(to right, var(--c) var(--pct), var(--box) var(--pct)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: #fff;
+                      border: 3px solid var(--c); box-shadow: 0 3px 8px -2px rgba(0,0,0,.25); cursor: grab; }
+  input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 3px solid var(--c); }
+
+  .sumbar { position: sticky; top: 58px; z-index: 9; margin: 0 -16px 10px; padding: 8px 16px 10px; background: color-mix(in srgb, var(--bg) 92%, transparent);
+            -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .stack { display: flex; height: 16px; border-radius: 99px; overflow: hidden; background: var(--box); }
+  .stack i { display: block; height: 100%; transition: width .25s ease; }
+  .sumtext { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--sub); margin-top: 6px; font-weight: 700; }
+  .sumtext b { font-family: var(--num); color: var(--text); }
+  .sumtext .bad { color: var(--pr); }
+
+  .prev { display: grid; grid-template-columns: 24px 34px 1fr auto; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px dashed var(--line);
+          text-decoration: none; }
+  .prev:first-child { border-top: 0; }
+  .prev .p { font-family: var(--num); font-weight: 800; color: var(--faint); font-size: 12px; text-align: right; }
+  .prev .n { font-weight: 900; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prev .n small { display: block; font-size: 11px; color: var(--sub); font-weight: 700; }
+  .prev .s { text-align: right; font-family: var(--num); font-weight: 900; font-size: 18px; }
+  .prev .s small { display: block; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🎚️ 配分を調整</h1></header>
+<p class="note">何を重視して銘柄を選ぶかを、合計100点の配分で決めます。動かすとすぐ下の「上位10社」が入れ替わります。「マイ配分として使う」を押すと、アプリ全体の順位がこの配分になります（この端末に保存）。★の加点（ROE10%↑PER15↓など）と⚠の減点は、どの配分でも同じように入ります。</p>
+
+<h2>ひな形からはじめる</h2>
+<div class="presets" id="presets"></div>
+
+<h2>自分で配分する</h2>
+<div class="sumbar"><div class="stack" id="stack"></div><div class="sumtext" id="sumtext"></div></div>
+<section class="card" id="sliders"></section>
+<div class="actions">
+  <button class="btn" id="normalize">合計を100にそろえる</button>
+  <button class="btn primary" id="use">マイ配分として使う</button>
+</div>
+
+<h2>この配分での上位10社</h2>
+<section class="card" id="preview"><div class="skel" style="height:300px;margin:0"></div></section>
+
+<script src="app.js"></script>
+<script>
+let DATA = null;
+const COL = { profit: "#F2A93B", growth: "#E86F7E", value: "#4AA57A", dividend: "#8D7BC9", quality: "#3D8BD8", safety: "#B08968" };
+const FALLBACK = { profit: 20, growth: 20, value: 15, dividend: 15, quality: 15, safety: 15 };
+let W = { ...(store.get("invest-custom-weights", null) || FALLBACK) };
+let base = currentStyle();
+
+function sum() { return FACTOR_KEYS.reduce((t, k) => t + (W[k] || 0), 0); }
+function stackEls(w) { const t = FACTOR_KEYS.reduce((a, k) => a + (w[k] || 0), 0) || 1; return FACTOR_KEYS.map(k => el("i", { style: { width: (100 * (w[k] || 0) / t) + "%", background: COL[k] } })); }
+
+function renderPresets() {
+  const styles = DATA ? DATA.styles : {};
+  $("presets").replaceChildren(...Object.keys(styles).map(k => el("button", { class: "preset", "aria-pressed": String(k === base),
+    onclick: () => { base = k; W = { ...styles[k] }; renderPresets(); renderSliders(); preview(); } }, [
+      el("b", { text: STYLE_NAMES[k] || k }), el("small", { text: STYLE_DESC[k] || "" }), el("span", { class: "mini" }, stackEls(styles[k]))])));
+}
+function renderSliders() {
+  $("sliders").replaceChildren(...FACTOR_KEYS.map(k => {
+    const v = el("span", { class: "v" }, [String(W[k]), el("small", { text: "点" })]);
+    const r = el("input", { type: "range", min: "0", max: "60", step: "5", value: String(W[k]), "aria-label": FACTOR_LONG[k] });
+    const paint = () => { r.style.setProperty("--c", COL[k]); r.style.setProperty("--pct", (100 * W[k] / 60) + "%"); };
+    paint();
+    r.addEventListener("input", () => { W[k] = +r.value; v.firstChild.textContent = r.value; paint(); base = "custom"; renderPresets(); updateSum(); preview(); });
+    return el("div", { class: "slider" }, [el("div", { class: "top" }, [el("i", { style: { width: "10px", height: "10px", borderRadius: "50%", background: COL[k], display: "inline-block" } }),
+      el("b", { text: FACTOR_LONG[k] }), v]), el("div", { class: "how", text: FACTOR_HOW[k] }), r]);
+  }));
+  updateSum();
+}
+function updateSum() {
+  const t = sum();
+  $("stack").replaceChildren(...stackEls(W));
+  $("sumtext").replaceChildren(el("span", {}, ["合計 ", el("b", { class: t === 100 ? "" : "bad", text: t + "点" }), t === 100 ? "（ちょうど）" : "（100にそろえると比べやすい）"]),
+    el("span", { text: STYLE_NAMES[base] ? "もと：" + STYLE_NAMES[base] : "" }));
+}
+function normalized() {
+  const t = sum() || 1; const out = {}; let acc = 0;
+  FACTOR_KEYS.forEach((k, i) => { out[k] = i === FACTOR_KEYS.length - 1 ? 100 - acc : Math.round(100 * W[k] / t); acc += out[k]; });
+  return out;
+}
+let pt;
+function preview() {
+  if (!DATA) return;
+  clearTimeout(pt);
+  pt = setTimeout(() => {
+    const before = new Map(scoreAll(DATA, weightsFor(DATA)).map(s => [s.c, s.pos]));
+    const list = scoreAll(DATA, normalized()).slice(0, 10);
+    $("preview").replaceChildren(...list.map(s => {
+      const was = before.get(s.c), d = was ? was - s.pos : 0;
+      return el("a", { class: "prev", href: `stock.html?c=${s.c}` }, [
+        el("span", { class: "p", text: s.pos }), rankEl(s.rank),
+        el("span", { class: "n" }, [s.n, el("small", { text: `${s.c}　いまの配分では${was ? was + "位" : "–"}` })]),
+        el("span", { class: "s" }, [Math.round(s.score), d ? el("small", { class: "delta " + (d > 0 ? "up" : "down"), text: (d > 0 ? "▲" : "▼") + Math.abs(d) }) : null])]);
+    }));
+  }, 120);
+}
+$("normalize").addEventListener("click", () => { W = normalized(); renderSliders(); preview(); toast("合計を100にそろえました"); });
+$("use").addEventListener("click", () => {
+  if (base !== "custom" && DATA && DATA.styles[base]) {  // ひな形のまま → そのひな形を使う
+    setStyle(base); preview(); toast(`「${STYLE_NAMES[base]}」の配分にしました`); return;
+  }
+  W = normalized(); store.set("invest-custom-weights", W); setStyle("custom"); base = "custom";
+  renderSliders(); renderPresets(); preview(); toast("マイ配分にしました。ランキングもこの配分になります");
+});
+
+loadData(d => {
+  DATA = d;
+  if (!store.get("invest-custom-weights", null) && d.styles[base]) W = { ...d.styles[base] };
+  renderPresets(); renderSliders(); preview();
+}, e => keyNeeded($("preview"), e));
+renderSliders();
+</script>
+</body>
+</html>

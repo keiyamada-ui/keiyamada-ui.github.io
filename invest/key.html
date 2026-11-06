@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>合い鍵｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  ol.steps { padding-left: 22px; margin: 8px 0 0; font-size: 14px; line-height: 1.9; }
+  ol.steps code { background: var(--box); padding: 1px 7px; border-radius: 7px; font-size: 13px; }
+  .perm { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; background: var(--box); border-radius: 14px; padding: 10px 12px; margin: 6px 0; font-size: 13px; }
+  .perm b { font-weight: 900; }
+</style>
+</head>
+<body data-nodock>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🔑 合い鍵</h1></header>
+
+<div id="status"></div>
+
+<p class="note" data-keep>採点の結果は<b>非公開の invest-system</b> にあり、このページ（公開サイト）には置いていません。この端末から読むための「合い鍵」を1回だけ登録してください。合い鍵はこの端末の中だけに保存されます。</p>
+
+<section class="card">
+  <div class="title">① GitHub で合い鍵を作る</div>
+  <ol class="steps">
+    <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">合い鍵を作る画面を開く ↗</a></li>
+    <li><b>Token name</b>：<code>invest-app</code></li>
+    <li><b>Expiration</b>：Custom → 1年後の日付</li>
+    <li><b>Repository access</b>：「Only select repositories」→ <code>invest-system</code> <b>だけ</b>を選ぶ</li>
+    <li><b>Permissions</b> → Repository permissions で次の3つだけ：
+      <div class="perm"><b>Contents</b><span>Read-only</span><b>Actions</b><span>Read and write</span><b>Issues</b><span>Read and write</span></div>
+      <span class="muted">（採点結果を読む・採点を動かす・改善アイデアを送るため。ほかは触らない）</span></li>
+    <li>一番下の <b>Generate token</b> → <code>github_pat_</code> で始まる文字列をコピー</li>
+  </ol>
+</section>
+
+<section class="card">
+  <div class="title">② ここに貼り付けて保存</div>
+  <label class="field" for="key">合い鍵 <small>（github_pat_ で始まる文字列）</small></label>
+  <input type="password" id="key" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_...">
+  <div class="actions"><button class="btn primary" id="save">保存して確認する</button></div>
+  <div class="actions"><button class="btn danger" id="clear">この端末から合い鍵を消す</button></div>
+</section>
+
+<p class="muted" style="margin:0 4px">ことりの管理画面の合い鍵とは別のものです（あちらは keiyamada-ui.github.io 用）。<br>
+落とした・心配なときは <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">GitHub の合い鍵一覧</a> で削除すれば、すぐ使えなくなります。</p>
+
+<script src="app.js"></script>
+<script>
+async function check() {
+  if (!Key.get()) { $("status").replaceChildren(el("div", { class: "info", text: "まだ合い鍵は登録されていません。" })); return; }
+  $("status").replaceChildren(el("div", { class: "info", text: "確認しています…" }));
+  try {
+    const me = await gh("/user");
+    if (me.login !== OWNER) throw new Error(`${me.login} の合い鍵です。${OWNER} のアカウントで作ってください`);
+    await gh(`/repos/${REPO}`);
+    let data = "まだ採点データがありません（ホームの「今すぐ採点する」で作れます）";
+    try { await gh(`/repos/${REPO}/contents/${DATA_FILE}?ref=main`); data = "採点データも読めます"; } catch (e) {}
+    const d = keyDaysLeft();
+    $("status").replaceChildren(el("div", { class: d !== null && d <= 14 ? "warnbox" : "okbox" }, [
+      `✅ 合い鍵は使える状態です（@${me.login}）。${data}。`, d !== null ? el("br") : null, d !== null ? `期限まであと${d}日です。` : null,
+      el("br"), el("a", { href: "./", text: "🏠 ホームへ →" })]));
+  } catch (e) { $("status").replaceChildren(el("div", { class: "warnbox", text: "⚠️ " + e.message })); }
+}
+$("save").addEventListener("click", () => {
+  const v = $("key").value.trim();
+  if (!v) { toast("合い鍵を貼り付けてください"); return; }
+  if (!/^(github_pat_|ghp_)/.test(v)) { toast("github_pat_ で始まる文字列を貼り付けてください"); return; }
+  Key.set(v); $("key").value = ""; check();
+});
+$("clear").addEventListener("click", () => {
+  if (!confirm("この端末から合い鍵を消しますか？（GitHub 側の合い鍵は残ります）")) return;
+  Key.clear(); check();
+});
+check();
+</script>
+</body>
+</html>

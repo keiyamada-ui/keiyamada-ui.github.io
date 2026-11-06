@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>銘柄｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .hero { display: flex; align-items: center; gap: 16px; }
+  .ring { --p: 0; --c: var(--accent); width: 112px; height: 112px; border-radius: 50%; flex: none; display: grid; place-items: center;
+          background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--box) 0); transition: --p 1s; }
+  .ring > div { width: 92px; height: 92px; border-radius: 50%; background: var(--card); display: grid; place-items: center; text-align: center; }
+  .ring b { font-family: var(--num); font-size: 36px; font-weight: 900; line-height: 1; display: block; }
+  .ring small { font-size: 11px; color: var(--sub); font-weight: 700; }
+  .hero .info2 { min-width: 0; flex: 1; }
+  .hero .code { color: var(--sub); font-size: 13px; font-weight: 700; }
+  .hero .price { font-family: var(--num); font-size: 22px; font-weight: 900; margin-top: 4px; }
+  .hero .price small { font-size: 12px; color: var(--sub); font-weight: 700; margin-left: 4px; font-family: var(--font); }
+
+  .contrib { display: grid; grid-template-columns: 72px 1fr 52px; align-items: center; gap: 4px 10px; padding: 8px 0; border-top: 1px dashed var(--line); }
+  .contrib:first-of-type { border-top: 0; }
+  .contrib .nm { font-weight: 900; font-size: 14px; }
+  .contrib .nm small { display: block; font-size: 11px; color: var(--sub); font-weight: 700; }
+  .contrib .bar { height: 10px; border-radius: 99px; background: var(--box); overflow: hidden; }
+  .contrib .bar i { display: block; height: 100%; border-radius: 99px; }
+  .contrib .pt { text-align: right; font-family: var(--num); font-weight: 900; font-size: 15px; }
+  .contrib .pt small { display: block; font-size: 10.5px; color: var(--sub); font-weight: 700; font-family: var(--font); }
+  .contrib .how { grid-column: 2 / -1; font-size: 11.5px; color: var(--sub); margin-top: -2px; }
+  .adj { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 7px 0; border-top: 1px dashed var(--line); }
+  .adj small { display: block; color: var(--sub); font-size: 12px; }
+  .adj b { font-family: var(--num); white-space: nowrap; }
+  .adj.plus b { color: var(--ok); } .adj.minus b { color: var(--pr); }
+  .totalline { display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; margin-top: 4px; border-top: 2px solid var(--line); font-weight: 900; }
+  .totalline b { font-family: var(--num); font-size: 22px; }
+
+  .grouptitle { font-size: 12.5px; font-weight: 900; color: var(--sub); margin: 14px 2px 8px; display: flex; align-items: center; gap: 6px; }
+  .grouptitle i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .links a { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 16px; background: var(--box); text-decoration: none; font-size: 13.5px; font-weight: 700; }
+  .links a small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
+  .rule .calc { display: flex; gap: 8px; margin-top: 8px; }
+  .rule .calc div { flex: 1; text-align: center; border-radius: 14px; padding: 8px; }
+  .rule .calc span { display: block; font-size: 11px; font-weight: 700; color: var(--sub); }
+  .rule .calc b { font-family: var(--num); font-size: 17px; font-weight: 900; }
+  .principle { font-size: 12.5px; color: var(--sub); line-height: 1.7; background: var(--box); border-radius: 14px; padding: 10px 12px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="ranking.html" aria-label="ランキングに戻る">‹</a><h1 id="title">銘柄</h1>
+  <div class="right"><button class="iconbtn" id="watch" aria-label="ウォッチリストに追加">☆</button></div></header>
+<main id="main"></main>
+
+<script src="app.js"></script>
+<script>
+const code = new URLSearchParams(location.search).get("c") || "";
+if (document.referrer && !document.referrer.includes("ranking.html")) document.querySelector("a.back").href = "javascript:history.back()";
+$("main").replaceChildren(...skeleton(3));
+
+function setWatch() { const on = Watch.has(code); $("watch").textContent = on ? "★" : "☆"; $("watch").classList.toggle("watch-on", on); }
+$("watch").addEventListener("click", () => { const on = Watch.toggle(code); setWatch(); toast(on ? "ウォッチリストに追加しました" : "ウォッチリストから外しました"); });
+setWatch();
+
+const RANKCOLOR = { S: "#F2B33D", A: "#4AA57A", B: "#3D8BD8", C: "#8D7BC9", D: "#BDB3A8" };
+const FCOLOR = { profit: "--f-profit", growth: "--f-growth", value: "--f-value", dividend: "--f-dividend", quality: "--f-quality", safety: "--f-safety" };
+
+function render(data) {
+  const w = weightsFor(data);
+  const list = scoreAll(data, w);
+  const s = data.byCode.get(code);
+  if (!s) { $("main").replaceChildren(el("div", { class: "empty", text: "この銘柄は採点の対象に入っていません🐤" })); return; }
+  $("title").textContent = s.n || s.c;
+  document.title = `${s.n}｜ことり投資ノート`;
+
+  const delta = deltaEl(s);
+  const hero = el("section", { class: "card rise" }, [
+    el("div", { class: "hero" }, [
+      el("div", { class: "ring", style: { "--p": Math.round(s.score), "--c": RANKCOLOR[s.rank] } }, [el("div", {}, [el("div", {}, [el("b", { text: Math.round(s.score) }), el("small", { text: "/ 100点" })])])]),
+      el("div", { class: "info2" }, [
+        el("div", { class: "row" }, [rankEl(s.rank), el("span", { class: "title", text: `${s.rank}ランク` }), delta]),
+        el("div", { class: "code", text: `${s.c}　${s.m || ""}　全${list.length.toLocaleString()}社中 ${s.pos}位` }),
+        el("div", { class: "price", html: `${fmt.yen(s.p)}<small>${fmt.md(data.price_date)}時点</small>` }),
+        el("div", { class: "muted", text: "時価総額 " + fmt.oku(s.mc) }),
+      ])]),
+    (s.b.length || s.f.length) ? el("div", { class: "row", style: { marginTop: "12px" } }, [
+      ...s.b.map(b => el("span", { class: "badge star", text: "★ " + b })), ...s.f.map(f => el("span", { class: "badge warn", text: "⚠ " + f }))]) : null,
+  ]);
+
+  // 点数の内訳
+  const rows = FACTOR_KEYS.filter(k => w[k] > 0).map(k => el("div", { class: "contrib" }, [
+    el("div", { class: "nm" }, [FACTOR_LONG[k], el("small", { text: `配分 ${w[k]}点` })]),
+    el("div", { class: "bar" }, [el("i", { style: { width: s.s[k] + "%", background: `var(${FCOLOR[k]})` } })]),
+    el("div", { class: "pt" }, [((s.s[k] * w[k]) / 100).toFixed(1), el("small", { text: `順位 ${Math.round(s.s[k])}点` })]),
+    el("div", { class: "how", text: FACTOR_HOW[k] })]));
+  const adjs = [...s.b.map(b => el("div", { class: "adj plus" }, [el("span", {}, ["★ " + b, el("small", { text: BONUS_DESC[b] || "" })]), el("b", { text: "+" + data.bonus[b] })])),
+                ...s.f.map(f => el("div", { class: "adj minus" }, [el("span", {}, ["⚠ " + f, el("small", { text: FLAG_DESC[f] || "" })]), el("b", { text: "−" + data.penalty[f] })]))];
+  const breakdown = el("section", { class: "card rise" }, [
+    el("div", { class: "row between" }, [el("span", { class: "title", text: "🧮 点数の内訳" }), el("span", { class: "badge gray", text: "配分：" + STYLE_NAMES[currentStyle()] })]),
+    el("p", { class: "muted", style: { margin: "4px 0 6px" }, text: "「順位」は全銘柄の中での位置（100点＝いちばん良い）。それに配分を掛けて合計します。" }),
+    ...rows, ...adjs,
+    el("div", { class: "totalline" }, [el("span", { text: "合計" }), el("b", { text: Math.round(s.score) + "点" })])]);
+
+  // 数字
+  const kv = (pairs) => el("div", { class: "kv" }, pairs.map(([k, v]) => el("div", {}, [el("span", { text: k }), el("b", { html: v })])));
+  const group = (k, title) => el("div", { class: "grouptitle" }, [el("i", { style: { background: `var(${FCOLOR[k]})` } }), title]);
+  const numbers = el("section", { class: "card rise" }, [
+    el("span", { class: "title", text: "📊 数字で見る" }),
+    group("profit", "収益性"), kv([["ROE", fmt.pct(s.roe)], ["営業利益率", fmt.pct(s.opm)]]),
+    group("growth", "成長性"), kv([["売上の伸び", fmt.pct(s.sg)], ["営業利益の伸び", fmt.pct(s.og)], ["予想EPSの伸び", fmt.pct(s.eg)]]),
+    group("value", "割安性"), kv([["予想PER", s.fper ? s.fper.toFixed(1) + "<small>倍</small>" : "–"], ["実績PER", s.per ? s.per.toFixed(1) + "<small>倍</small>" : "–"],
+                                  ["PBR", s.pbr ? s.pbr.toFixed(2) + "<small>倍</small>" : "–"]]),
+    group("dividend", "増配余力"), kv([["ROE−DOE", fmt.pct(s.rd)], ["DOE", fmt.pct(s.doe)], ["予想配当", s.dps ? s.dps.toFixed(1) + "<small>円</small>" : "–"],
+                                       ["配当利回り", fmt.pct(s.dy)], ["株主資本の伸び", fmt.pct(s.eqg)]]),
+    group("quality", "利益の質・健全性"), kv([["営業CF÷純利益", s.cfo !== null ? s.cfo.toFixed(2) + "<small>倍</small>" : "–"], ["自己資本比率", fmt.pct(s.eqr)],
+                                              ["1日の売買代金", s.va ? fmt.oku(s.va) : "–"]]),
+  ]);
+
+  // 事前ルールメモ（この端末に保存）
+  const memoKey = "invest-rule-" + code;
+  const memo = store.get(memoKey, { reason: "", target: "", stop: "", review: "" });
+  const calc = el("div", { class: "calc" });
+  const updCalc = () => {
+    const t = parseFloat(memo.target), st = parseFloat(memo.stop), p = s.p;
+    const pct = v => (v / p - 1) * 100;
+    calc.replaceChildren(
+      el("div", { style: { background: "var(--up-bg)" } }, [el("span", { text: "目標まで" }), el("b", { style: { color: "var(--up)" }, text: t && p ? (pct(t) >= 0 ? "+" : "") + pct(t).toFixed(1) + "%" : "–" })]),
+      el("div", { style: { background: "var(--down-bg)" } }, [el("span", { text: "損切りまで" }), el("b", { style: { color: "var(--down)" }, text: st && p ? pct(st).toFixed(1) + "%" : "–" })]),
+      el("div", { style: { background: "var(--box)" } }, [el("span", { text: "損益の比率" }), el("b", { text: t && st && p && p > st ? ((t - p) / (p - st)).toFixed(1) + " : 1" : "–" })]));
+  };
+  const field = (k, label, type, ph) => {
+    const input = type === "area" ? el("textarea", { id: "m-" + k, placeholder: ph }) : el("input", { id: "m-" + k, type, inputmode: type === "number" ? "decimal" : null, placeholder: ph });
+    input.value = memo[k] || "";
+    input.addEventListener("input", () => { memo[k] = input.value; store.set(memoKey, memo); updCalc(); });
+    return [el("label", { class: "field", for: "m-" + k, html: label }), input];
+  };
+  updCalc();
+  const rule = el("section", { class: "card rule rise" }, [
+    el("span", { class: "title", text: "📝 事前ルールメモ" }),
+    el("div", { class: "principle", style: { marginTop: "8px" }, html: "感情ではなく<b>事前ルール</b>で。買う前に「なぜ買うか・どこで利益を確定するか・どこで損切りするか」を決めておく。<br>頭と尻尾はくれてやれ。" }),
+    ...field("reason", "買う理由（成長ストーリー） <small>崩れたら売る、の基準になります</small>", "area", "例：ニッチ分野で世界シェア首位。営業利益率が高く、毎年増収増益"),
+    el("div", { class: "row", style: { gap: "10px", alignItems: "flex-start" } }, [
+      el("div", { style: { flex: 1 } }, field("target", "目標株価（円）", "number", "例：" + Math.round((s.p || 1000) * 1.3))),
+      el("div", { style: { flex: 1 } }, field("stop", "損切りライン（円）", "number", "例：" + Math.round((s.p || 1000) * 0.9)))]),
+    calc,
+    ...field("review", "見直す日・条件", "text", "例：次の決算（2月）で減益なら見直す"),
+    el("p", { class: "muted", style: { margin: "10px 2px 0" }, text: "このメモはこの端末の中だけに保存されます。株価が基準日のものなので、実際の株価で確認してください。" }),
+  ]);
+
+  const L = (href, icon, name, sub) => el("a", { href, target: "_blank", rel: "noopener" }, [el("span", { text: icon }), el("span", {}, [name, el("small", { text: sub })])]);
+  const links = el("section", { class: "card rise" }, [
+    el("span", { class: "title", text: "🔎 くわしく確かめる" }),
+    el("p", { class: "muted", style: { margin: "4px 0 10px" }, text: "チャートの形（逆三尊・三尊天井など）や最新ニュース、会社の方針（DOEの書き方など）はここで確認。" }),
+    el("div", { class: "links" }, [
+      L(`https://www.tradingview.com/chart/?symbol=TSE%3A${code}`, "📈", "チャート", "TradingView"),
+      L(`https://kabutan.jp/stock/?code=${code}`, "📰", "株探", "決算・開示・ニュース"),
+      L(`https://finance.yahoo.co.jp/quote/${code}.T`, "💹", "Yahoo!ファイナンス", "最新の株価・掲示板"),
+      L(`https://irbank.net/${code}`, "📚", "IR BANK", "長期の業績推移"),
+      L(`https://www.google.com/search?q=${encodeURIComponent((s.n || code) + " 配当方針 DOE")}`, "🎯", "配当方針", "DOEの書き方を確認"),
+      L(`https://news.google.com/search?q=${encodeURIComponent(s.n || code)}&hl=ja&gl=JP&ceid=JP:ja`, "🗞️", "ニュース", "Googleニュース"),
+    ])]);
+
+  $("main").replaceChildren(hero, breakdown, numbers, rule, links);
+}
+loadData(render, e => keyNeeded($("main"), e));
+</script>
+</body>
+</html>

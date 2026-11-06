@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>ウォッチ｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .memoline { margin-top: 8px; font-size: 12.5px; color: var(--sub); background: var(--box); border-radius: 12px; padding: 7px 10px; line-height: 1.6; }
+  .memoline b { font-family: var(--num); color: var(--text); }
+  .alert { color: var(--pr); font-weight: 700; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>⭐ ウォッチリスト</h1></header>
+<p class="note">銘柄の画面の右上の ☆ を押すと、ここに集まります。事前ルールメモ（目標株価・損切りライン）を書いた銘柄は、採点が下がったときやランクが落ちたときに目立つようにお知らせします。ウォッチリストとメモはこの端末の中だけに保存されます。</p>
+<div id="list"></div>
+
+<script src="app.js"></script>
+<script>
+$("list").replaceChildren(...skeleton(3));
+function render(data) {
+  const list = scoreAll(data, weightsFor(data));
+  const codes = Watch.all();
+  if (!codes.length) {
+    $("list").replaceChildren(el("div", { class: "empty", html: "まだウォッチしている銘柄はないよ🐤<br>気になる銘柄の ☆ を押してね" }),
+      el("div", { class: "actions" }, [el("a", { class: "btn primary", href: "ranking.html", text: "🏅 ランキングから探す" })]));
+    return;
+  }
+  const items = codes.map(c => data.byCode.get(c)).filter(Boolean);
+  $("list").replaceChildren(...items.map(s => {
+    const r = stockRow(s, { showPos: false });
+    const m = store.get("invest-rule-" + s.c, null);
+    const notes = [];
+    if (s.prevRank && "SABCD".indexOf(s.rank) > "SABCD".indexOf(s.prevRank)) notes.push(el("div", { class: "alert", text: `⚠ ランクが ${s.prevRank} → ${s.rank} に下がりました。買う理由が崩れていないか確認を` }));
+    if (s.f.length) notes.push(el("div", { class: "alert", text: "⚠ 要注意フラグ：" + s.f.join("、") }));
+    if (m && (m.target || m.stop)) {
+      const p = s.p, t = parseFloat(m.target), st = parseFloat(m.stop);
+      notes.push(el("div", { html: `目標 <b>${t ? fmt.yen(t) : "–"}</b>（${t && p ? ((t / p - 1) * 100).toFixed(1) + "%" : "–"}）　損切り <b>${st ? fmt.yen(st) : "–"}</b>（${st && p ? ((st / p - 1) * 100).toFixed(1) + "%" : "–"}）` }));
+      if (st && p && p <= st) notes.push(el("div", { class: "alert", text: "🔻 基準日の株価が損切りラインを下回っています。ルールどおりに判断を" }));
+      if (t && p && p >= t) notes.push(el("div", { class: "alert", style: { color: "var(--ok)" }, text: "🎯 基準日の株価が目標株価に届いています。利益確定を検討" }));
+    }
+    if (notes.length) r.append(el("div", { class: "memoline" }, notes));
+    return r;
+  }));
+}
+loadData(render, e => keyNeeded($("list"), e));
+</script>
+</body>
+</html>
