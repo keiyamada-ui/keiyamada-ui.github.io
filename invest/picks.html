@@ -49,6 +49,9 @@
   .lesson p { margin: 6px 0; font-size: 13.5px; line-height: 1.75; }
   .rp { padding: 8px 0; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.7; } .rp:nth-of-type(1) { border-top: 0; }
   .rp b { font-size: 13.5px; }
+  .pk .ai { margin: 8px 0 4px; font-size: 13px; line-height: 1.75; background: var(--accent-bg, #FFF4D6); border-radius: 14px; padding: 9px 11px; }
+  .pk .exh { margin-top: 8px; font-size: 12px; font-weight: 900; color: var(--sub); } .pk .exh.warn { color: var(--pr); }
+  .pk ul { margin-top: 2px; padding-left: 0; } .pk li { padding-left: 1em; text-indent: -1em; } .pk li::before { content: "・"; }
 </style>
 </head>
 <body>
@@ -89,7 +92,12 @@ function render() {
       el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・ランク${p.rank}・${fmt.yen(p.p)}` })]),
         el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
       el("div", { class: "bars" }, Object.keys(P.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), P.feats[k].replace(/（.*）/, "")]))),
-      el("ul", {}, p.why.slice(0, 5).map(w => el("li", { text: w })))])));
+      ...(p.ex ? [
+        p.ai ? el("p", { class: "ai", text: "🐤 " + p.ai }) : "",
+        el("div", { class: "exh", text: "🎯 選んだ決め手" }), el("ul", {}, p.ex.keys.map(w => el("li", { text: w }))),
+        el("div", { class: "exh", text: "🔢 数字で見ると" }), el("ul", {}, p.ex.facts.map(w => el("li", { text: w }))),
+        ...(p.ex.risks.length ? [el("div", { class: "exh warn", text: "⚠ 注意点" }), el("ul", {}, p.ex.risks.map(w => el("li", { text: w })))] : [])]
+        : [el("ul", {}, (p.why || []).slice(0, 5).map(w => el("li", { text: w })))])])));
   } else b.push(el("div", { class: "card muted", text: "3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" }));
 
   const rep = (P.reports || [])[0];
