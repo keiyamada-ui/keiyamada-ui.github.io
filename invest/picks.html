@@ -47,57 +47,76 @@
   .wt b { font-family: var(--num); text-align: right; }
   .wt em { font-style: normal; font-size: 10.5px; color: var(--sub); font-weight: 700; }
   .lesson p { margin: 6px 0; font-size: 13.5px; line-height: 1.75; }
+  .rp { padding: 8px 0; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.7; } .rp:nth-of-type(1) { border-top: 0; }
+  .rp b { font-size: 13.5px; }
 </style>
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🐤 今日の3選</h1></header>
-<p class="note">「会社の良さ・チャートの形・市場より強いか（RS）・業績の勢い・割安さ」の5つを合計して、毎営業日の夕方に3銘柄を選びます。1週間後・2週間後の成績を自動で採点し、当たった観点の配分を少しずつ増やして精度を上げていきます。勉強用の記録で、売買のおすすめではありません。</p>
+<p class="note">「会社の良さ・チャートの形・市場より強いか（RS）・業績の勢い・割安さ」の5つを、短期向け・中長期向けの2通りの配分で合計し、毎営業日の夕方に3銘柄ずつ選びます。2週間後の成績を自動で採点して毎週金曜にまとめて発表し、当たった観点の配分を少しずつ増やして精度を上げていきます。勉強用の記録で、売買のおすすめではありません。</p>
 <main id="main"></main>
 
 <script src="app.js"></script>
 <script>
 $("main").replaceChildren(...skeleton(3));
-let P = null, H = "10";
+let P = null, K = "s";
+try { K = localStorage.getItem("invest-picks-tab") || "s"; } catch (e) {}
 const sg = v => v == null ? el("span", { class: "wait", text: "集計待ち" }) : el("span", { class: v > 0 ? "up" : v < 0 ? "down" : "", text: (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%" });
 const pctTxt = v => (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+const md = d => d.slice(5).replace("-", "/");
+
+function kpis(st, n) {
+  return el("div", { class: "kpi" }, st ? [
+    el("div", {}, [el("b", { text: Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（${st.n}回）` })]),
+    el("div", {}, [el("b", { class: st.avg >= 0 ? "up" : "down", text: pctTxt(st.avg) }), el("small", { text: "平均の騰落率" })]),
+    el("div", {}, [el("b", { class: st.avgx >= 0 ? "up" : "down", text: pctTxt(st.avgx) }), el("small", { text: `TOPIXとの差（勝ち${Math.round(st.beat * 100)}%）` })])]
+    : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: "最初の結果は、選んでから2週間後に出ます" })])]);
+}
 
 function render() {
   if (!P) return;
-  const b = [], t = P.today;
-  if (t && t.picks.length) {
-    const d = t.date.slice(5).replace("-", "/");
-    b.push(el("h2", { text: `${d} の3選（${d} の終値で選定）` }));
+  const b = [], t = P.today, S = P.strats[K];
+  b.push(el("div", { class: "seg", style: { marginTop: "4px" } }, Object.entries(P.strats).map(([k, v]) => el("button", { class: "chip", "aria-pressed": String(k === K),
+    text: (k === "s" ? "⚡ " : "🌳 ") + v.name, onclick: () => { K = k; try { localStorage.setItem("invest-picks-tab", k); } catch (e) {} render(); } }))));
+  b.push(el("p", { class: "muted", style: { margin: "0 4px 10px", fontSize: "12.5px" }, text: S.desc }));
+
+  const set = t && t.sets && t.sets[K];
+  if (set && set.length) {
+    b.push(el("h2", { text: `${md(t.date)} の3選（${S.name}）` }));
     if (t.regime && t.regime.score != null && t.regime.score < 40)
       b.push(el("div", { class: "warnbox", text: `${t.regime.icon || ""} 市場は「${t.regime.label}」。選んだ銘柄でも、買うなら少しずつ・損切りラインを先に決めて。` }));
-    t.picks.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
+    set.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
       el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・ランク${p.rank}・${fmt.yen(p.p)}` })]),
         el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
       el("div", { class: "bars" }, Object.keys(P.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), P.feats[k].replace(/（.*）/, "")]))),
       el("ul", {}, p.why.slice(0, 5).map(w => el("li", { text: w })))])));
-  } else b.push(el("div", { class: "card muted", text: "今日の3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" }));
+  } else b.push(el("div", { class: "card muted", text: "3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" }));
 
-  b.push(el("h2", { text: "📊 これまでの成績" }));
-  const seg = el("div", { class: "seg" }, P.horizons.map(h => el("button", { class: "chip", "aria-pressed": String(String(h) === H), text: h === 5 ? "1週間後（5営業日）" : "2週間後（10営業日）",
-    onclick: () => { H = String(h); render(); } })));
-  b.push(seg);
-  const st = P.stats[H];
-  b.push(el("div", { class: "kpi" }, st ? [
-    el("div", {}, [el("b", { text: Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（${st.n}回）` })]),
-    el("div", {}, [el("b", { class: st.avg >= 0 ? "up" : "down", text: pctTxt(st.avg) }), el("small", { text: "平均の騰落率" })]),
-    el("div", {}, [el("b", { class: st.avgx >= 0 ? "up" : "down", text: pctTxt(st.avgx) }), el("small", { text: `TOPIXとの差（勝ち${Math.round(st.beat * 100)}%）` })])]
-    : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: `最初の結果は${H === "5" ? "1週間" : "2週間"}後に出ます` })])]));
-  b.push(el("p", { class: "muted", style: { margin: "8px 4px", fontSize: "11.5px" }, text: "選んだ日の終値で買い、5・10営業日後の終値で売ったとした場合の計算（手数料・税は含みません）。" }));
-  b.push(...P.history.filter(d => d.picks.length).slice(0, 20).map(d => el("div", { class: "day" }, [
-    el("div", { class: "dt" }, [el("span", { text: d.date.slice(5).replace("-", "/") + " の3選" }), el("span", {}, ["TOPIX ", sg(d["b" + H])])]),
-    ...d.picks.map(p => el("a", { href: `stock.html?c=${p.c}` }, [el("span", { text: p.n }), el("b", {}, [sg(p["r" + H])]),
-      el("small", { text: p["x" + H] == null ? "" : `差 ${pctTxt(p["x" + H])}` })]))])));
+  const rep = (P.reports || [])[0];
+  b.push(el("h2", { text: "📣 週の成績発表" }));
+  if (rep) {
+    b.push(el("section", { class: "card" }, [el("div", { class: "muted", style: { fontSize: "12px", marginBottom: "8px" }, text: `${md(rep.date)} 発表・この1週間に2週間後の結果が出た3選` }),
+      ...Object.entries(rep.strats).map(([k, r]) => el("div", { class: "rp" }, [
+        el("b", { text: `${P.strats[k].name}：勝率 ${Math.round(r.win * 100)}%（${r.n}銘柄）・平均 ${pctTxt(r.avg)}・TOPIXとの差 ${pctTxt(r.avgx)}` }),
+        el("div", { class: "muted", text: "◎ " + r.best.map(x => `${x.n} ${pctTxt(x.r)}`).join("、") }),
+        el("div", { class: "muted", text: "× " + r.worst.map(x => `${x.n} ${pctTxt(x.r)}`).join("、") }),
+        ...(r.lesson || []).slice(0, 1).map(x => el("div", { class: "muted", text: "🧠 " + x }))]))]));
+  } else b.push(el("div", { class: "card muted", text: "毎週金曜の夕方に、その週に結果が出た3選をまとめて発表します。最初の発表は、選び始めてから2週間後の金曜です。" }));
+
+  b.push(el("h2", { text: `📊 ${S.name}の通算成績（2週間後）` }), kpis(S.stats && S.stats["10"]));
+  b.push(el("p", { class: "muted", style: { margin: "8px 4px", fontSize: "11.5px" }, text: "選んだ日の終値で買い、10営業日後の終値で売ったとした場合の計算（手数料・税は含みません）。" }));
+  b.push(...P.history.filter(d => (d.sets[K] || []).length).slice(0, 20).map(d => el("div", { class: "day" }, [
+    el("div", { class: "dt" }, [el("span", { text: md(d.date) + " の3選" }), el("span", {}, ["TOPIX ", sg(d.b10)])]),
+    ...d.sets[K].map(p => el("a", { href: `stock.html?c=${p.c}` }, [el("span", { text: p.n }), el("b", {}, [sg(p.r10)]),
+      el("small", { text: p.x10 == null ? "" : `差 ${pctTxt(p.x10)}` })]))])));
 
   b.push(el("h2", { text: "🧠 ことりの勉強ノート" }));
-  b.push(el("section", { class: "card lesson" }, P.lessons.map(x => el("p", { text: x }))));
-  const ic = P.learn && P.learn.ic || {};
-  b.push(el("section", { class: "card" }, [el("div", { class: "muted", style: { marginBottom: "8px", fontSize: "12px" }, text: "いまの点数の配分（右の数字は、2週間後の成績との相関。プラスほど「当たっている」観点）" }),
-    el("div", { class: "wt" }, Object.keys(P.feats).map(k => el("div", {}, [el("span", { text: P.feats[k] }), el("i", { style: { "--w": Math.round(P.weights[k] * 200) + "%" } }),
-      el("b", {}, [Math.round(P.weights[k] * 100) + "%", el("em", { text: ic[k] != null && P.learn.days ? ` ${ic[k] >= 0 ? "+" : ""}${ic[k].toFixed(2)}` : "" })])])))]));
+  b.push(el("section", { class: "card lesson" }, (S.learn.text || []).map(x => el("p", { text: x }))));
+  const ic = S.learn.ic || {}, w0 = S.history && S.history[0] ? S.history[0].w : null;
+  b.push(el("section", { class: "card" }, [el("div", { class: "muted", style: { marginBottom: "8px", fontSize: "12px" }, text: "いまの点数の配分（小さい数字は2週間後の成績との相関。プラスほど「当たっている」観点）" }),
+    el("div", { class: "wt" }, Object.keys(P.feats).map(k => el("div", {}, [el("span", { text: P.feats[k] }), el("i", { style: { "--w": Math.round(S.weights[k] * 200) + "%" } }),
+      el("b", {}, [Math.round(S.weights[k] * 100) + "%", el("em", { text: S.learn.days && ic[k] != null ? ` ${ic[k] >= 0 ? "+" : ""}${ic[k].toFixed(2)}` : "" })])]))),
+    w0 ? el("div", { class: "muted", style: { marginTop: "8px", fontSize: "11.5px" }, text: "はじめの配分: " + Object.keys(P.feats).map(k => `${P.feats[k].replace(/（.*）/, "")} ${Math.round(w0[k] * 100)}%`).join("・") }) : ""]));
   $("main").replaceChildren(...b);
 }
 loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"), e));
