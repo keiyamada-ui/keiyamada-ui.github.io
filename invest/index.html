@@ -137,7 +137,7 @@ function say(lines) {
   }));
 }
 
-let LAST = null;
+let LAST = null, DTD = null;
 function render(data) {
   LAST = data;
   const style = currentStyle();
@@ -191,6 +191,11 @@ function render(data) {
         el("span", { class: "muted", text: r.why[0] ? r.why[0].text : r.desc })]), el("span", { style: { color: "var(--sub)", fontWeight: 900 }, text: "›" })]));
   }
   blocks.push(fresh, dist);
+  if (DTD && DTD.today && DTD.today.picks.length) {
+    blocks.push(el("h2", {}, ["🏃 明日のデイトレ候補", el("a", { href: "picks.html", text: "理由を見る" })]),
+      el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: "テクニカル（移動平均・MACD・RSI・VWAP・出来高）だけで選んだ3銘柄" + (DTD.stats ? `・勝率 ${Math.round(DTD.stats.win * 100)}%（${DTD.stats.n}回）` : "") }),
+      ...DTD.today.picks.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s)));
+  }
   if (PICKS && PICKS.today && PICKS.today.sets) {
     blocks.push(el("h2", {}, ["🐤 今日の3選", el("a", { href: "picks.html", text: "成績を見る" })]),
       el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: `${PICKS.today.date.slice(5).replace("-", "/")} の終値で選定・成績は2週間後に採点` }));
@@ -255,6 +260,7 @@ function askRun() {
 loadMarket(() => { if (LAST) render(LAST); });
 loadChart(() => { if (LAST) render(LAST); });
 loadPicks(() => { if (LAST) render(LAST); });
+loadJSON("data/daytrade.json", d => { DTD = d; if (LAST) render(LAST); }, () => {}, true);
 loadData(render, e => { say([["🐤", "合い鍵を登録すると、ここに採点の結果が出るよ", "key.html"]]); keyNeeded($("main"), e); });
 </script>
 </body>

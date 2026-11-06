@@ -50,6 +50,7 @@
   .rp { padding: 8px 0; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.7; } .rp:nth-of-type(1) { border-top: 0; }
   .rp b { font-size: 13.5px; }
   .pk .ai { margin: 8px 0 4px; font-size: 13px; line-height: 1.75; background: var(--accent-bg, #FFF4D6); border-radius: 14px; padding: 9px 11px; }
+  .pk .plan { margin: 2px 0 0; font-size: 12.5px; line-height: 1.7; background: var(--box); border-radius: 12px; padding: 7px 10px; }
   .pk .exh { margin-top: 8px; font-size: 12px; font-weight: 900; color: var(--sub); } .pk .exh.warn { color: var(--pr); }
   .pk ul { margin-top: 2px; padding-left: 0; } .pk li { padding-left: 1em; text-indent: -1em; } .pk li::before { content: "・"; }
 </style>
@@ -76,11 +77,49 @@ function kpis(st, n) {
     : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: "最初の結果は、選んでから2週間後に出ます" })])]);
 }
 
+let DT = null;
+function tabs() {
+  const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + v.name])];
+  return el("div", { class: "seg", style: { marginTop: "4px", flexWrap: "wrap" } }, list.map(([k, label]) => el("button", { class: "chip", "aria-pressed": String(k === K),
+    text: label, onclick: () => { K = k; try { localStorage.setItem("invest-picks-tab", k); } catch (e) {} render(); } })));
+}
+function exBlock(p) {
+  return [p.ai ? el("p", { class: "ai", text: "🐤 " + p.ai }) : "",
+    el("div", { class: "exh", text: "🎯 選んだ決め手" }), el("ul", {}, p.ex.keys.map(w => el("li", { text: w }))),
+    el("div", { class: "exh", text: "🔢 数字で見ると" }), el("ul", {}, p.ex.facts.map(w => el("li", { text: w }))),
+    ...(p.ex.plan ? [el("div", { class: "exh", text: "📐 売買の目安" }), el("p", { class: "plan", text: p.ex.plan })] : []),
+    ...(p.ex.risks.length ? [el("div", { class: "exh warn", text: "⚠ 注意点" }), el("ul", {}, p.ex.risks.map(w => el("li", { text: w })))] : [])];
+}
+function renderDT() {
+  const b = [tabs()];
+  if (!DT) { b.push(el("div", { class: "card muted", text: "デイトレの3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" })); $("main").replaceChildren(...b); return; }
+  b.push(el("p", { class: "muted", style: { margin: "0 4px 10px", fontSize: "12.5px" }, text: DT.desc }));
+  const t = DT.today;
+  if (t && t.picks.length) {
+    b.push(el("h2", { text: `${md(t.date)} の終値から選んだ、翌営業日のデイトレ候補` }));
+    if (t.regime && t.regime.score != null && t.regime.score < 40)
+      b.push(el("div", { class: "warnbox", text: `${t.regime.icon || ""} 市場は「${t.regime.label}」。地合いが悪い日は無理をしない・枚数を減らす。` }));
+    t.picks.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
+      el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・終値 ${fmt.yen(p.p)}` })]),
+        el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
+      el("div", { class: "bars", style: { gridTemplateColumns: "repeat(7, 1fr)" } }, Object.keys(DT.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), DT.feats[k].replace(/[（・].*/, "").replace("移動平均線の並び", "移動平均")]))),
+      ...exBlock(p)])));
+  }
+  b.push(el("h2", { text: "📊 デイトレの通算成績（翌日の寄り→引け）" }), kpis(DT.stats));
+  b.push(...DT.history.filter(d => d.picks.length).slice(0, 20).map(d => el("div", { class: "day" }, [
+    el("div", { class: "dt" }, [el("span", { text: md(d.date) + " 選定 → " + (d.on ? md(d.on) : "翌営業日") }), el("span", {}, ["TOPIX ", sg(d.b)])]),
+    ...d.picks.map(p => el("a", { href: `stock.html?c=${p.c}` }, [el("span", { text: p.n }), el("b", {}, [sg(p.r)]), el("small", { text: p.x == null ? "" : `差 ${pctTxt(p.x)}` })]))])));
+  b.push(el("h2", { text: "🧠 ことりの勉強ノート（デイトレ）" }), el("section", { class: "card lesson" }, (DT.learn.text || []).map(x => el("p", { text: x }))));
+  const ic = DT.learn.ic || {};
+  b.push(el("section", { class: "card" }, [el("div", { class: "wt" }, Object.keys(DT.feats).map(k => el("div", {}, [el("span", { text: DT.feats[k] }), el("i", { style: { "--w": Math.round(DT.weights[k] * 250) + "%" } }),
+    el("b", {}, [Math.round(DT.weights[k] * 100) + "%", el("em", { text: DT.learn.days && ic[k] != null ? ` ${ic[k] >= 0 ? "+" : ""}${ic[k].toFixed(2)}` : "" })])])))]));
+  $("main").replaceChildren(...b);
+}
 function render() {
   if (!P) return;
+  if (K === "d") return renderDT();
   const b = [], t = P.today, S = P.strats[K];
-  b.push(el("div", { class: "seg", style: { marginTop: "4px" } }, Object.entries(P.strats).map(([k, v]) => el("button", { class: "chip", "aria-pressed": String(k === K),
-    text: (k === "s" ? "⚡ " : "🌳 ") + v.name, onclick: () => { K = k; try { localStorage.setItem("invest-picks-tab", k); } catch (e) {} render(); } }))));
+  b.push(tabs());
   b.push(el("p", { class: "muted", style: { margin: "0 4px 10px", fontSize: "12.5px" }, text: S.desc }));
 
   const set = t && t.sets && t.sets[K];
@@ -92,11 +131,7 @@ function render() {
       el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・ランク${p.rank}・${fmt.yen(p.p)}` })]),
         el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
       el("div", { class: "bars" }, Object.keys(P.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), P.feats[k].replace(/（.*）/, "")]))),
-      ...(p.ex ? [
-        p.ai ? el("p", { class: "ai", text: "🐤 " + p.ai }) : "",
-        el("div", { class: "exh", text: "🎯 選んだ決め手" }), el("ul", {}, p.ex.keys.map(w => el("li", { text: w }))),
-        el("div", { class: "exh", text: "🔢 数字で見ると" }), el("ul", {}, p.ex.facts.map(w => el("li", { text: w }))),
-        ...(p.ex.risks.length ? [el("div", { class: "exh warn", text: "⚠ 注意点" }), el("ul", {}, p.ex.risks.map(w => el("li", { text: w })))] : [])]
+      ...(p.ex ? exBlock(p)
         : [el("ul", {}, (p.why || []).slice(0, 5).map(w => el("li", { text: w })))])])));
   } else b.push(el("div", { class: "card muted", text: "3選は、平日の夕方（16:43ごろ）の自動更新で選ばれます。" }));
 
@@ -128,6 +163,7 @@ function render() {
   $("main").replaceChildren(...b);
 }
 loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"), e));
+loadJSON("data/daytrade.json", d => { DT = d; render(); }, () => {}, true);
 </script>
 </body>
 </html>
