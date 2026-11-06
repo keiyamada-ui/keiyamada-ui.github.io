@@ -55,6 +55,8 @@
   .side { flex: none; font-size: 11px; font-weight: 900; border-radius: 999px; padding: 2px 8px; margin-top: 2px; }
   .side.pos { background: var(--ok-bg); color: var(--ok); } .side.neg { background: var(--pr-bg); color: var(--pr); } .side.mix { background: var(--box); color: var(--sub); }
   .stamp { font-size: 12px; color: var(--sub); text-align: right; margin: 6px 4px 0; }
+  .stock .why { grid-column: 1 / -1; flex-basis: 100%; width: 100%; box-sizing: border-box; background: var(--box); border-radius: 12px; padding: 7px 10px; margin-top: 8px; display: grid; gap: 3px; font-size: 12px; line-height: 1.5; }
+  .stock .why .wpos { color: var(--up, #d6453d); } .stock .why .wneg { color: var(--down, #2f6fd6); } .stock .why .wmix { color: var(--sub); }
 </style>
 </head>
 <body>
@@ -113,6 +115,29 @@ function render() {
     blocks.push(...(list.length ? list.map(s => stockRow(s, { showPos: false })) : [el("div", { class: "card muted", text: "いまは条件に合う銘柄がありません。" })]));
   }
 
+  if (MOVERS && D) {
+    scoreAll(D, weightsFor(D));
+    const KIND = { up: ["▲", "wpos"], down: ["▼", "wneg"], vol: ["📊", "wmix"], event: ["📅", "wmix"], news: ["📰", "wmix"] };
+    const picks = MOVERS.picks.filter(p => D.byCode.has(p.c)).slice(0, 12);
+    blocks.push(el("h2", { text: "⚡ 動きそうな銘柄" }), el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" },
+      text: "決算発表の直前・適時開示・急騰急落・出来高急増が重なる銘柄。上がるとは限りません。良い会社かどうか（ランク）と合わせて見てください。" }));
+    blocks.push(...(picks.length ? picks.map(p => {
+      const r = stockRow(D.byCode.get(p.c), { showPos: false });
+      r.append(el("div", { class: "why" }, p.why.slice(0, 3).map(w => el("div", { class: KIND[w.k][1], text: `${KIND[w.k][0]} ${w.t}` }))));
+      return r;
+    }) : [el("div", { class: "card muted", text: "いまは目立つ動きの銘柄はありません。" })]));
+    const ev = MOVERS.earnings.filter(e => D.byCode.has(e.code));
+    if (ev.length) {
+      const order = s => "SABCD".indexOf(s.rank);
+      ev.sort((a, b) => a.date.localeCompare(b.date) || order(D.byCode.get(a.code)) - order(D.byCode.get(b.code)));
+      blocks.push(el("h2", { text: "📅 1週間以内の決算発表" }), el("section", { class: "card disc" }, ev.slice(0, 40).map(e => {
+        const s = D.byCode.get(e.code);
+        return el("a", { href: `stock.html?c=${e.code}` }, [el("span", { class: "side mix", text: e.days === 0 ? "今日" : e.days === 1 ? "明日" : e.date.slice(5).replace("-", "/") }),
+          el("span", { class: "t" }, [`${s.n}（${e.code}）`, el("small", { text: `ランク${s.rank}・${e.fq || "決算"}・決算をまたいで持つかは事前ルールで` })])]);
+      })));
+    } else if (!MOVERS.earnings_ok) blocks.push(el("p", { class: "muted", style: { margin: "6px 4px" }, text: "決算発表の予定は、いまのデータ契約（J-Quants 無料プラン）では取れないことがあります。" }));
+  }
+
   if (NEWS) {
     if (NEWS.digest) {
       const jst = new Date(Date.parse(NEWS.generated_at) + 9 * 3600000).getUTCHours();
@@ -157,7 +182,7 @@ $("refresh").addEventListener("click", async e => {
 });
 let n = 0; const done = () => { if (++n >= 1) render(); };
 loadData(d => { D = d; render(); }, () => {});
-loadMarket(done); loadChart(done); loadNews(done);
+loadMarket(done); loadChart(done); loadNews(done); loadMovers(done);
 setTimeout(() => { if (!MARKET && !NEWS && !CHART) render(); }, 2500);
 </script>
 </body>

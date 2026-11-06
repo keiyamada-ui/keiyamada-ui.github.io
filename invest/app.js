@@ -141,9 +141,10 @@ async function loadJSON(path, onData, onError = () => {}, quiet = false) {
 }
 async function loadData(onData, onError) { return loadJSON(DATA_FILE, d => onData(prepare(d)), onError); }
 // 市場の天気・チャート・ニュース（毎日更新）。まだ無ければ何もしない
-let CHART = null, MARKET = null, NEWS = null;
+let CHART = null, MARKET = null, NEWS = null, MOVERS = null;
 function loadChart(cb) { return loadJSON("data/chart.json", d => { CHART = d; cb && cb(d); }, () => {}, true); }
 function loadMarket(cb) { return loadJSON("data/market.json", d => { MARKET = d; cb && cb(d); }, () => {}, true); }
+function loadMovers(cb) { return loadJSON("data/movers.json", d => { MOVERS = d; cb && cb(d); }, () => {}, true); }
 function loadNews(cb) { return loadJSON("data/news.json", d => { NEWS = d; cb && cb(d); }, () => {}, true); }
 const TIMING_STYLE = { "買い場候補": "ok", "やや良い": "star", "様子見": "gray", "待ち・注意": "warn" };
 function timingOf(code) { return CHART && CHART.stocks ? CHART.stocks[code] || null : null; }
