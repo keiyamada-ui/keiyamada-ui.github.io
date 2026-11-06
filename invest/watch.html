@@ -110,6 +110,7 @@ function manageTags() {
 $("tagbtn").addEventListener("click", manageTags);
 renderTop();
 if (location.hash === "#tags") manageTags();
+loadChart(() => renderList());
 loadData(d => { DATA = d; scoreAll(d, weightsFor(d)); renderList(); }, e => keyNeeded($("list"), e));
 </script>
 </body>

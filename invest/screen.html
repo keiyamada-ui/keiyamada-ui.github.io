@@ -88,7 +88,7 @@ const PRESETS = [
   ["🪙 割安株", { fper: [null, 12], pbr: [null, 1], roe: [8, null] }, "予想PER12倍以下・PBR1倍以下"],
   ["🏰 大型の優良株", { mc: [3000, null], roe: [12, null], eqr: [40, null] }, "時価総額3,000億円以上"],
 ];
-const OPTS = { markets: [], noflag: true, star: false };
+const OPTS = { markets: [], noflag: true, star: false, timing: false };
 let DATA = null, LIST = [], shown = 0;
 let C = store.get("invest-screen-current", { roe: [10, null], fper: [null, 15] });
 Object.assign(OPTS, store.get("invest-screen-opts", {}));
@@ -118,6 +118,7 @@ function renderConds() {
     ...["プライム", "スタンダード", "グロース"].map(m => el("button", { class: "chip soft", "aria-pressed": String(OPTS.markets.includes(m)), text: m,
       onclick: () => { const i = OPTS.markets.indexOf(m); i >= 0 ? OPTS.markets.splice(i, 1) : OPTS.markets.push(m); save(); renderConds(); apply(); } })),
     el("button", { class: "chip soft", "aria-pressed": String(OPTS.star), text: "★あり", onclick: () => { OPTS.star = !OPTS.star; save(); renderConds(); apply(); } }),
+    el("button", { class: "chip soft", "aria-pressed": String(OPTS.timing), text: "📈 チャートが買い場", onclick: () => { OPTS.timing = !OPTS.timing; save(); renderConds(); apply(); } }),
     el("button", { class: "chip soft", "aria-pressed": String(OPTS.noflag), text: "⚠を除く", onclick: () => { OPTS.noflag = !OPTS.noflag; save(); renderConds(); apply(); } }));
 }
 $("add").addEventListener("click", () => openSheet([el("h3", { text: "＋ 条件を追加" }),
@@ -153,6 +154,7 @@ function apply() {
   LIST = all.filter(s => {
     if (OPTS.noflag && s.f.length) return false;
     if (OPTS.star && !s.b.length) return false;
+    if (OPTS.timing && !(timingOf(s.c) && ["買い場候補", "やや良い"].includes(timingOf(s.c).label))) return false;
     if (OPTS.markets.length && !OPTS.markets.some(m => (s.m || "").includes(m))) return false;
     for (const [k, lo, hi] of conds) {
       const v = s[k];
@@ -195,6 +197,7 @@ $("q").addEventListener("keydown", e => { if (e.key === "Enter") { const a = $("
 
 renderPresets(); renderConds(); renderSaved();
 $("list").replaceChildren(...skeleton(4));
+loadChart(() => { if (DATA) apply(); });
 loadData(d => { DATA = d; apply(); search(); }, e => keyNeeded($("list"), e));
 </script>
 </body>

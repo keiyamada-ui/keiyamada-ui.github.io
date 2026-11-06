@@ -37,6 +37,7 @@
 <div class="tabs" role="tablist">
   <button class="tab" id="t-all" role="tab">総合</button>
   <button class="tab" id="t-dividend" role="tab">増配余力</button>
+  <button class="tab" id="t-timing" role="tab">買い場</button>
   <button class="tab" id="t-caution" role="tab">要注意</button>
 </div>
 
@@ -62,10 +63,12 @@ const SORTS = {
         ["dy", "配当利回りが高い順"], ["rd", "ROE−DOEが大きい順"], ["mc", "時価総額が大きい順"]],
   dividend: [["rd", "ROE−DOEが大きい順"], ["eqg", "株主資本の伸び順"], ["dy", "配当利回りが高い順"], ["score", "総合点が高い順"]],
   caution: [["roe", "見かけのROEが高い順"], ["score", "総合点が高い順"]],
+  timing: [["tscore", "タイミングの点数順"], ["score", "総合点が高い順"]],
 };
 const EXPLAIN = {
   all: "",
   dividend: "DOE＝配当÷株主資本。<b>ROE−DOE</b>が大きいほど利益の多くが会社に残って株主資本が増え、将来の増配の余地が大きい（配当のある会社・⚠なしのみ）。",
+  timing: "チャートの形（押し目・逆三尊の突破・ゴールデンクロスなど）が<b>買い場候補・やや良い</b>の銘柄。総合点と合わせて見ると「良い会社を良いタイミングで」に近づきます（チャートは平日の夕方に更新）。",
   caution: "ROE15%以上で、⚠が付いた銘柄。一時的な利益や計算のずれで<b>数字だけ良く見えている</b>可能性があります。飛びつく前に確認を。",
 };
 
@@ -94,6 +97,7 @@ function apply() {
   let list = scoreAll(DATA, weightsFor(DATA));
   if (tab === "dividend") list = list.filter(s => s.rd !== null && s.dps > 0 && !s.f.length);
   if (tab === "caution") list = list.filter(s => s.f.length && s.roe !== null && s.roe >= 0.15);
+  if (tab === "timing") list = list.filter(s => timingOf(s.c) && ["買い場候補", "やや良い"].includes(timingOf(s.c).label));
   list = list.filter(s =>
     (!q || s.c.toLowerCase().includes(q) || (s.n || "").toLowerCase().includes(q)) &&
     (!F.ranks.length || F.ranks.includes(s.rank)) &&
@@ -105,6 +109,7 @@ function apply() {
     score: (a, b) => b.score - a.score,
     delta: (a, b) => ((a.prevPos ?? 1e9) - a.pos > (b.prevPos ?? 1e9) - b.pos ? -1 : 1),
     fper: (a, b) => (a.fper > 0 ? a.fper : 1e9) - (b.fper > 0 ? b.fper : 1e9),
+    tscore: (a, b) => (timingOf(b.c)?.score || 0) - (timingOf(a.c)?.score || 0) || b.score - a.score,
   }[key] || ((a, b) => desc(a, b, key));
   LIST = list.sort(sorter);
   $("count").textContent = `${LIST.length.toLocaleString()}社`;
@@ -131,12 +136,12 @@ new IntersectionObserver(es => { if (es[0].isIntersecting && shown < LIST.length
 
 function setTab(name) {
   tab = name;
-  for (const t of ["all", "dividend", "caution"]) $("t-" + t).setAttribute("aria-selected", String(t === name));
+  for (const t of ["all", "dividend", "timing", "caution"]) $("t-" + t).setAttribute("aria-selected", String(t === name));
   history.replaceState(null, "", "#" + name);
   $("explain").replaceChildren(EXPLAIN[name] ? el("div", { class: "info", html: EXPLAIN[name] }) : "");
   renderSort(); $("sort").value = SORTS[name][0][0]; renderFilters(); apply();
 }
-for (const t of ["all", "dividend", "caution"]) $("t-" + t).addEventListener("click", () => setTab(t));
+for (const t of ["all", "dividend", "timing", "caution"]) $("t-" + t).addEventListener("click", () => setTab(t));
 let timer; $("q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(apply, 150); });
 $("sort").addEventListener("change", apply);
 
@@ -153,7 +158,8 @@ $("stylebtn").addEventListener("click", () => {
 
 $("list").replaceChildren(...skeleton(6));
 const start = location.hash.slice(1);
-setTab(["all", "dividend", "caution"].includes(start) ? start : "all");
+setTab(["all", "dividend", "timing", "caution"].includes(start) ? start : "all");
+loadChart(() => { if (DATA) apply(); });
 loadData(d => { DATA = d; apply(); }, e => { keyNeeded($("list"), e); $("more").textContent = ""; });
 </script>
 </body>

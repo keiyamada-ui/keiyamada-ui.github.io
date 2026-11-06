@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>市場｜ことり投資ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#FBF6EF">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+  .sky { position: relative; overflow: hidden; border-radius: 26px; padding: 18px 18px 16px; box-shadow: var(--shadow); border: 1px solid var(--line); }
+  .sky.sunny { background: linear-gradient(160deg, #FFF3C9, #FFE2A6 60%, #FFD58A); }
+  .sky.fair { background: linear-gradient(160deg, #FFF6DA, #E7F1FB); }
+  .sky.cloudy { background: linear-gradient(160deg, #F3EFEA, #E3E4EA); }
+  .sky.rain { background: linear-gradient(160deg, #E4ECF6, #CFDCEC); }
+  .sky.storm { background: linear-gradient(160deg, #DCDDE8, #BFC3D6); }
+  .sky .top { display: flex; align-items: center; gap: 14px; }
+  .sky .icon { font-size: 64px; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.12)); animation: bob 3.2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-4px) } }
+  .sky .lab { font-size: 13px; font-weight: 900; color: var(--sub); letter-spacing: .06em; }
+  .sky h2 { all: unset; display: block; font-size: 26px; font-weight: 900; line-height: 1.2; }
+  .sky .score { margin-left: auto; text-align: center; }
+  .sky .score b { display: block; font-family: var(--num); font-size: 34px; font-weight: 900; line-height: 1; }
+  .sky .score small { font-size: 11px; font-weight: 700; color: var(--sub); }
+  .sky .desc { margin: 10px 0 0; font-size: 14px; font-weight: 700; }
+  .meter { position: relative; height: 10px; border-radius: 99px; margin: 12px 0 4px; background: linear-gradient(90deg, #8E97B8, #9DB7D8, #D9D6CE, #F6E19A, #F5B84A); }
+  .meter i { position: absolute; top: -4px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--text); transform: translateX(-50%); transition: left 1s; }
+  .meter-l { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--sub); font-weight: 700; }
+  .why { list-style: none; margin: 10px 0 0; padding: 0; }
+  .why li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.6; padding: 4px 0; border-top: 1px dashed rgba(0,0,0,.08); }
+  .why li:first-child { border-top: 0; }
+  .why b { font-family: var(--num); min-width: 34px; text-align: right; flex: none; }
+  .why .p { color: var(--ok); } .why .m { color: var(--pr); }
+  .adv { display: grid; gap: 8px; }
+  .adv div { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: start; background: var(--box); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; line-height: 1.65; }
+  .adv b { font-size: 12px; font-weight: 900; background: var(--card); border-radius: 999px; padding: 2px 0; text-align: center; }
+  .ind { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ind button { text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 18px; padding: 10px 11px 8px; cursor: pointer; color: inherit; box-shadow: var(--shadow); }
+  .ind .nm { font-size: 12px; font-weight: 900; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ind .v { font-family: var(--num); font-size: 18px; font-weight: 900; margin-top: 2px; }
+  .ind .c { display: flex; gap: 8px; font-family: var(--num); font-size: 11.5px; font-weight: 800; margin: 2px 0 4px; }
+  .ind .up { color: var(--up); } .ind .down { color: var(--down); } .ind .flat { color: var(--faint); }
+  .digest { font-size: 14px; line-height: 1.85; }
+  .digest h4 { font-size: 15px; font-weight: 900; margin: 14px 0 4px; padding-left: 10px; border-left: 4px solid var(--accent); }
+  .digest p { margin: 4px 0; } .digest ul { margin: 4px 0; padding-left: 20px; }
+  .disc a, .news a { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px dashed var(--line); text-decoration: none; }
+  .disc a:first-child, .news a:first-child { border-top: 0; }
+  .disc .t, .news .t { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.5; }
+  .disc .t small, .news .t small { display: block; color: var(--sub); font-weight: 500; font-size: 11.5px; margin-top: 2px; }
+  .side { flex: none; font-size: 11px; font-weight: 900; border-radius: 999px; padding: 2px 8px; margin-top: 2px; }
+  .side.pos { background: var(--ok-bg); color: var(--ok); } .side.neg { background: var(--pr-bg); color: var(--pr); } .side.mix { background: var(--box); color: var(--sub); }
+  .stamp { font-size: 12px; color: var(--sub); text-align: right; margin: 6px 4px 0; }
+</style>
+</head>
+<body>
+<header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>🌤️ 市場</h1>
+  <div class="right"><button class="iconbtn" id="refresh" aria-label="今すぐ更新">🔄</button></div></header>
+<p class="note">株価指数・為替・原油・金・米金利・VIX（恐怖指数）から、いまの市場が株を買いやすい「晴れ」か、慎重になるべき「雨」かを機械的に判定します。ニュースは見出しとリンクだけを集めています（記事の本文は各社のサイトで）。平日の朝と夕方に自動で更新されます。</p>
+<main id="main"></main>
+
+<script src="app.js"></script>
+<script>
+$("main").replaceChildren(...skeleton(4));
+const fmtV = (key, v) => v == null ? "–" : key === "us10y" ? v.toFixed(2) + "%" : key === "vix" ? v.toFixed(1)
+  : ["usdjpy", "eurjpy"].includes(key) ? v.toFixed(2) + "円" : v >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2);
+const chg = v => v == null ? el("span", { class: "flat", text: "–" }) : el("span", { class: v > 0.0005 ? "up" : v < -0.0005 ? "down" : "flat", text: (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%" });
+const ago = iso => { if (!iso) return ""; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m}分前` : m < 1440 ? `${Math.round(m / 60)}時間前` : `${Math.round(m / 1440)}日前`; };
+let D = null;
+
+function render() {
+  const blocks = [];
+  if (MARKET && MARKET.regime) {
+    const r = MARKET.regime;
+    blocks.push(el("section", { class: "sky " + r.key + " rise" }, [
+      el("div", { class: "top" }, [el("span", { class: "icon", text: r.icon }),
+        el("div", {}, [el("div", { class: "lab", text: "きょうの市場の天気" }), el("h2", { text: r.label })]),
+        el("div", { class: "score" }, [el("b", { text: r.score }), el("small", { text: "/ 100" })])]),
+      el("p", { class: "desc", text: r.desc }),
+      el("div", { class: "meter" }, [el("i", { style: { left: r.score + "%" } })]),
+      el("div", { class: "meter-l" }, ["⛈️ 嵐", "🌧️ 雨", "☁️ くもり", "🌤️", "☀️ 晴れ"].map(t => el("span", { text: t }))),
+      el("ul", { class: "why" }, r.why.slice(0, 6).map(w => el("li", {}, [el("b", { class: w.pts >= 0 ? "p" : "m", text: (w.pts > 0 ? "+" : "") + w.pts }), w.text]))),
+    ]));
+    blocks.push(el("div", { class: "stamp", text: `${fmt.date(MARKET.as_of)}の終値で判定・${ago(MARKET.generated_at)}に更新` }));
+    blocks.push(el("h2", { text: "🧭 この天気での動き方（目安）" }), el("section", { class: "card adv" }, [
+      ["短期", r.advice.short], ["中期", r.advice.mid], ["長期", r.advice.long]].map(([k, t]) => el("div", {}, [el("b", { text: k }), el("span", { text: t })]))));
+    blocks.push(el("h2", { text: "📊 指標" }), el("div", { class: "ind" }, MARKET.indicators.map(x => {
+      const color = x.trend === "上昇" ? "var(--up)" : x.trend === "下降" ? "var(--down)" : "var(--sub)";
+      return el("button", { onclick: () => openSheet([el("h3", { text: x.name }), el("p", { class: "muted", text: x.desc }),
+          el("div", { style: { margin: "10px 0" } }, [sparkSVG(x.spark, { w: 300, h: 120, color, lines: [{ vals: movingAvg(x.spark, 38), color: "var(--accent-deep)", dash: "4 3" }] })]),
+          el("div", { class: "kv" }, [["いま", fmtV(x.key, x.last)], ["トレンド", x.trend], ["1日", x.chg1d == null ? "–" : (x.chg1d * 100).toFixed(2) + "%"],
+            ["1週間", x.chg1w == null ? "–" : (x.chg1w * 100).toFixed(1) + "%"], ["1か月", x.chg1m == null ? "–" : (x.chg1m * 100).toFixed(1) + "%"],
+            ["52週の位置", x.pos52 == null ? "–" : Math.round(x.pos52 * 100) + "%"]].map(([k, v]) => el("div", {}, [el("span", { text: k }), el("b", { text: v })]))),
+          el("p", { class: "muted", style: { marginTop: "10px" }, text: "点線は約75日の平均（図は2日ごとに間引き）。52週の位置は、1年の安値=0%・高値=100%。" }),
+          el("div", { class: "actions" }, [el("button", { class: "btn", text: "閉じる", onclick: closeSheet })])]) }, [
+        el("div", { class: "nm", text: x.name }), el("div", { class: "v", text: fmtV(x.key, x.last) }),
+        el("div", { class: "c" }, [el("span", {}, ["1日 ", chg(x.chg1d)]), el("span", {}, ["1か月 ", chg(x.chg1m)])]),
+        sparkSVG(x.spark.slice(-60), { w: 120, h: 30, color })]);
+    })));
+  } else {
+    blocks.push(el("div", { class: "card" }, [el("div", { class: "empty", html: "市場のデータはまだありません🐤<br>右上の 🔄 で最初の更新を始められます（5〜10分）。" })]));
+  }
+
+  // 買い場候補（チャート × 採点）
+  if (CHART && D) {
+    const list = scoreAll(D, weightsFor(D)).filter(s => ["S", "A", "B"].includes(s.rank) && timingOf(s.c) && timingOf(s.c).label === "買い場候補" && !s.f.length).slice(0, 8);
+    blocks.push(el("h2", {}, ["📈 チャートの買い場候補（S〜Bランク）", el("a", { href: "ranking.html#timing", text: "すべて" })]));
+    if (MARKET && MARKET.regime && MARKET.regime.score < 40) blocks.push(el("div", { class: "warnbox", text: `いまは市場が「${MARKET.regime.label}」です。買い場候補でも、分割で少しずつ・損切りラインを決めてから。` }));
+    blocks.push(...(list.length ? list.map(s => stockRow(s, { showPos: false })) : [el("div", { class: "card muted", text: "いまは条件に合う銘柄がありません。" })]));
+  }
+
+  if (NEWS) {
+    if (NEWS.digest) {
+      const jst = new Date(Date.parse(NEWS.generated_at) + 9 * 3600000).getUTCHours();
+      blocks.push(el("h2", { text: `📰 マーケット${jst < 12 ? "朝刊" : "夕刊"}（AIの要約）` }), el("section", { class: "card digest" }, [
+        ...mdToEls(NEWS.digest), el("p", { class: "muted", style: { fontSize: "11.5px", marginTop: "10px" }, text: `${NEWS.digest_model}が見出しだけから要約・${ago(NEWS.generated_at)}。事実は元の記事で確認してください。` })]));
+    }
+    if (NEWS.disclosures && NEWS.disclosures.length) {
+      const codes = D ? D.byCode : new Map();
+      blocks.push(el("h2", { text: "📣 適時開示（追い風・向かい風）" }), el("section", { class: "card disc" }, NEWS.disclosures.slice(0, 25).map(d => {
+        const tone = d.t.match(/上方修正|増配|復配|自己株式の取得|自社株買い|最高益|株式分割|黒字転換/) && !d.t.match(/下方修正|減配|無配|減益|赤字|特別損失/) ? "pos"
+          : d.t.match(/下方修正|減配|無配|減益|赤字|特別損失|下振れ/) ? "neg" : "mix";
+        const inApp = codes.has(d.code);
+        return el("a", { href: inApp ? `stock.html?c=${d.code}` : d.u, target: inApp ? null : "_blank", rel: "noopener" }, [
+          el("span", { class: "side " + tone, text: tone === "pos" ? "追い風" : tone === "neg" ? "向かい風" : "注目" }),
+          el("span", { class: "t" }, [d.t, el("small", { text: `${d.name}（${d.code}）・${ago(d.d)}${inApp ? "・アプリで見る" : ""}` })])]);
+      })));
+    }
+    const cats = ["すべて", ...new Set(NEWS.items.map(i => i.cat))];
+    let cat = "すべて";
+    const box = el("section", { class: "card news" });
+    const chips = el("div", { class: "chips", style: { marginBottom: "8px" } });
+    const draw = () => {
+      chips.replaceChildren(...cats.map(c => el("button", { class: "chip soft", "aria-pressed": String(c === cat), text: c, onclick: () => { cat = c; draw(); } })));
+      box.replaceChildren(...NEWS.items.filter(i => cat === "すべて" || i.cat === cat).slice(0, 40).map(i =>
+        el("a", { href: i.u, target: "_blank", rel: "noopener" }, [el("span", { class: "t" }, [i.t, el("small", { text: `${i.s}・${ago(i.d)}${i.codes ? "・関連: " + i.codes.join(", ") : ""}` })])])));
+    };
+    draw();
+    blocks.push(el("h2", { text: "🗞️ ニュースの見出し" }), chips, box,
+      el("p", { class: "muted", style: { margin: "8px 4px" }, html: "日経・会社四季報（東洋経済）・ダイヤモンドなどの見出しとリンクです。本文は各社のサイトで読めます（有料記事は契約が必要）。" }));
+  }
+  $("main").replaceChildren(...blocks);
+}
+
+$("refresh").addEventListener("click", async e => {
+  if (!Key.get()) { location.href = "key.html"; return; }
+  e.currentTarget.disabled = true;
+  try {
+    await gh(`/repos/${REPO}/actions/workflows/daily.yml/dispatches`, { method: "POST", body: { ref: "main", inputs: { extra: Watch.all().slice(0, 60).join(",") } } });
+    toast("更新をはじめました。5〜10分で新しい結果になります（ウォッチ銘柄のチャートも調べます）");
+  } catch (err) { toast(err.message); }
+  e.currentTarget.disabled = false;
+});
+let n = 0; const done = () => { if (++n >= 1) render(); };
+loadData(d => { D = d; render(); }, () => {});
+loadMarket(done); loadChart(done); loadNews(done);
+setTimeout(() => { if (!MARKET && !NEWS && !CHART) render(); }, 2500);
+</script>
+</body>
+</html>

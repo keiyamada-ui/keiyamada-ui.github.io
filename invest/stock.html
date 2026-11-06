@@ -73,6 +73,24 @@
   .ai .waiting img { width: 44px; height: 44px; animation: hop 1.4s ease-in-out infinite; }
   @keyframes hop { 0%, 60%, 100% { transform: translateY(0) } 75% { transform: translateY(-7px) rotate(-4deg) } }
   .principle { font-size: 12.5px; color: var(--sub); line-height: 1.7; background: var(--box); border-radius: 14px; padding: 10px 12px; margin-bottom: 4px; }
+  .tm .head2 { display: flex; align-items: center; gap: 12px; }
+  .tm .lbl { font-size: 20px; font-weight: 900; }
+  .tm .pricebox { margin-left: auto; text-align: right; }
+  .tm .pricebox b { font-family: var(--num); font-size: 20px; font-weight: 900; display: block; }
+  .tm .pricebox small { font-size: 11.5px; color: var(--sub); }
+  .tm .legend { display: flex; gap: 12px; font-size: 11px; color: var(--sub); font-weight: 700; margin-top: 4px; }
+  .tm .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .sig { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; padding: 9px 0; border-top: 1px dashed var(--line); align-items: start; }
+  .sig .k { font-size: 11px; font-weight: 900; border-radius: 999px; padding: 2px 8px; margin-top: 1px; text-align: center; }
+  .sig .k.buy { background: var(--ok-bg); color: var(--ok); } .sig .k.sell { background: var(--pr-bg); color: var(--pr); } .sig .k.info { background: var(--box); color: var(--sub); }
+  .sig b { font-size: 14px; font-weight: 900; } .sig small { grid-column: 2; color: var(--sub); font-size: 12px; line-height: 1.6; }
+  .rsibar { position: relative; height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--ok-bg) 0 30%, var(--box) 30% 70%, var(--pr-bg) 70%); margin: 6px 0 2px; }
+  .rsibar i { position: absolute; top: -3px; width: 4px; height: 14px; border-radius: 2px; background: var(--text); transform: translateX(-50%); }
+  .nw a { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-top: 1px dashed var(--line); text-decoration: none; font-size: 13.5px; font-weight: 700; line-height: 1.5; }
+  .nw a:first-of-type { border-top: 0; }
+  .nw small { display: block; color: var(--sub); font-weight: 500; font-size: 11.5px; }
+  .nw .side { flex: none; font-size: 11px; font-weight: 900; border-radius: 999px; padding: 2px 8px; margin-top: 2px; }
+  .nw .side.pos { background: var(--ok-bg); color: var(--ok); } .nw .side.neg { background: var(--pr-bg); color: var(--pr); } .nw .side.mix { background: var(--box); color: var(--sub); }
 </style>
 </head>
 <body>
@@ -260,7 +278,62 @@ function render(data) {
   aiBody.replaceChildren(el("div", { class: "muted", style: { marginTop: "12px" }, text: "読み込み中…" }));
   loadAI();
 
-  $("main").replaceChildren(hero, tags, aiCard, breakdown, numbers, rule, links);
+  // チャートと買い時（毎日更新のチャート判定）
+  const tmCard = el("section", { class: "card tm rise" });
+  const drawTiming = () => {
+    const t = timingOf(code);
+    if (!t) {
+      tmCard.replaceChildren(el("span", { class: "title", text: "📈 チャートと買い時" }),
+        el("p", { class: "muted", style: { margin: "6px 0 0" }, html: CHART
+          ? "この銘柄はまだチャートを調べていません。ウォッチに入れて、<a href='market.html'>市場の画面</a>の 🔄 で更新すると調べます（毎日の自動更新でも対象になります）。"
+          : "チャートのデータがまだありません。<a href='market.html'>市場の画面</a>の 🔄 で最初の更新を始められます。" }));
+      return;
+    }
+    const sigs = (t.sig || []).map(k => ({ k, ...(CHART.signals[k] || { name: k, side: "info", horizon: "", desc: "" }) }));
+    const sp = t.spark || [];
+    const lines = [{ vals: movingAvg(sp, 25), color: "#F2A93B" }, { vals: movingAvg(sp, 75), color: "#8D7BC9" }];
+    if (t.neck) lines.push({ vals: sp.map(() => t.neck), color: "var(--ok)", dash: "5 4", width: 1 });
+    if (t.neck_top) lines.push({ vals: sp.map(() => t.neck_top), color: "var(--pr)", dash: "5 4", width: 1 });
+    const feps = s.fper && s.p ? s.p / s.fper : null;
+    const freshPer = feps && feps > 0 ? t.p / feps : null;
+    const weather = MARKET && MARKET.regime;
+    tmCard.replaceChildren(
+      el("div", { class: "head2" }, [
+        el("div", {}, [el("div", { class: "muted", text: "📈 チャートから見た買い時" }), el("div", { class: "lbl", text: t.label }),
+          el("span", { class: "badge " + (TIMING_STYLE[t.label] || "gray"), text: `タイミング ${t.score}点・${t.trend}トレンド` })]),
+        el("div", { class: "pricebox" }, [el("b", { text: fmt.yen(t.p) }),
+          el("small", {}, [fmt.md(t.date) + "　", el("span", { class: "delta " + (t.chg1d > 0 ? "up" : t.chg1d < 0 ? "down" : "flat"), text: t.chg1d == null ? "" : (t.chg1d > 0 ? "+" : "") + (t.chg1d * 100).toFixed(1) + "%" })])])]),
+      el("div", { style: { margin: "12px -4px 0" } }, [sparkSVG(sp, { w: 320, h: 140, color: t.trend === "下降" ? "#3577C4" : "#D9485F", lines })]),
+      el("div", { class: "legend" }, [el("span", {}, [el("i", { style: { background: "#F2A93B" } }), "25日線"]), el("span", {}, [el("i", { style: { background: "#8D7BC9" } }), "75日線"]),
+        t.neck ? el("span", {}, [el("i", { style: { background: "var(--ok)" } }), "逆三尊のネックライン"]) : null,
+        t.neck_top ? el("span", {}, [el("i", { style: { background: "var(--pr)" } }), "三尊天井のネックライン"]) : null, el("span", { text: `約${sp.length}日` })]),
+      el("div", { class: "kv", style: { marginTop: "10px" } }, [
+        el("div", {}, [el("span", { text: "RSI（14日）" }), el("b", { text: t.rsi ?? "–" }), el("div", { class: "rsibar" }, [el("i", { style: { left: (t.rsi || 0) + "%" } })])]),
+        el("div", {}, [el("span", { text: "最新株価での予想PER" }), el("b", { html: freshPer ? freshPer.toFixed(1) + "<small>倍</small>" : "–" })]),
+        el("div", {}, [el("span", { text: "1か月の値動き" }), el("b", { text: t.chg1m == null ? "–" : (t.chg1m > 0 ? "+" : "") + (t.chg1m * 100).toFixed(1) + "%" })]),
+        el("div", {}, [el("span", { text: "52週高値まで" }), el("b", { text: t.hi52 ? ((t.p / t.hi52 - 1) * 100).toFixed(1) + "%" : "–" })])]),
+      el("div", { style: { marginTop: "8px" } }, sigs.length ? sigs.map(g => el("div", { class: "sig" }, [
+        el("span", { class: "k " + g.side, text: g.side === "buy" ? "買い" : g.side === "sell" ? "売り" : "注目" }),
+        el("b", { text: `${g.name}${g.horizon ? "（" + g.horizon + "）" : ""}` }), el("small", { text: g.desc })])) : [el("div", { class: "muted", text: "目立ったサインはありません。" })]),
+      weather ? el("div", { class: weather.score < 40 ? "warnbox" : "info", style: { marginTop: "10px", marginBottom: 0 },
+        html: `市場の天気は <b>${weather.icon} ${weather.label}</b>（${weather.score}点）。${weather.score < 40 ? "買う場合は分割で、損切りラインを決めてから。" : weather.desc}` }) : null,
+      el("p", { class: "muted", style: { fontSize: "11.5px", margin: "8px 0 0" }, text: "チャートの形は機械的な検出で、だまし（外れ）もあります。決算・ニュースと合わせて判断してください。" }));
+  };
+  // この銘柄のニュース（見出しと適時開示）
+  const nwCard = el("section", { class: "card nw rise" });
+  const drawNews = () => {
+    const ev = NEWS && NEWS.events ? NEWS.events[code] || [] : [];
+    if (!NEWS || !ev.length) { nwCard.style.display = "none"; return; }
+    nwCard.style.display = "";
+    nwCard.replaceChildren(el("span", { class: "title", text: "📰 この銘柄のニュース・開示" }),
+      el("div", { style: { marginTop: "6px" } }, ev.map(e => el("a", { href: e.u, target: "_blank", rel: "noopener" }, [
+        el("span", { class: "side " + (e.side || "mix"), text: e.side === "pos" ? "追い風" : e.side === "neg" ? "向かい風" : "情報" }),
+        el("span", {}, [e.t, el("small", { text: `${e.s}・${(e.d || "").slice(0, 10)}` })])]))));
+  };
+  drawTiming(); drawNews();
+  loadChart(drawTiming); loadMarket(drawTiming); loadNews(drawNews);
+
+  $("main").replaceChildren(hero, tmCard, tags, aiCard, nwCard, breakdown, numbers, rule, links);
 }
 loadData(render, e => keyNeeded($("main"), e));
 </script>

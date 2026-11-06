@@ -121,24 +121,54 @@ function keyDaysLeft() {
 
 // ── データ（最新の採点結果）。前回読んだものをこの端末に残し、すぐ表示 → 裏で最新に更新 ──
 const CACHE = "invest-data-v1";
-async function cachedData() {
-  try { const r = await (await caches.open(CACHE)).match(DATA_FILE); return r ? r.json() : null; } catch (e) { return null; }
+async function cachedJSON(path) {
+  try { const r = await (await caches.open(CACHE)).match(path); return r ? r.json() : null; } catch (e) { return null; }
 }
-async function fetchData() {
-  const text = await gh(`/repos/${REPO}/contents/${DATA_FILE}?ref=main`, { accept: "application/vnd.github.raw+json" });
-  try { await (await caches.open(CACHE)).put(DATA_FILE, new Response(text, { headers: { "Content-Type": "application/json" } })); } catch (e) {}
+async function fetchJSON(path) {
+  const text = await gh(`/repos/${REPO}/contents/${path}?ref=main`, { accept: "application/vnd.github.raw+json" });
+  try { await (await caches.open(CACHE)).put(path, new Response(text, { headers: { "Content-Type": "application/json" } })); } catch (e) {}
   return JSON.parse(text);
 }
-// onData は「端末に残っていたデータ」と「最新のデータ」で最大2回呼ばれる
-async function loadData(onData, onError) {
-  const cached = await cachedData();
-  if (cached) onData(prepare(cached), true);
+// 端末に残っていたデータですぐ表示し、裏で最新を読む。onData は最大2回呼ばれる
+async function loadJSON(path, onData, onError = () => {}, quiet = false) {
+  const cached = await cachedJSON(path);
+  if (cached) onData(cached, true);
   if (!Key.get()) { if (!cached) onError(Object.assign(new Error("nokey"), { status: 0 })); return; }
   try {
-    const fresh = await fetchData();
-    if (!cached || fresh.generated_at !== cached.generated_at) onData(prepare(fresh), false);
-  } catch (e) { if (!cached) onError(e); else toast("最新データを読めませんでした（前回のデータを表示中）"); }
+    const fresh = await fetchJSON(path);
+    if (!cached || fresh.generated_at !== cached.generated_at) onData(fresh, false);
+  } catch (e) { if (!cached) onError(e); else if (!quiet) toast("最新データを読めませんでした（前回のデータを表示中）"); }
 }
+async function loadData(onData, onError) { return loadJSON(DATA_FILE, d => onData(prepare(d)), onError); }
+// 市場の天気・チャート・ニュース（毎日更新）。まだ無ければ何もしない
+let CHART = null, MARKET = null, NEWS = null;
+function loadChart(cb) { return loadJSON("data/chart.json", d => { CHART = d; cb && cb(d); }, () => {}, true); }
+function loadMarket(cb) { return loadJSON("data/market.json", d => { MARKET = d; cb && cb(d); }, () => {}, true); }
+function loadNews(cb) { return loadJSON("data/news.json", d => { NEWS = d; cb && cb(d); }, () => {}, true); }
+const TIMING_STYLE = { "買い場候補": "ok", "やや良い": "star", "様子見": "gray", "待ち・注意": "warn" };
+function timingOf(code) { return CHART && CHART.stocks ? CHART.stocks[code] || null : null; }
+// 終値の列から、小さな折れ線（SVG）を作る
+function sparkSVG(vals, { w = 120, h = 36, color = "var(--sub)", fill = true, lines = [] } = {}) {
+  const v = vals.filter(x => x !== null && x !== undefined);
+  if (v.length < 2) return el("span");
+  const all = v.concat(...lines.map(l => l.vals.filter(x => x != null)));
+  const lo = Math.min(...all), hi = Math.max(...all), span = hi - lo || 1;
+  const X = i => (i / (vals.length - 1)) * w, Y = x => h - 2 - ((x - lo) / span) * (h - 4);
+  const pts = arr => arr.map((x, i) => x == null ? null : `${X(i).toFixed(1)},${Y(x).toFixed(1)}`).filter(Boolean).join(" ");
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`); svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("aria-hidden", "true"); svg.style.width = "100%"; svg.style.height = h + "px"; svg.style.display = "block";
+  const id = "g" + Math.random().toString(36).slice(2, 8);
+  if (fill) {
+    svg.innerHTML = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".22"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>`
+      + `<polygon fill="url(#${id})" points="0,${h} ${pts(vals)} ${w},${h}"/>`;
+  }
+  for (const l of lines) svg.innerHTML += `<polyline fill="none" stroke="${l.color}" stroke-width="${l.width || 1.2}" ${l.dash ? `stroke-dasharray="${l.dash}"` : ""} points="${pts(l.vals)}"/>`;
+  svg.innerHTML += `<polyline fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" points="${pts(vals)}"/>`;
+  return svg;
+}
+function movingAvg(vals, n) { return vals.map((_, i) => i < n - 1 ? null : vals.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n); }
 
 // ── 点数の計算（アプリ側で重みを変えて計算し直せる） ──
 function currentStyle() { return store.get("invest-style", "balanced"); }
@@ -251,7 +281,8 @@ function stockRow(s, { showPos = true } = {}) {
     ]),
     fbarsEl(s.s),
     el("div", { class: "meta" }, metas.map(([k, v]) => el("span", {}, [k + " ", el("b", { text: v })]))),
-    (s.b.length || s.f.length || Tags.of(s.c).length) ? el("div", { class: "tags" }, [
+    (s.b.length || s.f.length || Tags.of(s.c).length || timingOf(s.c)) ? el("div", { class: "tags" }, [
+      timingOf(s.c) ? el("span", { class: "badge " + (TIMING_STYLE[timingOf(s.c).label] || "gray"), text: "📈 " + timingOf(s.c).label }) : null,
       ...Tags.of(s.c).map(tagChip),
       ...s.b.map(b => el("span", { class: "badge star", text: "★ " + b })),
       ...s.f.map(f => el("span", { class: "badge warn", text: "⚠ " + f })),
@@ -297,8 +328,8 @@ function closeSheet() { $("sheet-bg")?.classList.remove("open"); $("sheet")?.cla
 (function dock() {
   if (document.body.dataset.nodock !== undefined) return;
   const here = location.pathname.split("/").pop() || "index.html";
-  const items = [["index.html", "🏠", "ホーム"], ["ranking.html", "🏅", "ランキング"], ["screen.html", "🔍", "さがす"],
-                 ["watch.html", "⭐", "ウォッチ"], ["more.html", "🌱", "育てる"]];
+  const items = [["index.html", "🏠", "ホーム"], ["market.html", "🌤️", "市場"], ["ranking.html", "🏅", "ランキング"],
+                 ["screen.html", "🔍", "さがす"], ["watch.html", "⭐", "ウォッチ"]];
   document.body.append(el("nav", { class: "dock", "aria-label": "メニュー" }, items.map(([href, icon, label]) =>
     el("a", { href: href === "index.html" ? "./" : href, "aria-current": here === href ? "page" : null }, [el("span", { class: "i", text: icon }), label]))));
 })();

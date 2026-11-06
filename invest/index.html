@@ -137,7 +137,9 @@ function say(lines) {
   }));
 }
 
+let LAST = null;
 function render(data) {
+  LAST = data;
   const style = currentStyle();
   const list = scoreAll(data, weightsFor(data, style));
   const n = r => list.filter(s => s.rank === r).length;
@@ -151,7 +153,10 @@ function render(data) {
   // ことりの一言
   const lines = [["🏅", `「${STYLE_NAMES[style]}」の配分で、Sランクは <b>${counts.S}社</b>、Aランクは <b>${counts.A}社</b>。`, "ranking.html"]];
   if (newS.length) lines.push(["✨", `前回から新しくSランクに入ったのは <b>${newS.length}社</b>`, null]);
-  if (free) lines.push(["🕰️", `いまの株価は ${fmt.md(data.price_date)} 時点（無料プランなので約3か月前）`, "plan.html"]);
+  if (MARKET && MARKET.regime) lines.unshift([MARKET.regime.icon, `市場の天気は <b>${MARKET.regime.label}</b>（${MARKET.regime.score}点）。${MARKET.regime.desc}`, "market.html"]);
+  const buys = CHART ? list.filter(s => ["S", "A"].includes(s.rank) && !s.f.length && timingOf(s.c) && timingOf(s.c).label === "買い場候補") : [];
+  if (buys.length) lines.push(["📈", `Sランク・Aランクで、チャートが<b>買い場候補</b>なのは <b>${buys.length}社</b>`, "ranking.html#timing"]);
+  if (free && !CHART) lines.push(["🕰️", `いまの株価は ${fmt.md(data.price_date)} 時点（無料プランなので約3か月前）`, "plan.html"]);
   say(lines);
 
   const card = (...c) => el("section", { class: "card rise" }, c);
@@ -177,7 +182,18 @@ function render(data) {
     el("a", { class: "btn small", href: "tune.html", text: "変える" })]);
 
   const top = list.slice(0, 5).map(s => stockRow(s));
-  const blocks = [fresh, dist, el("h2", {}, ["きょうの上位5社", el("a", { href: "ranking.html", text: "すべて見る" })]), styleBar, ...top];
+  const blocks = [];
+  if (MARKET && MARKET.regime) {
+    const r = MARKET.regime;
+    blocks.push(el("a", { class: "card rise", href: "market.html", style: { display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" } }, [
+      el("span", { style: { fontSize: "40px", lineHeight: 1 }, text: r.icon }),
+      el("span", { style: { flex: 1 } }, [el("span", { class: "muted", text: "きょうの市場の天気" }), el("b", { style: { display: "block", fontSize: "18px", fontWeight: 900 }, text: `${r.label}　${r.score}点` }),
+        el("span", { class: "muted", text: r.why[0] ? r.why[0].text : r.desc })]), el("span", { style: { color: "var(--sub)", fontWeight: 900 }, text: "›" })]));
+  }
+  blocks.push(fresh, dist);
+  if (buys.length) blocks.push(el("h2", {}, ["📈 良い会社 × 良いタイミング", el("a", { href: "ranking.html#timing", text: "すべて見る" })]),
+    el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: "Sランク・Aランクで、チャートの形が買い場候補になっている銘柄です。" }), ...buys.slice(0, 3).map(s => stockRow(s)));
+  blocks.push(el("h2", {}, ["きょうの上位5社", el("a", { href: "ranking.html", text: "すべて見る" })]), styleBar, ...top);
   if (newS.length) {
     blocks.push(el("h2", { text: "✨ 新しくSランク入り" }), el("div", { class: "newin" }, newS.slice(0, 12).map(s =>
       el("a", { href: `stock.html?c=${s.c}` }, [rankEl("S", 30), el("span", {}, [el("b", { text: s.n }), el("small", { text: `${s.c}　${Math.round(s.score)}点` })])]))));
@@ -226,6 +242,8 @@ function askRun() {
   ]);
 }
 
+loadMarket(() => { if (LAST) render(LAST); });
+loadChart(() => { if (LAST) render(LAST); });
 loadData(render, e => { say([["🐤", "合い鍵を登録すると、ここに採点の結果が出るよ", "key.html"]]); keyNeeded($("main"), e); });
 </script>
 </body>
