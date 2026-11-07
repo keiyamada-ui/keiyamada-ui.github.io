@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-07",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-07",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜なのに中2が早起きして「お腹すいた」。時計見たらまだ7時前なんだけど。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "水筒のパッキンだけ外してシンクに置いてある。小5なりに洗う気はあったみたい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "部活から帰ってきた中2が、玄関で座り込んだまま動かない。そこまで疲れ果てたか。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
