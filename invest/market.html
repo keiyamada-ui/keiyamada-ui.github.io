@@ -57,6 +57,10 @@
   .stamp { font-size: 12px; color: var(--sub); text-align: right; margin: 6px 4px 0; }
   .stock .why { grid-column: 1 / -1; flex-basis: 100%; width: 100%; box-sizing: border-box; background: var(--box); border-radius: 12px; padding: 7px 10px; margin-top: 8px; display: grid; gap: 3px; font-size: 12px; line-height: 1.5; }
   .stock .why .wpos { color: var(--up, #d6453d); } .stock .why .wneg { color: var(--down, #2f6fd6); } .stock .why .wmix { color: var(--sub); }
+  .shock .steps { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .shock .steps span { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: var(--box); color: var(--faint); }
+  .shock .steps span.done { color: var(--sub); } .shock .steps span.on { background: var(--pr); color: #fff; }
+  .shock .ttl { font-size: 16px; font-weight: 900; } .shock ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.75; }
 </style>
 </head>
 <body>
@@ -88,6 +92,22 @@ function render() {
       el("ul", { class: "why" }, r.why.slice(0, 6).map(w => el("li", {}, [el("b", { class: w.pts >= 0 ? "p" : "m", text: (w.pts > 0 ? "+" : "") + w.pts }), w.text]))),
     ]));
     blocks.push(el("div", { class: "stamp", text: `${fmt.date(MARKET.as_of)}の終値で判定・${ago(MARKET.generated_at)}に更新` }));
+    const S = MARKET.shock;
+    if (S) {
+      const steps = ["①急落", "②二番底待ち", "③リバウンド", "④足踏み", "⑤回復"];
+      const st = S.study, yen = v => Math.round(v).toLocaleString() + "円";
+      blocks.push(el("h2", { text: "📉 暴落のあとの段階（日経平均）" }), el("section", { class: "card shock" }, [
+        el("div", { class: "steps" }, steps.map((t, i) => el("span", { class: i + 1 === S.phase ? "on" : i + 1 < S.phase ? "done" : "", text: t }))),
+        el("b", { class: "ttl", text: S.title }),
+        el("ul", {}, [
+          el("li", { text: `ショックの始まり ${fmt.md(S.shock_date)}（直前の高値 ${yen(S.peak)}）` }),
+          S.star ? el("li", { text: `★ 一番底 ${fmt.md(S.star_date)} ${yen(S.star)}（${fmt.md(S.star_bull_date)} の大陽線で底打ち）・いまは★から${(S.from_star * 100).toFixed(2)}%` }) : "",
+          S.heart ? el("li", { text: `♥ 二番底 ${fmt.md(S.heart_date)} ${yen(S.heart)}（★の${S.heart_days}営業日後・${S.heart_new_low ? "★を割った" : "★の手前で止まった"}）` }) : "",
+          S.rebound_high ? el("li", { text: `戻り高値 ${yen(S.rebound_high)}（いまから${(S.to_rebound_high * 100).toFixed(2)}%）＝ここを抜けると回復のサイン` }) : ""]),
+        st ? el("p", { class: "muted", style: { fontSize: "12px", margin: "8px 0 0" },
+          text: `過去の日経平均の暴落 ${st.n}回では、★のあとに二番底が来たのは${Math.round(st.heart_rate * 100)}%` + (st.heart_days_median ? `（★から中央値${st.heart_days_median}営業日後` + (st.heart_days_range ? `・多くは${st.heart_days_range[0]}〜${st.heart_days_range[1]}日後` : "") + `）` : "") + `。二番底のうち★を割ったのは${Math.round((st.heart_new_low_rate || 0) * 100)}%。` + (st.break_days_median ? `戻り高値を抜けるまでは中央値${st.break_days_median}営業日。` : "") }) : "",
+        el("div", { class: "adv", style: { marginTop: "10px" } }, [["短期", S.advice.short], ["中期", S.advice.mid], ["長期", S.advice.long]].map(([k, v]) => el("div", {}, [el("b", { text: k }), el("span", { text: v })])))]));
+    }
     blocks.push(el("h2", { text: "🧭 この天気での動き方（目安）" }), el("section", { class: "card adv" }, [
       ["短期", r.advice.short], ["中期", r.advice.mid], ["長期", r.advice.long]].map(([k, t]) => el("div", {}, [el("b", { text: k }), el("span", { text: t })]))));
     blocks.push(el("h2", { text: "📊 指標" }), el("div", { class: "ind" }, MARKET.indicators.map(x => {
