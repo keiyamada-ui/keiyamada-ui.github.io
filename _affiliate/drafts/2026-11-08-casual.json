@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-08",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-08",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "漢字ドリルを広げたまま、小5が消しゴムのカスをきれいに集めてる。そっちに集中しちゃうよね。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2がテレビの前でストレッチしながら、ずっと小声で何かブツブツ言ってる。英語の暗記かな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夜、洗面所の鏡を拭き上げたらちょっとスッキリした。明日からまた平日。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

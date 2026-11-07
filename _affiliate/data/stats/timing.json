@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07",
+ "updated": "2026-11-08",
  "min_posts": 3,
  "slots": [
   {
@@ -41,8 +41,8 @@
   {
    "slot": 2,
    "name": "夕方（役立つ投稿・PR 投稿）",
-   "posts": 10,
-   "views": 46,
+   "posts": 11,
+   "views": 43,
    "buckets": [
     {
      "from": 1020,
@@ -57,9 +57,9 @@
      "from": 1050,
      "to": 1080,
      "label": "17:30〜18:00",
-     "posts": 0,
-     "views": null,
-     "likes": null,
+     "posts": 1,
+     "views": 13,
+     "likes": 0.0,
      "best": false
     },
     {
