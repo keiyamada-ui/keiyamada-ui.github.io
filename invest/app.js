@@ -279,10 +279,10 @@ function stockRow(s, { showPos = true } = {}) {
   return el("a", { class: "stock", href: `stock.html?c=${encodeURIComponent(s.c)}` }, [
     el("div", { class: "head" }, [
       showPos ? el("span", { class: "pos", text: s.pos }) : null,
-      rankEl(s.rank),
+      el("span", { class: "rk", title: "会社の良さのランク（S〜D）。チャートや勢いは含まない" }, [rankEl(s.rank), el("small", { text: "会社の質" })]),
       el("span", { class: "nm" }, [el("b", { text: s.n || s.c }),
         el("small", { text: [s.c, s.m, Watch.has(s.c) ? "★ウォッチ中" : ""].filter(Boolean).join("　") })]),
-      el("span", { class: "pt" }, [el("span", { class: "score", text: Math.round(s.score) }), deltaEl(s)]),
+      el("span", { class: "pt", title: "会社の良さの点数（100点満点）" }, [el("span", { class: "score", text: Math.round(s.score) }), el("small", { class: "unit", text: "点/100" }), deltaEl(s)]),
     ]),
     fbarsEl(s.s),
     el("div", { class: "meta" }, metas.map(([k, v]) => el("span", {}, [k + " ", el("b", { text: v })]))),

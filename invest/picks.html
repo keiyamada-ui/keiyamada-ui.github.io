@@ -128,8 +128,8 @@ function render() {
     if (t.regime && t.regime.score != null && t.regime.score < 40)
       b.push(el("div", { class: "warnbox", text: `${t.regime.icon || ""} 市場は「${t.regime.label}」。選んだ銘柄でも、買うなら少しずつ・損切りラインを先に決めて。` }));
     set.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
-      el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・ランク${p.rank}・${fmt.yen(p.p)}` })]),
-        el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
+      el("div", { class: "hd" }, [el("span", { class: "no", text: i + 1 }), el("div", { class: "nm" }, [el("b", { text: p.n }), el("small", { text: `${p.c}・会社の質 ${p.rank}・${fmt.yen(p.p)}` })]),
+        el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点/100" })])]),
       el("div", { class: "bars" }, Object.keys(P.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), P.feats[k].replace(/（.*）/, "")]))),
       ...(p.ex ? exBlock(p)
         : [el("ul", {}, (p.why || []).slice(0, 5).map(w => el("li", { text: w })))])])));

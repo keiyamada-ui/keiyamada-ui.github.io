@@ -85,6 +85,7 @@
              padding: 9px 12px 9px 9px; text-decoration: none; box-shadow: var(--shadow); max-width: 210px; }
   .newin a b { font-size: 13.5px; font-weight: 900; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
   .newin a small { font-size: 11.5px; color: var(--sub); }
+  .hint { font-size: 12px; line-height: 1.7; color: var(--sub); background: var(--box); border-radius: 12px; padding: 8px 10px; margin: 0 0 8px; }
 </style>
 </head>
 <body>
@@ -194,16 +195,17 @@ function render(data) {
   if (DTD && DTD.today && DTD.today.picks.length) {
     blocks.push(el("h2", {}, ["🏃 明日のデイトレ候補", el("a", { href: "picks.html", text: "理由を見る" })]),
       el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: "テクニカル（移動平均・MACD・RSI・VWAP・出来高）だけで選んだ3銘柄" + (DTD.stats ? `・勝率 ${Math.round(DTD.stats.win * 100)}%（${DTD.stats.n}回）` : "") }),
-      ...DTD.today.picks.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s)));
+      ...DTD.today.picks.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s, { showPos: false })));
   }
   if (PICKS && PICKS.today && PICKS.today.sets) {
     blocks.push(el("h2", {}, ["🐤 今日の3選", el("a", { href: "picks.html", text: "成績を見る" })]),
-      el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: `${PICKS.today.date.slice(5).replace("-", "/")} の終値で選定・成績は2週間後に採点` }));
+      el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: `${PICKS.today.date.slice(5).replace("-", "/")} の終値で選定・成績は2週間後に採点` }),
+      el("div", { class: "hint", text: "左のS〜Dと右の点数は「会社の良さ」だけの評価です。3選はそれに、チャートの形・市場より強いか・業績の勢い・割安さを足した合計で選んでいるので、B〜Dでも勢いが強ければ選ばれます（理由は「成績を見る」から）。" }));
     for (const [k, set] of Object.entries(PICKS.today.sets)) {
       const st = PICKS.strats[k], s10 = st.stats && st.stats["10"];
       blocks.push(el("div", { class: "muted", style: { margin: "10px 4px 6px", fontWeight: 900, color: "var(--text)" },
         text: `${k === "s" ? "⚡" : "🌳"} ${st.name}` + (s10 ? `（勝率 ${Math.round(s10.win * 100)}%・TOPIXとの差 ${(s10.avgx * 100).toFixed(2)}%）` : "") }),
-        ...set.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s)));
+        ...set.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s, { showPos: false })));
     }
   }
   if (buys.length) blocks.push(el("h2", {}, ["📈 良い会社 × 良いタイミング", el("a", { href: "ranking.html#timing", text: "すべて見る" })]),
@@ -234,7 +236,7 @@ async function showRun() {
 
 function askRun() {
   if (!Key.get()) { location.href = "key.html"; return; }
-  let style = currentStyle() === "custom" ? "balanced" : currentStyle(), plan = store.get("invest-plan", "free");
+  let style = currentStyle() === "custom" ? "balanced" : currentStyle(), plan = store.get("invest-plan", "light");
   const styleChips = el("div", { class: "chips" }, Object.keys(STYLE_DESC).filter(k => k !== "custom").map(k =>
     el("button", { class: "chip soft", "aria-pressed": String(k === style), text: STYLE_NAMES[k], onclick: e => {
       style = k; styleChips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === e.currentTarget))); } })));
