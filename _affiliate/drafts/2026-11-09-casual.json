@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-09",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-09",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2が脱いだブレザー、ハンガーにかけようとして諦めた跡がある。半分床についてるよ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "夕飯の匂いがした途端、小5が急に机に向かってドリル開き出した。今から集中するんだ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "水筒の底のゴムカバー、中2が指でいじって全部外してた。戻すの地味に硬いんだよね。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
