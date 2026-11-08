@@ -61,6 +61,12 @@
   .shock .steps span { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: var(--box); color: var(--faint); }
   .shock .steps span.done { color: var(--sub); } .shock .steps span.on { background: var(--pr); color: #fff; }
   .shock .ttl { font-size: 16px; font-weight: 900; } .shock ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.75; }
+  .th .tt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; font-weight: 800; line-height: 1.5; margin-bottom: 6px; }
+  .th .tt a { color: inherit; } .th textarea, .card textarea { width: 100%; box-sizing: border-box; }
+  .th a.tr { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px dashed var(--line); text-decoration: none; color: inherit; }
+  .th .tr .n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 900; background: var(--box); }
+  .th .tr .t { flex: 1; min-width: 0; } .th .tr .t b { font-size: 14px; } .th .tr .t small { display: block; color: var(--sub); font-size: 11.5px; line-height: 1.5; }
+  .th .tr .d { flex: none; font-size: 11.5px; font-weight: 900; } .th .tr .d.up { color: var(--up); } .th .tr .d.down { color: var(--down); }
 </style>
 </head>
 <body>
@@ -76,7 +82,7 @@ const fmtV = (key, v) => v == null ? "–" : key === "us10y" ? v.toFixed(2) + "%
   : ["usdjpy", "eurjpy"].includes(key) ? v.toFixed(2) + "円" : v >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2);
 const chg = v => v == null ? el("span", { class: "flat", text: "–" }) : el("span", { class: v > 0.0005 ? "up" : v < -0.0005 ? "down" : "flat", text: (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%" });
 const ago = iso => { if (!iso) return ""; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m}分前` : m < 1440 ? `${Math.round(m / 60)}時間前` : `${Math.round(m / 1440)}日前`; };
-let D = null;
+let D = null, TH = null;
 
 function render() {
   const blocks = [];
@@ -133,6 +139,31 @@ function render() {
     blocks.push(el("h2", {}, ["📈 チャートの買い場候補（S〜Bランク）", el("a", { href: "ranking.html#timing", text: "すべて" })]));
     if (MARKET && MARKET.regime && MARKET.regime.score < 40) blocks.push(el("div", { class: "warnbox", text: `いまは市場が「${MARKET.regime.label}」です。買い場候補でも、分割で少しずつ・損切りラインを決めてから。` }));
     blocks.push(...(list.length ? list.map(s => stockRow(s, { showPos: false })) : [el("div", { class: "card muted", text: "いまは条件に合う銘柄がありません。" })]));
+  }
+
+  {
+    const RC = { "当事者": "pos", "取引先": "mix", "同業": "mix", "関連": "mix" };
+    const theme = (x, mine) => el("section", { class: "card th" }, [
+      el("div", { class: "tt" }, [x.theme ? el("span", { class: "side mix", text: x.theme }) : "",
+        x.u ? el("a", { href: x.u, target: "_blank", rel: "noopener", text: x.t }) : el("b", { text: x.t })]),
+      mine && x.asked_at ? el("small", { class: "muted", text: `${fmt.md(x.asked_at)} に調べた話題` }) : "",
+      ...x.stocks.map((r, i) => el("a", { class: "tr", href: `stock.html?c=${r.c}` }, [
+        el("span", { class: "n", text: i + 1 }),
+        el("span", { class: "t" }, [el("b", {}, [r.n, el("small", { text: ` ${r.c}` })]),
+          el("small", { text: `${r.rel}・${r.why}` + (r.rank ? `・会社の質 ${r.rank}` : "") + (r.label ? `・チャート ${r.label}` : "") })]),
+        el("span", { class: "d " + (r.dir === "up" ? "up" : r.dir === "down" ? "down" : ""), text: r.dir === "up" ? "▲追い風" : r.dir === "down" ? "▼向かい風" : "？" })]))]);
+    const input = el("textarea", { placeholder: "例：三菱重工、防衛の受注が過去最高", rows: 2 });
+    const ask = el("button", { class: "btn primary", text: "関連銘柄を調べる（約2分）", onclick: async e => {
+      const v = input.value.trim(); if (!v) { toast("ニュースの見出しや話題を入れてください"); return; }
+      if (!Key.get()) { location.href = "key.html"; return; }
+      e.currentTarget.disabled = true;
+      try { await gh(`/repos/${REPO}/actions/workflows/theme.yml/dispatches`, { method: "POST", body: { ref: "main", inputs: { topic: v.slice(0, 200) } } });
+        toast("調べています。2分ほどしたら開き直してください"); input.value = ""; } catch (err) { toast(err.message); }
+      e.currentTarget.disabled = false; } });
+    blocks.push(el("h2", { text: "🧩 ニュースで動きそうな関連銘柄" }),
+      el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: "見出しだけからAIが、当事者 → 取引先 → 同業 → 関連テーマの順に挙げます（記事の本文は不要）。株価が必ず動くわけではありません。" }),
+      el("section", { class: "card" }, [input, el("div", { class: "actions" }, [ask])]));
+    if (TH) blocks.push(...(TH.custom || []).slice(0, 3).map(x => theme(x, true)), ...(TH.auto || []).slice(0, 6).map(x => theme(x, false)));
   }
 
   if (MOVERS && D) {
@@ -203,6 +234,7 @@ $("refresh").addEventListener("click", async e => {
 let n = 0; const done = () => { if (++n >= 1) render(); };
 loadData(d => { D = d; render(); }, () => {});
 loadMarket(done); loadChart(done); loadNews(done); loadMovers(done);
+loadJSON("data/themes.json", d => { TH = d; done(); }, () => {}, true);
 setTimeout(() => { if (!MARKET && !NEWS && !CHART) render(); }, 2500);
 </script>
 </body>
