@@ -85,6 +85,19 @@
              padding: 9px 12px 9px 9px; text-decoration: none; box-shadow: var(--shadow); max-width: 210px; }
   .newin a b { font-size: 13.5px; font-weight: 900; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
   .newin a small { font-size: 11.5px; color: var(--sub); }
+  .hseg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .hseg button { border: 1px solid var(--line); background: var(--card); border-radius: 16px; padding: 9px 4px; cursor: pointer; color: inherit; text-align: center; }
+  .hseg button[aria-pressed="true"] { background: var(--text); color: var(--bg, #fff); border-color: var(--text); }
+  .hseg b { display: block; font-size: 14px; font-weight: 900; } .hseg small { font-size: 10.5px; opacity: .75; }
+  a.hp { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 12px; margin-bottom: 8px; text-decoration: none; color: inherit; box-shadow: var(--shadow); }
+  .hp .no { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-family: var(--num); font-weight: 900; background: linear-gradient(150deg, #FFE7A8, #F7C35C); color: #6B4A00; }
+  .hp .bd { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .hp .bd b { font-size: 16px; font-weight: 900; } .hp .bd small { font-size: 12px; color: var(--sub); }
+  .hp .why { font-size: 12.5px; line-height: 1.55; } .hp .risk { font-size: 12px; color: var(--pr); line-height: 1.5; }
+  .hp .go, .more .go { color: var(--sub); font-weight: 900; }
+  .more { display: grid; gap: 8px; }
+  .more a { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; text-decoration: none; color: inherit; }
+  .more .ic { font-size: 22px; } .more a > span:nth-child(2) { flex: 1; } .more b { display: block; font-size: 14px; } .more small { font-size: 12px; color: var(--sub); }
   .hint { font-size: 12px; line-height: 1.7; color: var(--sub); background: var(--box); border-radius: 12px; padding: 8px 10px; margin: 0 0 8px; }
 </style>
 </head>
@@ -191,30 +204,50 @@ function render(data) {
       el("span", { style: { flex: 1 } }, [el("span", { class: "muted", text: "きょうの市場の天気" }), el("b", { style: { display: "block", fontSize: "18px", fontWeight: 900 }, text: `${r.label}　${r.score}点` }),
         el("span", { class: "muted", text: r.why[0] ? r.why[0].text : r.desc })]), el("span", { style: { color: "var(--sub)", fontWeight: 900 }, text: "›" })]));
   }
-  blocks.push(fresh, dist);
-  if (DTD && DTD.today && DTD.today.picks.length) {
-    blocks.push(el("h2", {}, ["🏃 明日のデイトレ候補", el("a", { href: "picks.html", text: "理由を見る" })]),
-      el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: "テクニカル（移動平均・MACD・RSI・VWAP・出来高）だけで選んだ3銘柄" + (DTD.stats ? `・勝率 ${Math.round(DTD.stats.win * 100)}%（${DTD.stats.n}回）` : "") }),
-      ...DTD.today.picks.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s, { showPos: false })));
-  }
-  if (PICKS && PICKS.today && PICKS.today.sets) {
-    blocks.push(el("h2", {}, ["🐤 今日の3選", el("a", { href: "picks.html", text: "成績を見る" })]),
-      el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: `${PICKS.today.date.slice(5).replace("-", "/")} の終値で選定・成績は2週間後に採点` }),
-      el("div", { class: "hint", text: "左のS〜Dと右の点数は「会社の良さ」だけの評価です。3選はそれに、チャートの形・市場より強いか・業績の勢い・割安さを足した合計で選んでいるので、B〜Dでも勢いが強ければ選ばれます（理由は「成績を見る」から）。" }));
-    for (const [k, set] of Object.entries(PICKS.today.sets)) {
-      const st = PICKS.strats[k], s10 = st.stats && st.stats["10"];
-      blocks.push(el("div", { class: "muted", style: { margin: "10px 4px 6px", fontWeight: 900, color: "var(--text)" },
-        text: `${k === "s" ? "⚡" : "🌳"} ${st.name}` + (s10 ? `（勝率 ${Math.round(s10.win * 100)}%・TOPIXとの差 ${(s10.avgx * 100).toFixed(2)}%）` : "") }),
-        ...set.map(p => data.byCode.get(p.c)).filter(Boolean).map(s => stockRow(s, { showPos: false })));
-    }
-  }
-  if (buys.length) blocks.push(el("h2", {}, ["📈 良い会社 × 良いタイミング", el("a", { href: "ranking.html#timing", text: "すべて見る" })]),
-    el("p", { class: "muted", style: { margin: "0 4px 8px" }, text: "Sランク・Aランクで、チャートの形が買い場候補になっている銘柄です。" }), ...buys.slice(0, 3).map(s => stockRow(s)));
-  blocks.push(el("h2", {}, ["きょうの上位5社", el("a", { href: "ranking.html", text: "すべて見る" })]), styleBar, ...top);
-  if (newS.length) {
-    blocks.push(el("h2", { text: "✨ 新しくSランク入り" }), el("div", { class: "newin" }, newS.slice(0, 12).map(s =>
-      el("a", { href: `stock.html?c=${s.c}` }, [rankEl("S", 30), el("span", {}, [el("b", { text: s.n }), el("small", { text: `${s.c}　${Math.round(s.score)}点` })])]))));
-  }
+  // ── 今日の厳選（デイトレ / スイング / 中長期）: 迷わないよう、1つの目的につき3銘柄だけ ──
+  const TABS = [
+    ["d", "🏃 デイトレ", "その日のうちに売買", "テクニカルだけで選んだ、翌営業日のデイトレ候補。寄り付きで買い、大引けまでに手じまう前提。"],
+    ["s", "⚡ スイング", "数日〜2週間", "チャートの形・勢い・直近の材料を重視。2週間後の成績で採点。"],
+    ["l", "🌳 中長期", "数か月〜年単位", "会社の良さ・割安さ・業績の伸びを重視。じっくり持つ前提。"]];
+  let tab = "s";
+  try { tab = localStorage.getItem("invest-home-tab") || "s"; } catch (e) {}
+  const picksOf = k => k === "d" ? (DTD && DTD.today ? DTD.today.picks : []) : (PICKS && PICKS.today && PICKS.today.sets ? PICKS.today.sets[k] || [] : []);
+  const statOf = k => k === "d" ? (DTD && DTD.stats) : (PICKS && PICKS.strats && PICKS.strats[k] && PICKS.strats[k].stats && PICKS.strats[k].stats["10"]);
+  const pickBox = el("div");
+  const seg = el("div", { class: "hseg" });
+  const drawPicks = () => {
+    seg.replaceChildren(...TABS.map(([k, label, sub]) => el("button", { "aria-pressed": String(k === tab), onclick: () => { tab = k; try { localStorage.setItem("invest-home-tab", k); } catch (e) {} drawPicks(); } },
+      [el("b", { text: label }), el("small", { text: sub })])));
+    const t = TABS.find(x => x[0] === tab), ps = picksOf(tab), st = statOf(tab);
+    const date = tab === "d" ? (DTD && DTD.today && DTD.today.date) : (PICKS && PICKS.today && PICKS.today.date);
+    pickBox.replaceChildren(
+      el("p", { class: "muted", style: { margin: "8px 4px", fontSize: "12.5px" }, text: t[3] + (date ? `（${fmt.md(date)} の終値で選定）` : "") }),
+      MARKET && MARKET.regime && MARKET.regime.score < 40 ? el("div", { class: "warnbox", style: { marginBottom: "8px" }, text: `${MARKET.regime.icon} 市場は「${MARKET.regime.label}」。どれを買う場合も少しずつ・損切りラインを先に決めて。` }) : "",
+      ...(ps.length ? ps.map((p, i) => {
+        const s = data.byCode.get(p.c), ex = p.ex || {};
+        return el("a", { class: "hp", href: `stock.html?c=${p.c}` }, [
+          el("span", { class: "no", text: i + 1 }),
+          el("span", { class: "bd" }, [
+            el("b", { text: p.n }),
+            el("small", { text: `${p.c}・${fmt.yen(p.p)}` + (s ? `・会社の質 ${s.rank}` : "") }),
+            el("span", { class: "why", text: "🎯 " + ((ex.keys && ex.keys[0]) || "").replace(/^[^：:]+[：:]\s*/, "") }),
+            (() => { const r = (ex.risks || []).filter(x => !/市場全体|日足から計算/.test(x)); return r.length ? el("span", { class: "risk", text: "⚠ " + r[0] }) : ""; })()]),
+          el("span", { class: "go", text: "›" })]);
+      }) : [el("div", { class: "card muted", text: "平日の夕方（16:43ごろ）に選ばれます。" })]),
+      el("div", { class: "row between", style: { margin: "6px 4px 0" } }, [
+        el("span", { class: "muted", style: { fontSize: "12px" }, text: st ? `これまでの勝率 ${Math.round(st.win * 100)}%（${st.n}回）` : "成績はこれから集計します" }),
+        el("a", { class: "btn small", href: "picks.html", onclick: () => { try { localStorage.setItem("invest-picks-tab", tab); } catch (e) {} }, text: "理由と成績を見る" })]));
+  };
+  drawPicks();
+  blocks.push(el("h2", { text: "🐤 今日の厳選" }), seg, pickBox);
+
+  // そのほかは「もっと見る」にまとめる
+  blocks.push(el("h2", { text: "🔎 もっと探す" }), el("div", { class: "more" }, [
+    ["ranking.html", "🏅", "ランキング", `会社の良さの順（Sランク ${counts.S}社）`],
+    ["ranking.html#timing", "📈", "良い会社×良いタイミング", buys.length ? `S・Aで買い場候補 ${buys.length}社` : "S・Aでチャートが買い場候補"],
+    ["screen.html", "🔍", "条件でさがす", "自分の条件で絞り込む"]].map(([h, ic, t, d]) =>
+      el("a", { href: h }, [el("span", { class: "ic", text: ic }), el("span", {}, [el("b", { text: t }), el("small", { text: d })]), el("span", { class: "go", text: "›" })]))));
+  blocks.push(fresh);
   $("main").replaceChildren(...blocks);
   showRun();
 }
