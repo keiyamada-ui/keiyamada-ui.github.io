@@ -78,8 +78,9 @@ function kpis(st, n) {
 }
 
 let DT = null;
+const NAMES = { d: "デイトレ", s: "スイング", l: "中長期" };
 function tabs() {
-  const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + v.name])];
+  const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + (NAMES[k] || v.name)])];
   return el("div", { class: "seg", style: { marginTop: "4px", flexWrap: "wrap" } }, list.map(([k, label]) => el("button", { class: "chip", "aria-pressed": String(k === K),
     text: label, onclick: () => { K = k; try { localStorage.setItem("invest-picks-tab", k); } catch (e) {} render(); } })));
 }
@@ -124,7 +125,7 @@ function render() {
 
   const set = t && t.sets && t.sets[K];
   if (set && set.length) {
-    b.push(el("h2", { text: `${md(t.date)} の3選（${S.name}）` }));
+    b.push(el("h2", { text: `${md(t.date)} の3選（${NAMES[K] || S.name}）` }));
     if (t.regime && t.regime.score != null && t.regime.score < 40)
       b.push(el("div", { class: "warnbox", text: `${t.regime.icon || ""} 市場は「${t.regime.label}」。選んだ銘柄でも、買うなら少しずつ・損切りラインを先に決めて。` }));
     set.forEach((p, i) => b.push(el("a", { class: "pk", href: `stock.html?c=${p.c}` }, [
@@ -140,13 +141,13 @@ function render() {
   if (rep) {
     b.push(el("section", { class: "card" }, [el("div", { class: "muted", style: { fontSize: "12px", marginBottom: "8px" }, text: `${md(rep.date)} 発表・この1週間に2週間後の結果が出た3選` }),
       ...Object.entries(rep.strats).map(([k, r]) => el("div", { class: "rp" }, [
-        el("b", { text: `${P.strats[k].name}：勝率 ${Math.round(r.win * 100)}%（${r.n}銘柄）・平均 ${pctTxt(r.avg)}・TOPIXとの差 ${pctTxt(r.avgx)}` }),
+        el("b", { text: `${NAMES[k] || P.strats[k].name}：勝率 ${Math.round(r.win * 100)}%（${r.n}銘柄）・平均 ${pctTxt(r.avg)}・TOPIXとの差 ${pctTxt(r.avgx)}` }),
         el("div", { class: "muted", text: "◎ " + r.best.map(x => `${x.n} ${pctTxt(x.r)}`).join("、") }),
         el("div", { class: "muted", text: "× " + r.worst.map(x => `${x.n} ${pctTxt(x.r)}`).join("、") }),
         ...(r.lesson || []).slice(0, 1).map(x => el("div", { class: "muted", text: "🧠 " + x }))]))]));
   } else b.push(el("div", { class: "card muted", text: "毎週金曜の夕方に、その週に結果が出た3選をまとめて発表します。最初の発表は、選び始めてから2週間後の金曜です。" }));
 
-  b.push(el("h2", { text: `📊 ${S.name}の通算成績（2週間後）` }), kpis(S.stats && S.stats["10"]));
+  b.push(el("h2", { text: `📊 ${NAMES[K] || S.name}の通算成績（2週間後）` }), kpis(S.stats && S.stats["10"]));
   b.push(el("p", { class: "muted", style: { margin: "8px 4px", fontSize: "11.5px" }, text: "選んだ日の終値で買い、10営業日後の終値で売ったとした場合の計算（手数料・税は含みません）。" }));
   b.push(...P.history.filter(d => (d.sets[K] || []).length).slice(0, 20).map(d => el("div", { class: "day" }, [
     el("div", { class: "dt" }, [el("span", { text: md(d.date) + " の3選" }), el("span", {}, ["TOPIX ", sg(d.b10)])]),
