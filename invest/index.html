@@ -230,6 +230,7 @@ function render(data) {
           el("span", { class: "bd" }, [
             el("b", { text: p.n }),
             el("small", { text: `${p.c}・${fmt.yen(p.p)}` + (s ? `・会社の質 ${s.rank}` : "") }),
+            liveEl(p.c, p.plan),
             planEl(p.plan, true),
             el("span", { class: "why", text: "🎯 " + ((ex.keys && ex.keys[0]) || "").replace(/^[^：:]+[：:]\s*/, "") }),
             (() => { const r = (ex.risks || []).filter(x => !/市場全体|日足から計算/.test(x)); return r.length ? el("span", { class: "risk", text: "⚠ " + r[0] }) : ""; })()]),
@@ -240,7 +241,13 @@ function render(data) {
         el("a", { class: "btn small", href: "picks.html", onclick: () => { try { localStorage.setItem("invest-picks-tab", tab); } catch (e) {} }, text: "理由と成績を見る" })]));
   };
   drawPicks();
-  blocks.push(el("h2", { text: "🐤 今日の厳選" }), seg, pickBox);
+  const qbtn = el("button", { class: "btn small", text: "🔄 今の株価", onclick: async e => {
+    const b = e.currentTarget; if (!Key.get()) { location.href = "key.html"; return; }
+    b.disabled = true;
+    try { await refreshQuotes(m => b.textContent = m.replace("株価を取りに行っています…", "取得中…")); drawPicks(); toast("今の株価にしました（約20分遅れ）"); }
+    catch (err) { toast(err.message); }
+    b.disabled = false; b.textContent = "🔄 今の株価"; } });
+  blocks.push(el("h2", {}, ["🐤 今日の厳選", qbtn]), seg, pickBox);
 
   // そのほかは「もっと見る」にまとめる
   blocks.push(el("h2", { text: "🔎 もっと探す" }), el("div", { class: "more" }, [
@@ -296,6 +303,7 @@ function askRun() {
 loadMarket(() => { if (LAST) render(LAST); });
 loadChart(() => { if (LAST) render(LAST); });
 loadPicks(() => { if (LAST) render(LAST); });
+loadQuotes(() => { if (LAST) render(LAST); });
 loadJSON("data/daytrade.json", d => { DTD = d; if (LAST) render(LAST); }, () => {}, true);
 loadData(render, e => { say([["🐤", "合い鍵を登録すると、ここに採点の結果が出るよ", "key.html"]]); keyNeeded($("main"), e); });
 </script>

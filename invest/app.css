@@ -213,3 +213,8 @@ footer.foot img { width: 40px; height: 40px; border-radius: 50%; display: block;
 .plan-l .ladder .up { background: color-mix(in srgb, var(--up) 10%, var(--card)); } .plan-l .ladder .up small { color: var(--up); }
 .plan-l .ladder .down { background: color-mix(in srgb, var(--down) 10%, var(--card)); } .plan-l .ladder .down small { color: var(--down); }
 .plan-l .ladder .in { outline: 2px solid var(--accent); }
+
+.live { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; font-size: 12.5px; background: var(--box); border-radius: 10px; padding: 4px 8px; margin: 3px 0; }
+.live b { font-family: var(--num); font-size: 14px; } .live small { color: var(--sub); }
+.live .up { color: var(--up); font-weight: 800; } .live .down { color: var(--down); font-weight: 800; }
+.live .st { font-weight: 800; font-size: 12px; } .live.down .st { color: var(--down); } .live.up .st { color: var(--up); } .live.in .st { color: var(--accent-deep, #B07A00); }

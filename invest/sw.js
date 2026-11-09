@@ -1,6 +1,6 @@
 // ことり投資ノート: 画面のファイルを端末に残して、ホーム画面から速く開けるようにする
 // 画面はいつも最新を取りに行き、通信できないときだけ残したものを使う（データは app.js が別に管理）
-const SHELL = "invest-shell-v15";
+const SHELL = "invest-shell-v16";
 const FILES = ["./", "index.html", "market.html", "picks.html", "ranking.html", "stock.html", "watch.html", "screen.html", "tune.html", "plan.html", "more.html", "key.html",
                "app.css", "app.js", "header.jpg", "avatar.png", "icon-192.png"];
 

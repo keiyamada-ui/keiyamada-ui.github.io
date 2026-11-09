@@ -413,3 +413,43 @@ function planEl(pl, compact) {
     el("div", { class: "exh", text: "🛑 損切りの根拠" }), el("p", { class: "plan", text: pl.stop_why }),
     el("div", { class: "exh", text: "📏 ルール" }), el("ul", {}, pl.rules.map(t => el("li", { text: t })))]);
 }
+
+// いまの株価（約20分遅れ）: ボタンでGitHubに取りに行ってもらい、終わったら読み込む
+let QUOTES = null;
+function loadQuotes(cb) { return loadJSON("data/quotes.json", d => { QUOTES = d; cb && cb(d); }, () => {}, true); }
+async function refreshQuotes(onStep) {
+  const t0 = Date.now();
+  await gh(`/repos/${REPO}/actions/workflows/quote.yml/dispatches`, { method: "POST", body: { ref: "main", inputs: { codes: Watch.all().slice(0, 30).join(",") } } });
+  onStep && onStep("株価を取りに行っています…");
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, i < 3 ? 8000 : 5000));
+    try {
+      const r = await gh(`/repos/${REPO}/actions/workflows/quote.yml/runs?per_page=1`);
+      const run = r.workflow_runs[0];
+      if (run && Date.parse(run.created_at) >= t0 - 60000 && run.status === "completed") {
+        if (run.conclusion !== "success") throw new Error("株価を取得できませんでした");
+        QUOTES = await fetchJSON("data/quotes.json");
+        return QUOTES;
+      }
+      onStep && onStep(`株価を取りに行っています…（${Math.round((Date.now() - t0) / 1000)}秒）`);
+    } catch (e) { if (e.message.includes("取得できません")) throw e; }
+  }
+  throw new Error("時間がかかっています。少ししてから開き直してください");
+}
+// いまの株価と売買ラインの位置関係
+function liveEl(code, plan) {
+  const q = QUOTES && QUOTES.quotes && QUOTES.quotes[code];
+  if (!q) return "";
+  const y = v => Math.round(v).toLocaleString() + "円";
+  let st = "", cls = "";
+  if (plan) {
+    if (q.p <= plan.stop) { st = "🛑 損切りラインを下回っています"; cls = "down"; }
+    else if (q.p >= plan.tp2) { st = "🎯 利確2に届いています"; cls = "up"; }
+    else if (q.p >= plan.tp1) { st = "🎯 利確1に届いています"; cls = "up"; }
+    else if (Math.abs(q.p / plan.entry - 1) <= 0.01) { st = "🛒 買いの目安の近く（±1%）"; cls = "in"; }
+    else st = q.p > plan.entry ? `買いの目安より ${((q.p / plan.entry - 1) * 100).toFixed(2)}% 上` : `買いの目安より ${((q.p / plan.entry - 1) * 100).toFixed(2)}% 下`;
+  }
+  return el("div", { class: "live " + cls }, [
+    el("span", {}, ["今 ", el("b", { text: y(q.p) }), q.chg == null ? "" : el("span", { class: q.chg > 0 ? "up" : q.chg < 0 ? "down" : "", text: ` ${q.chg > 0 ? "+" : ""}${(q.chg * 100).toFixed(2)}%` }), el("small", { text: ` ${q.time}` })]),
+    st ? el("span", { class: "st", text: st }) : ""]);
+}
