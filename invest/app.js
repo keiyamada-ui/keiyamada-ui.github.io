@@ -453,3 +453,25 @@ function liveEl(code, plan) {
     el("span", {}, ["今 ", el("b", { text: y(q.p) }), q.chg == null ? "" : el("span", { class: q.chg > 0 ? "up" : q.chg < 0 ? "down" : "", text: ` ${q.chg > 0 ? "+" : ""}${(q.chg * 100).toFixed(2)}%` }), el("small", { text: ` ${q.time}` })]),
     st ? el("span", { class: "st", text: st }) : ""]);
 }
+
+// チャートのデータから売買ラインを計算（スイング型・picks.py と同じ考え方）
+function tickJ(x) { const st = x < 3000 ? 1 : x < 5000 ? 5 : x < 30000 ? 10 : 50; return Math.round(x / st) * st; }
+function planFromChart(code) {
+  const t = CHART && CHART.stocks && CHART.stocks[code];
+  if (!t || !t.p) return null;
+  const p = t.p, atr = t.atr || p * 0.03, ma25 = t.ma25 || p, pl = t.push_low, hi20 = t.hi20 || p;
+  const pull = ma25 < p * 0.995 && ma25 > p * 0.9 ? ma25 : null, brk = hi20 > p * 1.002 ? hi20 * 1.005 : null;
+  const entry = pull || p;
+  const cands = [[entry - 2 * atr, `ATR（1日の平均的な値幅 ${atr.toFixed(2)}円）の2倍下`], [entry * 0.92, "買値から -8%"]];
+  if (pl && pl < entry) cands.push([pl * 0.99, `押し安値 ${tickJ(pl).toLocaleString()}円 の少し下`]);
+  cands.sort((a, b) => b[0] - a[0]);
+  const [stop, why] = cands[0], risk = entry - stop;
+  const how = [];
+  if (pull) how.push(`押し目買い: 25日線 ${tickJ(pull).toLocaleString()}円 付近まで下がって下げ止まったら（今から${((pull / p - 1) * 100).toFixed(2)}%）`);
+  if (brk) how.push(`ブレイク買い: 20日高値 ${tickJ(brk).toLocaleString()}円 を終値で上抜けたら（今から${((brk / p - 1) * 100).toFixed(2)}%）`);
+  if (!how.length) how.push(`今の株価 ${tickJ(p).toLocaleString()}円 前後。飛びつかず寄り付き後の値動きを見て`);
+  if (t.sig && t.sig.includes("dow_break")) how.unshift("⚠ 押し安値を割って上昇トレンドが崩れています。新しく買うのは待つ");
+  return { entry: tickJ(entry), entry_how: how, stop: tickJ(stop), stop_pct: stop / entry - 1, stop_why: why + "。近い方を損切りラインに",
+           tp1: tickJ(entry + 2 * risk), tp1_pct: 2 * risk / entry, tp2: tickJ(entry + 3 * risk), tp2_pct: 3 * risk / entry,
+           rules: ["損切りは買ったらすぐ逆指値で入れておく", "利確1で半分売り、残りは損切りを買値に上げる", `チャートの基準日 ${t.date || ""}（スイング型の目安）`] };
+}

@@ -26,11 +26,13 @@
   .tagrow:first-child { border-top: 0; }
   .tagrow .badge { font-size: 13px; }
   .tagrow small { color: var(--sub); flex: 1; }
+  .wplan { margin-top: 8px; display: grid; gap: 6px; } .wplan .btn { justify-self: start; }
+  .sheet .plan-l .exh { margin-top: 10px; font-weight: 900; color: var(--sub); font-size: 12px; }
 </style>
 </head>
 <body>
 <header class="top"><a class="back" href="./" aria-label="ホームに戻る">‹</a><h1>⭐ ウォッチ</h1>
-  <div class="right"><button class="iconbtn" id="tagbtn" aria-label="タグを管理">🏷️</button></div></header>
+  <div class="right"><button class="iconbtn" id="qbtn" aria-label="今の株価">🔄</button><button class="iconbtn" id="tagbtn" aria-label="タグを管理">🏷️</button></div></header>
 <p class="note">気になる銘柄に ☆ やタグ（監視中・買い候補・保有中など）を付けると、ここに集まります。タグを押すとその銘柄だけ表示。事前ルールメモを書いた銘柄は、ランクが下がった・損切りラインを割ったなどのときに目立たせます。この一覧はこの端末の中だけに保存されます。</p>
 
 <div class="summary" id="summary"></div>
@@ -84,6 +86,13 @@ function renderList() {
     }
     if (memo && memo.reason) notes.push(el("div", { text: "📝 " + memo.reason.slice(0, 60) + (memo.reason.length > 60 ? "…" : "") }));
     if (notes.length) r.append(el("div", { class: "memoline" }, notes));
+    const pl = planFromChart(s.c);
+    if (pl) {
+      const box = el("div", { class: "wplan" }, [liveEl(s.c, pl), planEl(pl, true),
+        el("button", { class: "btn small", text: "売買ラインの詳しい見方", onclick: e => { e.preventDefault(); e.stopPropagation();
+          openSheet([el("h3", { text: `📐 ${s.n} の売買ライン` }), planEl(pl), el("div", { class: "actions" }, [el("button", { class: "btn", text: "閉じる", onclick: closeSheet })])]); } })]);
+      r.append(box);
+    } else r.append(el("div", { class: "memoline", text: "📐 売買ラインは、次のチャート更新（平日夕方、または市場画面の🔄）で表示されます" }));
     return r;
   }));
 }
@@ -108,9 +117,16 @@ function manageTags() {
   draw();
 }
 $("tagbtn").addEventListener("click", manageTags);
+$("qbtn").addEventListener("click", async e => {
+  const b = e.currentTarget; if (!Key.get()) { location.href = "key.html"; return; }
+  b.disabled = true; toast("今の株価を取りに行っています（約1分）");
+  try { await refreshQuotes(); renderList(); toast("今の株価にしました（約20分遅れ）"); } catch (err) { toast(err.message); }
+  b.disabled = false;
+});
 renderTop();
 if (location.hash === "#tags") manageTags();
 loadChart(() => renderList());
+loadQuotes(() => renderList());
 loadData(d => { DATA = d; scoreAll(d, weightsFor(d)); renderList(); }, e => keyNeeded($("list"), e));
 </script>
 </body>
