@@ -69,15 +69,15 @@ const sg = v => v == null ? el("span", { class: "wait", text: "集計待ち" }) 
 const pctTxt = v => (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
 const md = d => d.slice(5).replace("-", "/");
 
-function kpis(st, n) {
+function kpis(st, empty) {
   return el("div", { class: "kpi" }, st ? [
     el("div", {}, [el("b", { text: Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（${st.n}回）` })]),
     el("div", {}, [el("b", { class: st.avg >= 0 ? "up" : "down", text: pctTxt(st.avg) }), el("small", { text: "平均の騰落率" })]),
     el("div", {}, [el("b", { class: st.avgx >= 0 ? "up" : "down", text: pctTxt(st.avgx) }), el("small", { text: `TOPIXとの差（勝ち${Math.round(st.beat * 100)}%）` })])]
-    : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: "最初の結果は、選んでから2週間後に出ます" })])]);
+    : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: empty || "最初の結果は、選んでから2週間後に出ます" })])]);
 }
 
-let DT = null;
+let DT = null, PP = null;
 const NAMES = { d: "デイトレ", s: "スイング", l: "中長期" };
 function tabs() {
   const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + (NAMES[k] || v.name)])];
@@ -106,7 +106,21 @@ function renderDT() {
       el("div", { class: "bars", style: { gridTemplateColumns: "repeat(7, 1fr)" } }, Object.keys(DT.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), DT.feats[k].replace(/[（・].*/, "").replace("移動平均線の並び", "移動平均")]))),
       ...exBlock(p)])));
   }
-  b.push(el("h2", { text: "📊 デイトレの通算成績（翌日の寄り→引け）" }), kpis(DT.stats));
+  if (PP) {
+    const st = PP.stats || {}, yen = v => (v > 0 ? "+" : "") + Math.round(v).toLocaleString() + "円";
+    b.push(el("h2", { text: "🤖 模擬売買（自動売買のルールで売買していたら）" }),
+      el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: `1銘柄 ${Math.round(PP.budget).toLocaleString()}円で、翌営業日の5分足に売買ルール（VWAP・前日高値ブレイク・損切り・利確・14:50全決済）を当てはめた結果。注文は出していません。手数料0円（SOR）・デイトレ信用の金利0%の前提。` }),
+      el("div", { class: "kpi" }, [
+        el("div", {}, [el("b", { class: (st.pnl || 0) >= 0 ? "up" : "down", text: st.trades ? yen(st.pnl) : "–" }), el("small", { text: `損益の合計（${st.days || 0}日）` })]),
+        el("div", {}, [el("b", { text: st.win == null ? "–" : Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（${st.trades || 0}回売買）` })]),
+        el("div", {}, [el("b", { text: (PP.queue || []).length + "件" }), el("small", { text: "結果待ち" })])]),
+      ...(PP.days || []).slice().reverse().slice(0, 10).map(d => el("div", { class: "day" }, [
+        el("div", { class: "dt" }, [el("span", { text: `${md(d.date)} 選定 → ${md(d.on)} 売買` }), el("span", { class: d.pnl > 0 ? "up" : d.pnl < 0 ? "down" : "", text: yen(d.pnl) })]),
+        ...d.rows.map(r => el("div", { style: { padding: "4px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px" } }, [
+          el("b", { text: r.n }), " ", el("span", { class: r.pnl > 0 ? "up" : r.pnl < 0 ? "down" : "", text: r.trades.length ? yen(r.pnl) : "" }),
+          el("div", { class: "muted", style: { fontSize: "11.5px" }, text: r.trades.length ? r.trades.map(t => `${t.t} ${t.side === "buy" ? "買" : "売"} ${t.qty}株@${t.price}（${t.why}）`).join(" → ") : r.note })]))])));
+  }
+  b.push(el("h2", { text: "📊 デイトレの通算成績（翌日の寄り→引け）" }), kpis(DT.stats, "最初の結果は、翌営業日の取引が終わってから出ます"));
   b.push(...DT.history.filter(d => d.picks.length).slice(0, 20).map(d => el("div", { class: "day" }, [
     el("div", { class: "dt" }, [el("span", { text: md(d.date) + " 選定 → " + (d.on ? md(d.on) : "翌営業日") }), el("span", {}, ["TOPIX ", sg(d.b)])]),
     ...d.picks.map(p => el("a", { href: `stock.html?c=${p.c}` }, [el("span", { text: p.n }), el("b", {}, [sg(p.r)]), el("small", { text: p.x == null ? "" : `差 ${pctTxt(p.x)}` })]))])));
@@ -165,6 +179,7 @@ function render() {
 }
 loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"), e));
 loadQuotes(() => render());
+loadJSON("data/paper.json", d => { PP = d; render(); }, () => {}, true);
 loadJSON("data/daytrade.json", d => { DT = d; render(); }, () => {}, true);
 </script>
 </body>
