@@ -204,3 +204,12 @@ footer.foot img { width: 40px; height: 40px; border-radius: 50%; display: block;
 .stock .rk { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
 .stock .rk small { font-size: 9.5px; font-weight: 800; color: var(--sub); white-space: nowrap; }
 .stock .pt .unit { display: block; font-size: 9.5px; font-weight: 800; color: var(--sub); text-align: right; margin-top: -2px; }
+
+.plan-c { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; margin-top: 2px; }
+.plan-c b { font-family: var(--num); } .plan-c .up { color: var(--up); } .plan-c .down { color: var(--down); }
+.plan-l .ladder { display: grid; gap: 4px; margin: 8px 0 4px; }
+.plan-l .ladder div { display: grid; grid-template-columns: 6.5em 1fr auto; align-items: center; padding: 6px 10px; border-radius: 12px; background: var(--box); font-size: 13px; }
+.plan-l .ladder b { font-family: var(--num); font-size: 15px; } .plan-l .ladder small { font-family: var(--num); font-weight: 800; }
+.plan-l .ladder .up { background: color-mix(in srgb, var(--up) 10%, var(--card)); } .plan-l .ladder .up small { color: var(--up); }
+.plan-l .ladder .down { background: color-mix(in srgb, var(--down) 10%, var(--card)); } .plan-l .ladder .down small { color: var(--down); }
+.plan-l .ladder .in { outline: 2px solid var(--accent); }

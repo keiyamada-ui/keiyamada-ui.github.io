@@ -394,3 +394,22 @@ function mdToEls(md) {
 
 // ホーム画面に追加したときに速く開くため（画面のファイルだけを端末に残す）
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// 売買ライン（買う値段・利確・損切り）
+function planEl(pl, compact) {
+  if (!pl) return "";
+  const y = v => Math.round(v).toLocaleString() + "円", pc = v => (v > 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
+  if (compact) return el("div", { class: "plan-c" }, [
+    el("span", {}, ["買い ", el("b", { text: y(pl.entry) })]),
+    el("span", { class: "up" }, ["利確 ", el("b", { text: y(pl.tp1) }), ` (${pc(pl.tp1_pct)})`]),
+    el("span", { class: "down" }, ["損切り ", el("b", { text: y(pl.stop) }), ` (${pc(pl.stop_pct)})`])]);
+  return el("div", { class: "plan-l" }, [
+    el("div", { class: "ladder" }, [
+      el("div", { class: "up" }, [el("span", { text: "🎯 利確2" }), el("b", { text: y(pl.tp2) }), el("small", { text: pc(pl.tp2_pct) })]),
+      el("div", { class: "up" }, [el("span", { text: "🎯 利確1" }), el("b", { text: y(pl.tp1) }), el("small", { text: pc(pl.tp1_pct) })]),
+      el("div", { class: "in" }, [el("span", { text: "🛒 買い" }), el("b", { text: y(pl.entry) }), el("small", { text: "目安" })]),
+      el("div", { class: "down" }, [el("span", { text: "🛑 損切り" }), el("b", { text: y(pl.stop) }), el("small", { text: pc(pl.stop_pct) })])]),
+    el("div", { class: "exh", text: "🛒 買うタイミング" }), el("ul", {}, pl.entry_how.map(t => el("li", { text: t }))),
+    el("div", { class: "exh", text: "🛑 損切りの根拠" }), el("p", { class: "plan", text: pl.stop_why }),
+    el("div", { class: "exh", text: "📏 ルール" }), el("ul", {}, pl.rules.map(t => el("li", { text: t })))]);
+}

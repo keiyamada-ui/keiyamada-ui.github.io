@@ -88,7 +88,7 @@ function exBlock(p) {
   return [p.ai ? el("p", { class: "ai", text: "🐤 " + p.ai }) : "",
     el("div", { class: "exh", text: "🎯 選んだ決め手" }), el("ul", {}, p.ex.keys.map(w => el("li", { text: w }))),
     el("div", { class: "exh", text: "🔢 数字で見ると" }), el("ul", {}, p.ex.facts.map(w => el("li", { text: w }))),
-    ...(p.ex.plan ? [el("div", { class: "exh", text: "📐 売買の目安" }), el("p", { class: "plan", text: p.ex.plan })] : []),
+    ...(p.plan ? [el("div", { class: "exh", text: "📐 売買ライン（テクニカルの目安）" }), planEl(p.plan)] : p.ex.plan ? [el("div", { class: "exh", text: "📐 売買の目安" }), el("p", { class: "plan", text: p.ex.plan })] : []),
     ...(p.ex.risks.length ? [el("div", { class: "exh warn", text: "⚠ 注意点" }), el("ul", {}, p.ex.risks.map(w => el("li", { text: w })))] : [])];
 }
 function renderDT() {

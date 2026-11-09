@@ -230,6 +230,7 @@ function render(data) {
           el("span", { class: "bd" }, [
             el("b", { text: p.n }),
             el("small", { text: `${p.c}・${fmt.yen(p.p)}` + (s ? `・会社の質 ${s.rank}` : "") }),
+            planEl(p.plan, true),
             el("span", { class: "why", text: "🎯 " + ((ex.keys && ex.keys[0]) || "").replace(/^[^：:]+[：:]\s*/, "") }),
             (() => { const r = (ex.risks || []).filter(x => !/市場全体|日足から計算/.test(x)); return r.length ? el("span", { class: "risk", text: "⚠ " + r[0] }) : ""; })()]),
           el("span", { class: "go", text: "›" })]);
