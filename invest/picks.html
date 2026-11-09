@@ -77,7 +77,7 @@ function kpis(st, empty) {
     : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: empty || "最初の結果は、選んでから2週間後に出ます" })])]);
 }
 
-let DT = null, PP = null;
+let DT = null, PP = null, BL = null, BH = null;
 const NAMES = { d: "デイトレ", s: "スイング", l: "中長期" };
 function tabs() {
   const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + (NAMES[k] || v.name)])];
@@ -105,6 +105,36 @@ function renderDT() {
         el("div", { class: "cs" }, [el("b", { text: Math.round(p.cs) }), el("small", { text: "合計点" })])]),
       el("div", { class: "bars", style: { gridTemplateColumns: "repeat(7, 1fr)" } }, Object.keys(DT.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), DT.feats[k].replace(/[（・].*/, "").replace("移動平均線の並び", "移動平均")]))),
       ...exBlock(p)])));
+  }
+  if (BL || BH) {
+    const yen = v => (v > 0 ? "+" : "") + Math.round(v || 0).toLocaleString() + "円", cls = v => v > 0 ? "up" : v < 0 ? "down" : "";
+    const tline = t => el("div", { style: { padding: "4px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px" } }, [
+      el("b", { text: `${t.t} ${t.side === "buy" ? "買" : "売"} ${t.n}` }), ` ${t.qty}株 @ ${Number(t.price).toLocaleString()}円 `,
+      t.side === "sell" ? el("span", { class: cls(t.pnl), text: yen(t.pnl) }) : "", el("div", { class: "muted", style: { fontSize: "11.5px" }, text: t.why })]);
+    b.push(el("h2", { text: "💼 パソコンのボット（保有と損益）" }));
+    if (BL) {
+      const upd = new Date(BL.updated), old = Date.now() - upd > 15 * 60 * 1000;
+      b.push(el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" },
+        text: `${md(BL.date)}・${BL.mode}モード・${BL.running ? (old ? "⚠ 15分以上更新がありません（パソコン・ボットを確認）" : "動作中") : "本日終了"}（${upd.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })} 更新）` }),
+        el("div", { class: "kpi" }, [
+          el("div", {}, [el("b", { class: cls(BL.realized), text: yen(BL.realized) }), el("small", { text: "今日の実現損益" })]),
+          el("div", {}, [el("b", { class: cls(BL.unreal), text: BL.positions.length ? yen(BL.unreal) : "–" }), el("small", { text: "含み損益" })]),
+          el("div", {}, [el("b", { text: BL.positions.length + "銘柄" }), el("small", { text: "保有中" })])]));
+      BL.positions.forEach(p => b.push(el("section", { class: "card" }, [
+        el("div", { class: "dt", style: { display: "flex", justifyContent: "space-between" } }, [el("b", { text: `${p.n}（${p.c}）${p.qty}株` }), el("span", { class: cls(p.unreal), text: yen(p.unreal) })]),
+        el("div", { class: "muted", style: { fontSize: "12px" }, text: `買値 ${p.entry.toLocaleString()}円 → いま ${p.price == null ? "–" : Number(p.price).toLocaleString() + "円"}／損切り ${p.stop.toLocaleString()}・利確1 ${p.tp1.toLocaleString()}・利確2 ${p.tp2.toLocaleString()}` })])));
+      if (BL.trades.length) b.push(el("div", { class: "day" }, [el("div", { class: "dt" }, [el("span", { text: "今日の売買" })]), ...BL.trades.map(tline)]));
+      else b.push(el("p", { class: "muted", style: { margin: "0 4px 8px", fontSize: "12px" }, text: (BL.watch || []).map(w => `${w.n}: ${w.note || (w.phase === "wait" ? "条件待ち" : "")}`).join("／") || "まだ売買はありません" }));
+    }
+    if (BH && BH.stats) {
+      const st = BH.stats;
+      b.push(el("div", { class: "kpi" }, [
+        el("div", {}, [el("b", { class: cls(st.pnl), text: yen(st.pnl) }), el("small", { text: `実現損益の合計（${st.days}日）` })]),
+        el("div", {}, [el("b", { text: st.win == null ? "–" : Math.round(st.win * 100) + "%" }), el("small", { text: `勝率（決済${st.sells}回）` })])]),
+        ...BH.days.slice().reverse().slice(0, 15).map(d => el("div", { class: "day" }, [
+          el("div", { class: "dt" }, [el("span", { text: `${md(d.date)}（${d.mode}）` }), el("span", { class: cls(d.pnl), text: yen(d.pnl) })]),
+          ...(d.trades.length ? d.trades.map(tline) : [el("div", { class: "muted", style: { fontSize: "12px" }, text: "売買なし" })])])));
+    }
   }
   if (PP) {
     const st = PP.stats || {}, yen = v => (v > 0 ? "+" : "") + Math.round(v).toLocaleString() + "円";
@@ -179,6 +209,8 @@ function render() {
 }
 loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"), e));
 loadQuotes(() => render());
+loadJSON("data/bot_live.json", d => { BL = d; render(); }, () => {}, true);
+loadJSON("data/bot_history.json", d => { BH = d; render(); }, () => {}, true);
 loadJSON("data/paper.json", d => { PP = d; render(); }, () => {}, true);
 loadJSON("data/daytrade.json", d => { DT = d; render(); }, () => {}, true);
 </script>
