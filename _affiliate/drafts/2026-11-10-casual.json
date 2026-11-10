@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-10",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-10",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "靴下脱ぎ捨ててスリッパ履こうとした中2、片方見失って固まってる。足元見てごらん。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "連絡帳に「三角定規」って書いてあるのを見て、引き出しを漁り始めた小5。明日使うの今言うんだ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "牛乳パックの注ぎ口、きれいに開かなくて反対側も引っ張ってる。両方ボロボロになるやつだ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
