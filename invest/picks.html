@@ -77,7 +77,7 @@ function kpis(st, empty) {
     : [el("div", { style: { gridColumn: "1/-1" } }, [el("small", { text: empty || "最初の結果は、選んでから2週間後に出ます" })])]);
 }
 
-let DT = null, PP = null, BL = null, BH = null;
+let DT = null, PP = null, BL = null, BH = null, BT = null;
 const NAMES = { d: "デイトレ", s: "スイング", l: "中長期" };
 function tabs() {
   const list = [["d", "🏃 デイトレ"], ...Object.entries(P.strats).map(([k, v]) => [k, (k === "s" ? "⚡ " : "🌳 ") + (NAMES[k] || v.name)])];
@@ -137,9 +137,33 @@ function renderDT() {
           ...(d.trades.length ? d.trades.map(tline) : [el("div", { class: "muted", style: { fontSize: "12px" }, text: "売買なし" })])])));
     }
   }
+  if (PP && (PP.orb_days || PP.orb_queue) || BT) {
+    const yen = v => (v > 0 ? "+" : "") + Math.round(v || 0).toLocaleString() + "円", cls = v => v > 0 ? "up" : v < 0 ? "down" : "";
+    const os_ = (PP && PP.orb_stats) || {};
+    b.push(el("h2", { text: "🆕 新ルール：主役株 × 寄り付き5分の高値ブレイク" }),
+      el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: "前日の夕方に、決算・開示・ニュース・出来高の急増から候補（最大48）を集め、翌朝9:05に「寄り付き5分の出来高が平常の2倍以上・陽線」の上位3つを主役株に。寄り付き5分の高値を抜けたら買い、損切りはその5分の安値（ATRの半分まで）。損切り幅の2倍で半分利確、残りは建値ストップ・11:30以降のVWAP割れ・14:50で決済。" }));
+    if (BT && BT.summary) {
+      const row = (k) => { const v = BT.summary[k]; return el("div", { style: { display: "grid", gridTemplateColumns: "1.6fr 1fr .7fr .7fr", gap: "4px", padding: "5px 0", borderTop: "1px dashed var(--line)", fontSize: "12px" } }, [
+        el("span", { text: BT.labels[k] }), el("b", { class: cls(v.pnl), text: yen(v.pnl) }), el("span", { text: v.win == null ? "–" : "勝率" + Math.round(v.win * 100) + "%" }), el("span", { text: v.trades + "回" })]); };
+      b.push(el("section", { class: "card" }, [el("b", { text: `過去の検証（${md(BT.period[0])}〜${md(BT.period[1])}・5分足・1銘柄30万円）` }), ...["A", "B", "C"].map(row),
+        el("div", { class: "muted", style: { fontSize: "11px", marginTop: "4px" }, text: "過去データでの計算です。将来も同じになるとは限りません。" })]));
+    }
+    if (PP && PP.orb_days) {
+      b.push(el("div", { class: "kpi" }, [
+        el("div", {}, [el("b", { class: cls(os_.pnl), text: os_.trades ? yen(os_.pnl) : "–" }), el("small", { text: `模擬の損益（${os_.days || 0}日）` })]),
+        el("div", {}, [el("b", { text: os_.win == null ? "–" : Math.round(os_.win * 100) + "%" }), el("small", { text: `勝率（${os_.trades || 0}回）` })]),
+        el("div", {}, [el("b", { text: (PP.orb_queue || []).length + "日分" }), el("small", { text: "結果待ち" })])]),
+        ...PP.orb_days.slice().reverse().slice(0, 10).map(d => el("div", { class: "day" }, [
+          el("div", { class: "dt" }, [el("span", { text: `${md(d.on)} の主役株` }), el("span", { class: cls(d.pnl), text: yen(d.pnl) })]),
+          ...(d.rows.length ? d.rows.map(r => el("div", { style: { padding: "4px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px" } }, [
+            el("b", { text: r.n }), ` 出来高${r.rvol}倍 `, el("span", { class: cls(r.pnl), text: r.trades.length ? yen(r.pnl) : "" }),
+            el("div", { class: "muted", style: { fontSize: "11.5px" }, text: (r.why || []).join("・") + "／" + (r.trades.length ? r.trades.map(t => `${t.t} ${t.side === "buy" ? "買" : "売"} ${t.qty}株@${t.price}（${t.why}）`).join(" → ") : r.note) })]))
+            : [el("div", { class: "muted", style: { fontSize: "12px" }, text: d.note })])])));
+    }
+  }
   if (PP) {
     const st = PP.stats || {}, yen = v => (v > 0 ? "+" : "") + Math.round(v).toLocaleString() + "円";
-    b.push(el("h2", { text: "🤖 模擬売買（自動売買のルールで売買していたら）" }),
+    b.push(el("h2", { text: "🤖 旧ルールの模擬売買（チャートで選んだ3銘柄）" }),
       el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: `1銘柄 ${Math.round(PP.budget).toLocaleString()}円で、翌営業日の5分足に売買ルール（VWAP・前日高値ブレイク・損切り・利確・14:50全決済）を当てはめた結果。注文は出していません。手数料0円（SOR）・デイトレ信用の金利0%の前提。` }),
       el("div", { class: "kpi" }, [
         el("div", {}, [el("b", { class: (st.pnl || 0) >= 0 ? "up" : "down", text: st.trades ? yen(st.pnl) : "–" }), el("small", { text: `損益の合計（${st.days || 0}日）` })]),
@@ -212,6 +236,7 @@ loadJSON("data/picks.json", d => { P = d; render(); }, e => keyNeeded($("main"),
 loadQuotes(() => render());
 loadJSON("data/bot_live.json", d => { BL = d; render(); }, () => {}, true);
 loadJSON("data/bot_history.json", d => { BH = d; render(); }, () => {}, true);
+loadJSON("data/orb_backtest.json", d => { BT = d; render(); }, () => {}, true);
 loadJSON("data/paper.json", d => { PP = d; render(); }, () => {}, true);
 loadJSON("data/daytrade.json", d => { DT = d; render(); }, () => {}, true);
 </script>
