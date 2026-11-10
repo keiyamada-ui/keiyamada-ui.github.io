@@ -161,6 +161,21 @@ function renderDT() {
             : [el("div", { class: "muted", style: { fontSize: "12px" }, text: d.note })])])));
     }
   }
+  if (PP && PP.reb_days) {
+    const yen = v => (v > 0 ? "+" : "") + Math.round(v || 0).toLocaleString() + "円", cls = v => v > 0 ? "up" : v < 0 ? "down" : "", rs = PP.reb_stats || {};
+    b.push(el("h2", { text: "🔁 リバウンド狙い（前日に3%以上下げた銘柄）" }),
+      el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: "研究で一番ましだった仮説。前日に3%以上下げた銘柄（決算の前後・+6%以上の窓は除く）から、9:10に出来高の倍率が高い3つを買い、14:50に売る。過去60日では前半プラス・後半ほぼゼロで、まだ証明されていません。" }),
+      el("div", { class: "kpi" }, [
+        el("div", {}, [el("b", { class: cls(rs.pnl), text: rs.trades ? yen(rs.pnl) : "–" }), el("small", { text: `模擬の損益（${rs.days || 0}日）` })]),
+        el("div", {}, [el("b", { text: rs.win == null ? "–" : Math.round(rs.win * 100) + "%" }), el("small", { text: `勝率（${rs.trades || 0}回）` })]),
+        el("div", {}, [el("b", { text: (PP.reb_queue || []).length + "日分" }), el("small", { text: "結果待ち" })])]),
+      ...PP.reb_days.slice().reverse().slice(0, 10).map(d => el("div", { class: "day" }, [
+        el("div", { class: "dt" }, [el("span", { text: `${md(d.on)}` }), el("span", { class: cls(d.pnl), text: yen(d.pnl) })]),
+        ...(d.rows.length ? d.rows.map(r => el("div", { style: { padding: "4px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px" } }, [
+          el("b", { text: r.n }), ` 前日${(r.chg * 100).toFixed(1)}%・出来高${r.rvol}倍 `, el("span", { class: cls(r.pnl), text: r.trades.length ? yen(r.pnl) : r.note }),
+          el("div", { class: "muted", style: { fontSize: "11.5px" }, text: r.trades.map(t => `${t.t} ${t.side === "buy" ? "買" : "売"} ${t.qty}株@${t.price}`).join(" → ") })]))
+          : [el("div", { class: "muted", style: { fontSize: "12px" }, text: d.note })])])));
+  }
   if (PP) {
     const st = PP.stats || {}, yen = v => (v > 0 ? "+" : "") + Math.round(v).toLocaleString() + "円";
     b.push(el("h2", { text: "🤖 旧ルールの模擬売買（チャートで選んだ3銘柄）" }),
