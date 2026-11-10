@@ -106,12 +106,13 @@ function renderDT() {
       el("div", { class: "bars", style: { gridTemplateColumns: "repeat(7, 1fr)" } }, Object.keys(DT.feats).map(k => el("div", {}, [el("i", { style: { "--w": p.feat[k] + "%" } }), DT.feats[k].replace(/[（・].*/, "").replace("移動平均線の並び", "移動平均")]))),
       ...exBlock(p)])));
   }
-  if (BL || BH) {
+  {
     const yen = v => (v > 0 ? "+" : "") + Math.round(v || 0).toLocaleString() + "円", cls = v => v > 0 ? "up" : v < 0 ? "down" : "";
     const tline = t => el("div", { style: { padding: "4px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px" } }, [
       el("b", { text: `${t.t} ${t.side === "buy" ? "買" : "売"} ${t.n}` }), ` ${t.qty}株 @ ${Number(t.price).toLocaleString()}円 `,
       t.side === "sell" ? el("span", { class: cls(t.pnl), text: yen(t.pnl) }) : "", el("div", { class: "muted", style: { fontSize: "11.5px" }, text: t.why })]);
     b.push(el("h2", { text: "💼 パソコンのボット（保有と損益）" }));
+    if (!BL && !BH) b.push(el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" }, text: "まだ記録はありません。平日の朝（8:50ごろ）にパソコンでボット（python bot.py）を起動すると、保有銘柄・売買・損益がここに出ます。" }));
     if (BL) {
       const upd = new Date(BL.updated), old = Date.now() - upd > 15 * 60 * 1000;
       b.push(el("p", { class: "muted", style: { margin: "-4px 4px 8px", fontSize: "12px" },
