@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-11",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-11",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5がランドセルの横に給食袋を置いたまま、ソファでゴロ寝。洗うの私なんだけどな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "部活のジャージ、洗濯機の前で裏返しのまま脱ぎ捨ててある。表に戻す係は誰なんだろう。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "朝晩ちょっと冷えるから、中2が制服の下にこっそり長袖Tシャツ着てた。何も言わないでおく🙂",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
