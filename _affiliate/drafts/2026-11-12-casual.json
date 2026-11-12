@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-12",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-12",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5が夕飯のテーブルで、箸を持ったまま漢字ドリルの答え合わせ始めた。先に食べなさい、冷めるよ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "洗面所のタオル、中2が使ったあと端がそろってない。直してから出てくる日はあるのかな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の部活の送迎、お弁当の中身で毎回ちょっと悩む。唐揚げ以外の正解がほしい。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}

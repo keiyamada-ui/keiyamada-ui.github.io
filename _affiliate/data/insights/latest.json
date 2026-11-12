@@ -1,84 +1,4 @@
 {
- "18116470159801404": {
-  "date": "2026-10-12",
-  "kind": "buzz",
-  "draft": "2026-10-12-buzz.json",
-  "post_index": 0,
-  "permalink": "https://www.threads.com/@kotori.family/post/DeX7ZpkEV98",
-  "metrics": {
-   "views": 232,
-   "likes": 0,
-   "replies": 0,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 0,
-  "fetched": "2026-10-19"
- },
- "17968547828963531": {
-  "date": "2026-10-12",
-  "kind": "casual",
-  "draft": "2026-10-12-casual.json",
-  "post_index": 0,
-  "permalink": "https://www.threads.com/@kotori.family/post/DeYNUl1jK5u",
-  "metrics": {
-   "views": 130,
-   "likes": 0,
-   "replies": 0,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 0,
-  "fetched": "2026-10-19"
- },
- "18093270095183022": {
-  "date": "2026-10-12",
-  "kind": "value",
-  "draft": "2026-10-12.json",
-  "post_index": 0,
-  "permalink": "https://www.threads.com/@kotori.family/post/DeYW60um2ZL",
-  "metrics": {
-   "views": 8,
-   "likes": 0,
-   "replies": 3,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 3,
-  "fetched": "2026-10-19"
- },
- "18136407340633672": {
-  "date": "2026-10-12",
-  "kind": "casual",
-  "draft": "2026-10-12-casual.json",
-  "post_index": 1,
-  "permalink": "https://www.threads.com/@kotori.family/post/DeYqPd5FqJZ",
-  "metrics": {
-   "views": 276,
-   "likes": 0,
-   "replies": 0,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 0,
-  "fetched": "2026-10-19"
- },
- "18152676310539187": {
-  "date": "2026-10-12",
-  "kind": "pr",
-  "draft": "2026-10-12.json",
-  "post_index": 2,
-  "permalink": "https://www.threads.com/@kotori.family/post/DeZK2huG48j",
-  "metrics": {
-   "views": 4,
-   "likes": 0,
-   "replies": 1,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 1,
-  "fetched": "2026-10-19"
- },
  "18495822214109511": {
   "date": "2026-10-13",
   "kind": "buzz",
@@ -797,7 +717,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18197871046350232": {
   "date": "2026-11-05",
@@ -813,7 +733,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "17904960039366662": {
   "date": "2026-11-05",
@@ -829,7 +749,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18070307627521002": {
   "date": "2026-11-06",
@@ -845,7 +765,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18121459055100673": {
   "date": "2026-11-08",
@@ -861,7 +781,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18134796397702630": {
   "date": "2026-11-08",
@@ -877,7 +797,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "17916182940497452": {
   "date": "2026-11-09",
@@ -893,7 +813,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18209630323329108": {
   "date": "2026-11-10",
@@ -909,7 +829,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
  },
  "18134582392668637": {
   "date": "2026-11-10",
@@ -925,6 +845,38 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-11"
+  "fetched": "2026-11-12"
+ },
+ "18139654129653638": {
+  "date": "2026-11-11",
+  "kind": "casual",
+  "draft": "2026-11-11-casual.json",
+  "post_index": 0,
+  "permalink": "https://www.threads.com/@kotori.family/post/DflfWZwFgtU",
+  "metrics": {
+   "views": 2,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-11-12"
+ },
+ "18120699706991004": {
+  "date": "2026-11-11",
+  "kind": "casual",
+  "draft": "2026-11-11-casual.json",
+  "post_index": 1,
+  "permalink": "https://www.threads.com/@kotori.family/post/Dfmiq2gEWG8",
+  "metrics": {
+   "views": 13,
+   "likes": 0,
+   "replies": 0,
+   "reposts": 0,
+   "quotes": 0
+  },
+  "own_replies": 0,
+  "fetched": "2026-11-12"
  }
 }
