@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-13",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-13",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5がお風呂上がりに、髪を濡らしたまま鉛筆を削り始めた。削りかす、床に落ちてるよ。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の部活のカバン、玄関に置いたまま。中でお弁当箱がカタカタ鳴ってたから、出すのだけ声かけた。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "金曜の夜は夕飯がどうしても適当になる。今日は冷凍ギョーザとわかめスープ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
