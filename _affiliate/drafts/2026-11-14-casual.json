@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-14",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-14",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2がテレビ見ながら片足立ちで靴下履こうとして、グラグラ揺れてる。座って履けばいいのに。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の夕方、もうお腹すいたって言われて冷蔵庫開けたけど何もない。今から買い出し行きます。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "音読の宿題、小5が早口言葉みたいなスピードで一気に読み切った。息継ぎした？",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
