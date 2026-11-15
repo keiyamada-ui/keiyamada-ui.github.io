@@ -1,36 +1,4 @@
 {
- "18149152381507421": {
-  "date": "2026-10-16",
-  "kind": "pr",
-  "draft": "2026-10-16.json",
-  "post_index": 2,
-  "permalink": "https://www.threads.com/@kotori.family/post/DejToF9m9Vv",
-  "metrics": {
-   "views": 14,
-   "likes": 0,
-   "replies": 1,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 1,
-  "fetched": "2026-10-23"
- },
- "18223696510339421": {
-  "date": "2026-10-16",
-  "kind": "buzz",
-  "draft": "2026-10-16-buzz.json",
-  "post_index": 0,
-  "permalink": "https://www.threads.com/@kotori.family/post/DejiCpskSYK",
-  "metrics": {
-   "views": 115,
-   "likes": 0,
-   "replies": 0,
-   "reposts": 0,
-   "quotes": 0
-  },
-  "own_replies": 0,
-  "fetched": "2026-10-23"
- },
  "18134068928507441": {
   "date": "2026-10-17",
   "kind": "casual",
@@ -605,7 +573,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18209630323329108": {
   "date": "2026-11-10",
@@ -621,7 +589,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18134582392668637": {
   "date": "2026-11-10",
@@ -637,7 +605,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18139654129653638": {
   "date": "2026-11-11",
@@ -653,7 +621,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18120699706991004": {
   "date": "2026-11-11",
@@ -669,7 +637,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18649430197046642": {
   "date": "2026-11-12",
@@ -685,7 +653,7 @@
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18004829372808659": {
   "date": "2026-11-12",
@@ -701,7 +669,7 @@
    "quotes": 0
   },
   "own_replies": 0,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  },
  "18122161940064935": {
   "date": "2026-11-14",
@@ -710,13 +678,13 @@
   "post_index": 2,
   "permalink": "https://www.threads.com/@kotori.family/post/DfuEDQJm_cB",
   "metrics": {
-   "views": 1,
+   "views": 2,
    "likes": 0,
    "replies": 1,
    "reposts": 0,
    "quotes": 0
   },
   "own_replies": 1,
-  "fetched": "2026-11-15"
+  "fetched": "2026-11-16"
  }
 }
