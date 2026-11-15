@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-15",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-15",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夜、明日の時間割を合わせてる小5。体育着だけ入れ忘れそうで、横から見てる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の上履き袋、洗濯かごの横に置いてある。月曜までに乾くかな。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜の夕飯、今日は鍋にした。野菜を切るだけで終わるのがありがたい。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
