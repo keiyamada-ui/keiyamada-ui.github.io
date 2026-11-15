@@ -137,6 +137,21 @@ function renderDT() {
           ...(d.trades.length ? d.trades.map(tline) : [el("div", { class: "muted", style: { fontSize: "12px" }, text: "売買なし" })])])));
     }
   }
+  if (DT.today && DT.today.short && DT.today.short.length) {
+    const sh = DT.today.short.filter(x => x.tz !== false);
+    b.push(el("h2", { text: `📉 翌営業日の空売り候補（${md(DT.today.date)} に3%以上上げた銘柄）` }),
+      el("section", { class: "card" }, [
+        el("div", { style: { fontSize: "12.5px", lineHeight: "1.7" } }, [
+          el("b", { text: "手順（5年分の検証で成績が良かった形）" }), el("br"),
+          "① 朝、下の銘柄のうち ", el("b", { text: "寄り付きが前日終値より+6%以上" }), " 高く始まったものだけが対象（窓が大きい順に3つまで）", el("br"),
+          "② ", el("b", { text: "寄り付き〜9:10 までに売る" }), "（9:30 以降に売ると利益は半分以下）", el("br"),
+          "③ 買い戻しは ", el("b", { text: "売値より5%下に指値" }), "。届かなければ ", el("b", { text: "大引け前に必ず買い戻す" }), el("br"),
+          "④ 決算発表の直後の銘柄は対象外。1銘柄の金額は小さく（1回で−20%前後の負けもあり得る）"]),
+        el("div", { class: "muted", style: { fontSize: "11.5px", margin: "6px 0" }, text: "前日の終値 → +6%の目安の値段。空売りできるか（在庫・入札）は証券会社の画面で確認してください。" }),
+        ...sh.slice(0, 40).map(x => el("a", { href: `stock.html?c=${x.c}`, style: { display: "grid", gridTemplateColumns: "1.5fr .8fr 1.2fr", gap: "6px", padding: "5px 0", borderTop: "1px dashed var(--line)", fontSize: "12.5px", color: "inherit", textDecoration: "none" } }, [
+          el("span", { text: `${x.n}（${x.c}）` }), el("span", { class: "up", text: `+${(x.chg * 100).toFixed(1)}%` }),
+          el("span", { text: `${Math.round(x.pc).toLocaleString()} → ${Math.ceil(x.pc * 1.06).toLocaleString()}円以上` })]))]));
+  }
   if (PP && PP.short_days) {
     const yen = v => (v > 0 ? "+" : "") + Math.round(v || 0).toLocaleString() + "円", cls = v => v > 0 ? "up" : v < 0 ? "down" : "", ss = PP.short_stats || {};
     b.push(el("h2", { text: "📉 空売り（跳ねて始まった株を売る）★本命の候補" }),
