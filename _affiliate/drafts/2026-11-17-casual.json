@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-17",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-17",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2がココア飲みながらスマホ見てて、カップが限界まで傾いてる。こぼれるって。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "火曜の夕飯は豚汁にした。これとご飯があればもう十分だよね。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5がランドセルからぐしゃぐしゃの算数プリント出してきた。3日前のやつだ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
