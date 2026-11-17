@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-18",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-18",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5がソファの上で靴下を片方だけ脱いだまま、もう片方は履いてる。どういう途中経過なの。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "水曜の夜、冷蔵庫の中身を見て今日は焼きそばでいいかと決めた。野菜は入れる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2が朝、玄関で靴ひもを結び直してる。時間はまだ大丈夫そう。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
