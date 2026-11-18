@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-19",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-19",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "木曜の夜。明日行けば休みだと思うと、今日の洗濯物がやけに軽く感じる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5が宿題の漢字ノートを開いたまま、鉛筆を鼻の下にはさんで遊んでる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "朝晩ほんとに冷えてきた。中2はまだ半袖の上にパーカーだけで出ていく。寒くないのかな",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
