@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-20",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-20",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "金曜17時、部活から帰ってきた中2が「明日朝練なくなった」と一言。もっと早く言ってほしかった。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "テーブルの真ん中に消しゴムのカスだけ集めて満足してる小5。そこからゴミ箱までが遠い。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "今日の夕飯、もう冷凍餃子焼くだけでいいよね。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
