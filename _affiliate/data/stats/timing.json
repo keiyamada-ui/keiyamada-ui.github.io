@@ -1,12 +1,12 @@
 {
- "updated": "2026-11-20",
+ "updated": "2026-11-21",
  "min_posts": 3,
  "slots": [
   {
    "slot": 1,
    "name": "昼（短い投稿）",
-   "posts": 11,
-   "views": 238,
+   "posts": 10,
+   "views": 208,
    "buckets": [
     {
      "from": 690,
@@ -30,9 +30,9 @@
      "from": 750,
      "to": 780,
      "label": "12:30〜13:00",
-     "posts": 4,
-     "views": 368,
-     "likes": 0.2,
+     "posts": 3,
+     "views": 312,
+     "likes": 0.3,
      "best": true
     }
    ],
@@ -45,7 +45,7 @@
    "slot": 2,
    "name": "夕方（役立つ投稿・PR 投稿）",
    "posts": 14,
-   "views": 16,
+   "views": 23,
    "buckets": [
     {
      "from": 1020,
@@ -79,8 +79,8 @@
      "to": 1140,
      "label": "18:30〜19:00",
      "posts": 11,
-     "views": 15,
-     "likes": 0.0,
+     "views": 24,
+     "likes": 0.1,
      "best": false
     }
    ],
@@ -89,8 +89,8 @@
   {
    "slot": 3,
    "name": "夜（短い投稿）",
-   "posts": 13,
-   "views": 178,
+   "posts": 12,
+   "views": 172,
    "buckets": [
     {
      "from": 1230,
@@ -114,9 +114,9 @@
      "from": 1290,
      "to": 1320,
      "label": "21:30〜22:00",
-     "posts": 12,
-     "views": 175,
-     "likes": 0.2,
+     "posts": 11,
+     "views": 167,
+     "likes": 0.3,
      "best": false
     }
    ],

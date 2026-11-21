@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-21",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-21",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜朝6時半。中2の部活のお弁当作って送り出したら、もう今日やるべきことの半分終わった気分。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "脱いだパジャマをきれいに畳んでベッドの上に置く中2と、脱ぎ捨てた形のまま床に残していく小5。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の昼ごはん、うどん茹でてつゆかけただけ。週末のお昼なんてこれで十分。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
