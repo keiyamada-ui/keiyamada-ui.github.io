@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-22",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-22",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "日曜朝7時半。まだ誰も起きてこない静かなリビングで飲むコーヒーが一番落ち着く。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "「あ、明日提出のプリントあった」と日曜の夕方に言ってくる小5。今からサイン書きます。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2の部屋の前に、脱ぎ捨てられた靴下が片方だけ落ちてる。もう片方はどこ。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
