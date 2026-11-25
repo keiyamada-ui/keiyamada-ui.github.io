@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-26",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-26",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "木曜朝7時20分。「今日ノートの新しいのいる」と玄関で言ってくる小5。もっと早く言ってほしい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "洗面台の鏡に歯磨き粉が飛んでるのを見つけると、出かける直前でも拭かずにはいられない。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "部活から帰ってきた中2、リビングの床にリュックをドサッと置いたまま部屋へ。重くて動かせない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
