@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-25",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-25",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "水曜朝7時。水筒にお茶入れて持たせようとしたら「今日いらない」って言われた。もっと早く言ってほしい。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "リビングのテーブルの上に、誰のかわからない消しゴムのカスが集められたまま放置されてる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "中2、話しかけても「うん」「別に」しか返ってこない時間帯がある。今はそっとしておこう。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
