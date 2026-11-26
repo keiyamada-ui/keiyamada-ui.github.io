@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-27",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-27",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "金曜の夜9時。中2が「明日部活7時集合だから弁当いる」とさらっと言ってきた。買い出し行ってない。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "きれいに並べた本棚の漫画、なぜか3巻だけ抜けてリビングのソファに挟まってる。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "金曜の夜は、どれだけ眠くてもキッチンのシンクを磨き上げないと落ち着いて布団に入れない。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
