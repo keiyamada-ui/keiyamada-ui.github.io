@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-28",
+  "kind": "casual",
+  "title": "💬 つぶやき 2026-11-28",
+  "errors": [],
+  "warnings": [],
+  "posts": [
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜朝6時半。部活のユニフォームがないと騒ぐ中2、昨日の夜自分で部屋に持って行ったはず。親のせいにされても困る。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "小5の脱いだ靴下、どうして毎回裏返しのまま洗濯カゴの手前で力尽きてるんだろう。",
+      "thread_parts": [],
+      "reply_text": ""
+    },
+    {
+      "type": "casual",
+      "angle": "日常",
+      "text": "土曜の夕方、みんなそれぞれ自分の部屋にこもってて家の中が急に静か。",
+      "thread_parts": [],
+      "reply_text": ""
+    }
+  ],
+  "neta_used": []
+}
